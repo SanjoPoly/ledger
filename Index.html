@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ledgr — personal finance, Excel-backed</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B101E; --bg-2:#0E1526;
+    --card:rgba(255,255,255,.035); --card-solid:#131B2F;
+    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
+    --text:#E9EEF8; --muted:#8B95AE;
+    --mint:#3DDCA3; --mint-dim:rgba(61,220,163,.14);
+    --coral:#FF6E61; --coral-dim:rgba(255,110,97,.14);
+    --violet:#8B7CFF; --violet-dim:rgba(139,124,255,.14);
+    --blue:#4D9FFF; --amber:#FFC466; --amber-dim:rgba(255,196,102,.15);
+    --pink:#E58BE0; --pink-dim:rgba(229,139,224,.15);
+    --grad:linear-gradient(135deg,#3DDCA3 0%,#4D9FFF 100%);
+    --r-lg:20px; --r-md:14px;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:16px;-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(77,159,255,.13), transparent 60%),
+      radial-gradient(800px 500px at -10% 110%, rgba(61,220,163,.10), transparent 60%),
+      var(--bg);
+    color:var(--text); min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit;font-size:16px;color:var(--text)} /* 16px stops iOS zoom */
+  ::placeholder{color:#5A6480}
+  h1,h2,h3{font-family:'Sora',sans-serif}
+  .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* ================= AUTH ================= */
+  .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.2rem}
+  .auth-card{
+    width:100%;max-width:460px;background:var(--card-solid);
+    border:1px solid var(--line);border-radius:24px;padding:2rem;box-shadow:var(--shadow);
+  }
+  .logo{display:flex;align-items:center;gap:.6rem;margin-bottom:1.5rem}
+  .logo-mark{width:38px;height:38px;border-radius:12px;background:var(--grad);display:grid;place-items:center;font-family:'Sora';font-weight:800;color:#0B101E;font-size:1.1rem;flex-shrink:0}
+  .logo b{font-family:'Sora';font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
+  .logo span{font-size:.68rem;color:var(--muted);display:block;letter-spacing:.08em;text-transform:uppercase}
+  .auth-card h2{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:.5rem}
+  .auth-card .sub{color:var(--muted);font-size:.88rem;line-height:1.55;margin-bottom:1.4rem}
+  .stack{display:flex;flex-direction:column;gap:.7rem}
+  .btn{
+    border-radius:12px;padding:.85rem 1.2rem;font-size:.95rem;font-weight:600;border:1px solid var(--line-strong);
+    background:rgba(255,255,255,.04);color:var(--text);transition:background .15s;
+    display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:48px;
+  }
+  .btn:hover{background:rgba(255,255,255,.08)}
+  .btn.primary{background:var(--grad);border:none;color:#08111C}
+  .btn.primary:hover{filter:brightness(1.07)}
+  .btn.ghost{background:none;border:none;color:var(--muted);font-weight:500;font-size:.85rem;min-height:40px}
+  .btn.ghost:hover{color:var(--text)}
+  .btn:focus-visible,input:focus-visible,select:focus-visible,.pill:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+  .auth-note{font-size:.74rem;color:var(--muted);margin-top:1.3rem;line-height:1.55;text-align:center}
+  .auth-note code{font-family:var(--mono);background:rgba(255,255,255,.06);padding:.05rem .35rem;border-radius:5px}
+  .f{margin-bottom:.85rem}
+  .f label{display:block;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
+  .f label i{font-style:normal;text-transform:none;color:#5A6480;font-weight:500}
+  .f input,.f select{width:100%;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:11px;padding:.72rem .85rem}
+  .f input:focus,.f select:focus{border-color:var(--mint)}
+  .f select option{background:var(--card-solid)}
+  .f .hint{font-size:.72rem;color:#5A6480;margin-top:.3rem;line-height:1.4}
+  .auth-error{background:var(--coral-dim);border:1px solid rgba(255,110,97,.35);color:#FFB3AC;border-radius:10px;padding:.6rem .8rem;font-size:.83rem;margin-bottom:.9rem;display:none}
+  .unlock-avatar{width:60px;height:60px;border-radius:50%;background:var(--grad);margin:0 auto 1rem;display:grid;place-items:center;font-family:'Sora';font-weight:800;font-size:1.4rem;color:#08111C}
+  .mode-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:.28rem .7rem;margin-bottom:1rem}
+  .mode-badge b{color:var(--text);font-weight:600}
+
+  /* ================= APP SHELL ================= */
+  #app{display:none;max-width:1180px;margin:0 auto;padding:1rem 1.1rem calc(3.5rem + env(safe-area-inset-bottom))}
+  .topbar{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.3rem 0 1rem}
+  .topbar .logo{margin:0;margin-right:auto}
+  .chip{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:.38rem .8rem;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip.dirty{border-color:var(--amber);color:var(--amber)}
+  .top-btn{border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--text);border-radius:11px;padding:.55rem .95rem;font-size:.85rem;font-weight:600;min-height:42px}
+  .top-btn:hover{background:rgba(255,255,255,.08)}
+  .top-btn.save{background:var(--grad);border:none;color:#08111C}
+  .top-btn.save:hover{filter:brightness(1.07)}
+  .top-btn.save:disabled{opacity:.6;cursor:wait}
+
+  nav.pills{display:flex;gap:.45rem;margin-bottom:1.3rem;overflow-x:auto;padding-bottom:.25rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav.pills::-webkit-scrollbar{display:none}
+  .pill{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);border-radius:999px;padding:.55rem 1.05rem;font-size:.87rem;font-weight:600;display:flex;align-items:center;gap:.45rem;transition:all .15s;white-space:nowrap;flex-shrink:0;min-height:42px}
+  .pill:hover{color:var(--text);border-color:var(--line-strong)}
+  .pill.active{background:var(--grad);border-color:transparent;color:#08111C}
+  .pill .dot{width:7px;height:7px;border-radius:50%}
+  .pill[data-tab="income"] .dot{background:var(--mint)}
+  .pill[data-tab="exp"] .dot{background:var(--coral)}
+  .pill[data-tab="inv"] .dot{background:var(--violet)}
+  .pill[data-tab="debt"] .dot{background:var(--amber)}
+  .pill.active .dot{background:#08111C}
+
+  .panel{display:none;animation:fade .25s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ================= OVERVIEW ================= */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-bottom:.9rem}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.05rem 1.15rem;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--kc,var(--blue))}
+  .kpi.income{--kc:var(--mint)} .kpi.expense{--kc:var(--coral)}
+  .kpi.savings{--kc:var(--blue)} .kpi.portfolio{--kc:var(--violet)}
+  .kpi.lend{--kc:var(--amber)} .kpi.borrow{--kc:var(--pink)}
+  .kpi .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .kpi .value{font-family:var(--mono);font-size:1.45rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:.25rem}
+  .kpi .sub .up{color:var(--mint)} .kpi .sub .down{color:var(--coral)}
+
+  .charts{display:grid;grid-template-columns:1.6fr 1fr;gap:.8rem;margin-bottom:.8rem}
+  .charts-row2{display:grid;grid-template-columns:1fr 1.6fr;gap:.8rem}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.05rem 1.15rem;min-width:0}
+  .chart-card h3{font-size:.93rem;font-weight:700;letter-spacing:-.01em;margin-bottom:.8rem}
+  .chart-card h3 small{color:var(--muted);font-weight:500;font-family:'Inter';font-size:.73rem;margin-left:.35rem}
+  .chart-box{position:relative;height:240px}
+  @media(max-width:840px){.charts,.charts-row2{grid-template-columns:1fr}.chart-box{height:215px}}
+
+  .tx-list{display:flex;flex-direction:column}
+  .tx{display:flex;align-items:center;gap:.8rem;padding:.6rem 0;border-bottom:1px solid var(--line)}
+  .tx:last-child{border-bottom:none}
+  .tx .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:.95rem;flex-shrink:0}
+  .tx .ic.in{background:var(--mint-dim);color:var(--mint)}
+  .tx .ic.out{background:var(--coral-dim);color:var(--coral)}
+  .tx .who{min-width:0}
+  .tx .who b{font-size:.87rem;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx .who span{font-size:.73rem;color:var(--muted)}
+  .tx .amt{margin-left:auto;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tx .amt.in{color:var(--mint)} .tx .amt.out{color:var(--coral)}
+  .empty-mini{color:var(--muted);font-size:.85rem;padding:1.4rem 0;text-align:center}
+
+  /* ================= SECTIONS ================= */
+  .section-head{display:flex;align-items:baseline;gap:.7rem;margin-bottom:.9rem;flex-wrap:wrap}
+  .section-head h2{font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
+  .section-head .total{font-family:var(--mono);color:var(--muted);font-size:.85rem}
+  .add-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1rem;display:grid;gap:.75rem;margin-bottom:1rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+  .add-card .f{margin:0}
+  .add-card button{background:var(--grad);color:#08111C;border:none;border-radius:11px;padding:.78rem 1rem;font-weight:700;font-size:.9rem;min-height:46px}
+  .add-card button:hover{filter:brightness(1.07)}
+  .toolbar{display:flex;gap:.55rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap}
+  .toolbar input[type="search"],.toolbar select{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem;min-height:42px}
+  .toolbar input[type="search"]{flex:1;min-width:160px;max-width:320px}
+  .toolbar select option{background:var(--card-solid)}
+  .toolbar .sum{margin-left:auto;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+
+  .table-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:680px}
+  th{text-align:left;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.75rem .9rem;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.88rem;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(255,255,255,.025)}
+  td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td .pos{color:var(--mint)} td .neg{color:var(--coral)}
+  .tag{font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .65rem;white-space:nowrap}
+  .tag.in{background:var(--mint-dim);color:var(--mint)}
+  .tag.out{background:var(--coral-dim);color:var(--coral)}
+  .tag.iv{background:var(--violet-dim);color:var(--violet)}
+  .tag.given{background:var(--amber-dim);color:var(--amber)}
+  .tag.taken{background:var(--pink-dim);color:var(--pink)}
+  .tag.done{background:rgba(255,255,255,.07);color:var(--muted)}
+  td input,td select{background:rgba(255,255,255,.05);border:1px solid var(--line-strong);border-radius:8px;padding:.45rem .5rem;width:100%;min-width:78px}
+  td select option{background:var(--card-solid)}
+  .row-actions{display:flex;gap:.35rem;justify-content:flex-end}
+  .icon-btn{border:1px solid var(--line);background:transparent;border-radius:8px;padding:.42rem .7rem;font-size:.78rem;color:var(--muted);min-height:36px}
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--text)}
+  .icon-btn.danger:hover{border-color:var(--coral);color:var(--coral)}
+  .icon-btn.confirm{background:var(--mint);border-color:var(--mint);color:#08111C;font-weight:700}
+  .empty{text-align:center;color:var(--muted);padding:2.2rem 1rem;font-size:.9rem;line-height:1.55}
+
+  #toast{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1B2540;border:1px solid var(--line-strong);color:var(--text);border-radius:12px;padding:.75rem 1.2rem;font-size:.87rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:92vw;box-shadow:var(--shadow)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* ================= MOBILE: tables become cards ================= */
+  @media (max-width:640px){
+    .auth-card{padding:1.5rem}
+    .chip{display:none}
+    .topbar{gap:.5rem}
+    .kpis{grid-template-columns:1fr 1fr;gap:.6rem}
+    .kpi .value{font-size:1.2rem}
+    .table-card{overflow:visible;background:none;border:none;border-radius:0}
+    table{min-width:0;display:block}
+    thead{display:none}
+    tbody{display:block}
+    tbody tr{display:block;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:.65rem;padding:.3rem .95rem}
+    tbody tr:hover{background:var(--card)}
+    td{display:flex;justify-content:space-between;align-items:center;gap:.8rem;border-bottom:1px dashed var(--line);padding:.55rem 0}
+    td:last-child{border-bottom:none}
+    td::before{content:attr(data-l);color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;font-weight:600;flex-shrink:0}
+    td[data-l=""]{justify-content:flex-end}
+    td[data-l=""]::before{display:none}
+    td.num{text-align:right}
+    td input,td select{max-width:62%}
+    .row-actions{justify-content:flex-end}
+    .toolbar .sum{margin-left:0;width:100%}
+  }
+</style>
+</head>
+<body>
+
+<!-- ======================= AUTH ======================= -->
+<div class="auth-wrap" id="authScreen">
+  <div class="auth-card">
+
+    <!-- 1. landing -->
+    <div class="a-view" id="vLanding">
+      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Excel-backed finance</span></div></div>
+      <h2>Your money,<br><span class="grad-text">clearly in view.</span></h2>
+      <p class="sub">Income, expenses, investments, debts and loans — all stored in an Excel workbook you own, on your computer or in your GitHub repo.</p>
+      <div class="stack">
+        <button class="btn primary" id="goOpenLocal">Open Excel from this device</button>
+        <button class="btn" id="goGithub">Connect GitHub repo</button>
+        <button class="btn" id="goCreate">Create a new database</button>
+      </div>
+      <p class="auth-note">Direct save-back to a local file needs <code>Chrome</code> or <code>Edge</code>. GitHub sync works in any modern browser.</p>
+    </div>
+
+    <!-- 2. github connect -->
+    <div class="a-view" id="vGithub" style="display:none">
+      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>GitHub sync</span></div></div>
+      <h2>Connect your repo</h2>
+      <p class="sub">Ledgr reads and commits your Excel file through the GitHub API. Use a <b>private</b> repo — this file holds your finances.</p>
+      <div class="auth-error" id="ghError"></div>
+      <div class="f"><label for="ghToken">Personal access token</label>
+        <input type="password" id="ghToken" placeholder="github_pat_… or ghp_…" autocomplete="off">
+        <div class="hint">Create a fine-grained token limited to this one repo with “Contents: read &amp; write”. It stays in memory only — you’ll paste it each time you open this page, and it is never written into the Excel or the repo.</div>
+      </div>
+      <div class="f"><label for="ghRepo">Repository</label><input type="text" id="ghRepo" placeholder="username/my-finance" autocomplete="off"></div>
+      <div class="f"><label for="ghPath">File path in repo</label><input type="text" id="ghPath" value="my-money.xlsx" autocomplete="off"></div>
+      <div class="f"><label for="ghBranch">Branch</label><input type="text" id="ghBranch" value="main" autocomplete="off"></div>
+      <div class="stack">
+        <button class="btn primary" id="ghConnect">Connect &amp; load</button>
+        <button class="btn ghost" data-back>← Back</button>
+      </div>
+    </div>
+
+    <!-- 3. create -->
+    <div class="a-view" id="vCreate" style="display:none">
+      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>New database</span></div></div>
+      <h2>Set up your ledger</h2>
+      <p class="sub" id="createSub">Creates a fresh Excel workbook with Income, Expenses, Investments and Debts sheets. Your login is stored (hashed) inside it.</p>
+      <div class="auth-error" id="createError"></div>
+      <div class="f"><label for="cName">Your name</label><input type="text" id="cName" placeholder="e.g. Ahmed" autocomplete="off"></div>
+      <div class="f"><label for="cUser">Login ID</label><input type="text" id="cUser" placeholder="e.g. ahmed" autocomplete="username"></div>
+      <div class="f"><label for="cPin">Password</label><input type="password" id="cPin" autocomplete="new-password"></div>
+      <div class="f"><label for="cPin2">Confirm password</label><input type="password" id="cPin2" autocomplete="new-password"></div>
+      <div class="f"><label for="cCurrency">Currency</label>
+        <select id="cCurrency"><option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option></select>
+      </div>
+      <div class="stack">
+        <button class="btn primary" id="btnCreateGo">Create my database</button>
+        <button class="btn ghost" data-back>← Back</button>
+      </div>
+      <p class="auth-note">The login is checked by this page against a hash stored in your own Excel file. It keeps casual eyes out, but anyone who has the .xlsx (or repo access) can open the data in Excel — so keep the file and repo private.</p>
+    </div>
+
+    <!-- 4. login -->
+    <div class="a-view" id="vLogin" style="display:none">
+      <div class="unlock-avatar" id="loginAvatar">•</div>
+      <h2 style="text-align:center" id="loginTitle">Sign in</h2>
+      <p class="sub" style="text-align:center" id="loginFile"></p>
+      <div style="text-align:center"><span class="mode-badge" id="loginMode"></span></div>
+      <div class="auth-error" id="loginError">Wrong login ID or password — try again.</div>
+      <form id="loginForm">
+        <div class="f"><label for="lUser">Login ID</label><input type="text" id="lUser" autocomplete="username" required></div>
+        <div class="f"><label for="lPin">Password</label><input type="password" id="lPin" autocomplete="current-password" required></div>
+        <div class="stack">
+          <button class="btn primary" type="submit">Sign in</button>
+          <button class="btn ghost" type="button" data-back>Use a different file</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 5. first-time credentials for an old workbook -->
+    <div class="a-view" id="vSetCreds" style="display:none">
+      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Secure this file</span></div></div>
+      <h2>Create your login</h2>
+      <p class="sub">This workbook doesn’t have a login yet. Set one now — it’s saved into the file’s Settings sheet on your next save.</p>
+      <div class="auth-error" id="setCredsError"></div>
+      <div class="f"><label for="sUser">Login ID</label><input type="text" id="sUser" autocomplete="username"></div>
+      <div class="f"><label for="sPin">Password</label><input type="password" id="sPin" autocomplete="new-password"></div>
+      <div class="f"><label for="sPin2">Confirm password</label><input type="password" id="sPin2" autocomplete="new-password"></div>
+      <div class="stack">
+        <button class="btn primary" id="btnSetCreds">Save login &amp; continue</button>
+        <button class="btn ghost" data-back>← Back</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================= APP ======================= -->
+<main id="app">
+  <div class="topbar">
+    <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span id="ownerLabel">Excel-backed finance</span></div></div>
+    <div class="chip" id="fileChip">no file</div>
+    <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
+      <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
+    </select>
+    <button class="top-btn" id="btnLock">Sign out</button>
+    <button class="top-btn save" id="btnSave">Save</button>
+  </div>
+
+  <nav class="pills">
+    <button class="pill active" data-tab="home">Overview</button>
+    <button class="pill" data-tab="income"><span class="dot"></span>Income</button>
+    <button class="pill" data-tab="exp"><span class="dot"></span>Expenses</button>
+    <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
+    <button class="pill" data-tab="debt"><span class="dot"></span>Debts &amp; Loans</button>
+  </nav>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section class="panel active" id="panel-home">
+    <div class="kpis">
+      <div class="kpi income"><div class="label">Income · this month</div><div class="value" id="kIncome">—</div><div class="sub" id="kIncomeSub"></div></div>
+      <div class="kpi expense"><div class="label">Expenses · this month</div><div class="value" id="kExpense">—</div><div class="sub" id="kExpenseSub"></div></div>
+      <div class="kpi savings"><div class="label">Net savings · this month</div><div class="value" id="kSavings">—</div><div class="sub" id="kSavingsSub"></div></div>
+      <div class="kpi portfolio"><div class="label">Portfolio value</div><div class="value" id="kPortfolio">—</div><div class="sub" id="kPortfolioSub"></div></div>
+      <div class="kpi lend"><div class="label">Owed to you</div><div class="value" id="kLent">—</div><div class="sub" id="kLentSub"></div></div>
+      <div class="kpi borrow"><div class="label">You owe</div><div class="value" id="kBorrowed">—</div><div class="sub" id="kBorrowedSub"></div></div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card"><h3>Cash flow <small>income vs expenses · last 6 months</small></h3><div class="chart-box"><canvas id="chCash"></canvas></div></div>
+      <div class="chart-card"><h3>Spending by category <small id="chExpScope">this month</small></h3><div class="chart-box"><canvas id="chExpCat"></canvas></div></div>
+    </div>
+    <div class="charts-row2">
+      <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
+      <div class="chart-card"><h3>Recent activity <small>latest income &amp; expenses</small></h3><div class="tx-list" id="txList"></div></div>
+    </div>
+  </section>
+
+  <!-- ============ INCOME ============ -->
+  <section class="panel" id="panel-income">
+    <div class="section-head"><h2>Income</h2><span class="total" id="incTotalHead"></span></div>
+    <form class="add-card" id="formInc">
+      <div class="f"><label for="inDate">Date</label><input type="date" id="inDate" required></div>
+      <div class="f"><label for="inSrc">Source</label><input type="text" id="inSrc" placeholder="e.g. Monthly salary" required></div>
+      <div class="f"><label for="inCat">Category</label>
+        <select id="inCat"><option>Salary</option><option>Business</option><option>Freelance</option><option>Rental</option><option>Dividends / Profit</option><option>Gift</option><option>Other</option></select></div>
+      <div class="f"><label for="inAmt">Amount</label><input type="number" id="inAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="inNotes">Notes</label><input type="text" id="inNotes" placeholder="optional"></div>
+      <div class="f"><button type="submit">+ Add income</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchInc" placeholder="Search income…">
+      <select id="filterIncMonth"><option value="">All months</option></select>
+      <span class="sum" id="incFilteredSum"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblInc"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th style="text-align:right">Amount</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyInc" style="display:none">No income recorded yet.<br>Add your salary or other income above — it goes into the “Income” sheet of your Excel file.</div>
+    </div>
+  </section>
+
+  <!-- ============ EXPENSES ============ -->
+  <section class="panel" id="panel-exp">
+    <div class="section-head"><h2>Expenses</h2><span class="total" id="expTotalHead"></span></div>
+    <form class="add-card" id="formExp">
+      <div class="f"><label for="exDate">Date</label><input type="date" id="exDate" required></div>
+      <div class="f"><label for="exCat">Category</label>
+        <select id="exCat"><option>Groceries</option><option>Rent / Housing</option><option>Utilities</option><option>Transport</option><option>Dining</option><option>Health</option><option>Education</option><option>Shopping</option><option>Travel</option><option>Family</option><option>Other</option></select></div>
+      <div class="f"><label for="exDesc">Description</label><input type="text" id="exDesc" placeholder="e.g. Panda supermarket" required></div>
+      <div class="f"><label for="exAmt">Amount</label><input type="number" id="exAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="exPay">Paid with</label>
+        <select id="exPay"><option>Card</option><option>Cash</option><option>Bank transfer</option><option>Apple Pay / STC Pay</option><option>Other</option></select></div>
+      <div class="f"><button type="submit">+ Add expense</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchExp" placeholder="Search expenses…">
+      <select id="filterExpCat"><option value="">All categories</option></select>
+      <select id="filterExpMonth"><option value="">All months</option></select>
+      <span class="sum" id="expFilteredSum"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblExp"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Paid with</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyExp" style="display:none">No expenses yet.<br>Add one above — it goes into the “Expenses” sheet of your Excel file.</div>
+    </div>
+  </section>
+
+  <!-- ============ INVESTMENTS ============ -->
+  <section class="panel" id="panel-inv">
+    <div class="section-head"><h2>Investments</h2><span class="total" id="invTotalHead"></span></div>
+    <form class="add-card" id="formInv">
+      <div class="f"><label for="ivDate">Date</label><input type="date" id="ivDate" required></div>
+      <div class="f"><label for="ivName">Name</label><input type="text" id="ivName" placeholder="e.g. Al Rajhi shares" required></div>
+      <div class="f"><label for="ivType">Type</label>
+        <select id="ivType"><option>Stocks</option><option>Funds</option><option>Real estate</option><option>Gold</option><option>Sukuk / Bonds</option><option>Crypto</option><option>Business</option><option>Other</option></select></div>
+      <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
+      <div class="f"><label for="ivNotes">Notes</label><input type="text" id="ivNotes" placeholder="optional"></div>
+      <div class="f"><button type="submit">+ Add investment</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchInv" placeholder="Search investments…">
+      <select id="filterInvType"><option value="">All types</option></select>
+    </div>
+    <div class="table-card">
+      <table id="tblInv"><thead><tr><th>Date</th><th>Name</th><th>Type</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyInv" style="display:none">No investments yet.<br>Add your first one above — it goes into the “Investments” sheet of your Excel file.</div>
+    </div>
+  </section>
+
+  <!-- ============ DEBTS & LOANS ============ -->
+  <section class="panel" id="panel-debt">
+    <div class="section-head"><h2>Debts &amp; Loans</h2><span class="total" id="debtTotalHead"></span></div>
+    <form class="add-card" id="formDebt">
+      <div class="f"><label for="dbDate">Date</label><input type="date" id="dbDate" required></div>
+      <div class="f"><label for="dbPerson">Person / party</label><input type="text" id="dbPerson" placeholder="e.g. Khalid" required></div>
+      <div class="f"><label for="dbType">Type</label>
+        <select id="dbType"><option value="Given">Debt given (they owe me)</option><option value="Taken">Loan taken (I owe them)</option></select></div>
+      <div class="f"><label for="dbAmt">Amount</label><input type="number" id="dbAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="dbRepaid">Repaid so far</label><input type="number" id="dbRepaid" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="dbDue">Due date <i>(optional)</i></label><input type="date" id="dbDue"></div>
+      <div class="f"><label for="dbNotes">Notes</label><input type="text" id="dbNotes" placeholder="optional"></div>
+      <div class="f"><button type="submit">+ Add record</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchDebt" placeholder="Search by person…">
+      <select id="filterDebtType"><option value="">All</option><option value="Given">Given (owed to me)</option><option value="Taken">Taken (I owe)</option></select>
+      <select id="filterDebtStatus"><option value="">Open &amp; settled</option><option value="open">Open only</option><option value="settled">Settled only</option></select>
+      <span class="sum" id="debtFilteredSum"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblDebt"><thead><tr><th>Date</th><th>Person</th><th>Type</th><th style="text-align:right">Amount</th><th style="text-align:right">Repaid</th><th style="text-align:right">Outstanding</th><th>Due</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyDebt" style="display:none">Nothing here yet.<br>Record money you’ve lent to others (debt given) or borrowed from others (loan taken) — it goes into the “Debts” sheet of your Excel file.</div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Ledgr v3 — Excel-as-database, local file or GitHub repo.
+   Sheets: Income, Expenses, Investments, Debts, Settings
+   Settings keys: Currency, Owner, Username, PasswordHash
+============================================================ */
+
+let income=[], expenses=[], investments=[], debts=[];
+let currency="SAR", owner="", username="", passHash="";
+let storageMode="local";            // "local" | "github"
+let fileHandle=null, fileName="", dirty=false;
+const gh={token:"",repo:"",path:"",branch:"main",sha:null};
+let editing={inc:-1,exp:-1,inv:-1,debt:-1};
+let charts={};
+let creatingToGithub=false;
+
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const hasFS="showOpenFilePicker" in window;
+const PALETTE=["#3DDCA3","#4D9FFF","#8B7CFF","#FFC466","#FF6E61","#5EE0E6","#E58BE0","#A3E635","#F97316","#94A3B8"];
+
+/* ---------- helpers ---------- */
+const fmt=n=>new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n||0);
+const fmtShort=n=>new Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:1}).format(n||0);
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2800);}
+const todayISO=()=>new Date().toISOString().slice(0,10);
+function normDate(v){
+  if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);
+  if(typeof v==="number"){const d=XLSX.SSF.parse_date_code(v);if(d)return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;}
+  if(typeof v==="string"&&v.trim()){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}
+  return "";
+}
+const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function setDirty(v){
+  dirty=v;
+  const chip=$("#fileChip");
+  chip.classList.toggle("dirty",dirty);
+  const label=storageMode==="github"?gh.repo+"/"+gh.path:(fileName||"unsaved workbook");
+  chip.textContent=label+(dirty?" • unsaved":"");
+}
+
+/* ---------- hashing (light lock — anyone with the file can read it in Excel) ---------- */
+function djb2(str){let h=5381;for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))>>>0;return "djb2:"+h.toString(16);}
+async function hashPin(pin){
+  const salted="ledgr::"+pin;
+  if(crypto&&crypto.subtle){
+    try{
+      const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salted));
+      return "sha256:"+[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }catch(_){}
+  }
+  return djb2(salted);
+}
+async function verifyPin(pin,stored){
+  if(stored.startsWith("djb2:"))return djb2("ledgr::"+pin)===stored;
+  return (await hashPin(pin))===stored;
+}
+
+/* ---------- base64 <-> bytes ---------- */
+function abToB64(buf){
+  const bytes=new Uint8Array(buf);let bin="";
+  for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+  return btoa(bin);
+}
+function b64ToAb(b64){
+  const bin=atob(b64.replace(/\s/g,""));
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  return bytes.buffer;
+}
+
+/* ---------- Excel: read ---------- */
+function loadWorkbook(buf,name){
+  const wb=XLSX.read(buf,{type:"array",cellDates:true});
+  const find=w=>wb.SheetNames.find(n=>n.trim().toLowerCase()===w)||null;
+  const g=(r,k)=>r[Object.keys(r).find(x=>x.trim().toLowerCase()===k)]??"";
+
+  income=[];expenses=[];investments=[];debts=[];owner="";username="";passHash="";
+
+  const sInc=find("income");
+  if(sInc)XLSX.utils.sheet_to_json(wb.Sheets[sInc],{defval:""}).forEach(r=>{
+    income.push({date:normDate(g(r,"date"))||todayISO(),source:String(g(r,"source")||"").trim(),
+      category:String(g(r,"category")||"Other").trim()||"Other",amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
+  });
+  income=income.filter(r=>r.source||r.amount);
+
+  const sExp=find("expenses");
+  if(sExp)XLSX.utils.sheet_to_json(wb.Sheets[sExp],{defval:""}).forEach(r=>{
+    expenses.push({date:normDate(g(r,"date"))||todayISO(),category:String(g(r,"category")||"Other").trim()||"Other",
+      desc:String(g(r,"description")||g(r,"desc")||"").trim(),amount:num(g(r,"amount")),
+      pay:String(g(r,"payment method")||g(r,"paid with")||"Card").trim()||"Card"});
+  });
+  expenses=expenses.filter(r=>r.desc||r.amount);
+
+  const sInv=find("investments");
+  if(sInv)XLSX.utils.sheet_to_json(wb.Sheets[sInv],{defval:""}).forEach(r=>{
+    const amount=num(g(r,"amount invested")||g(r,"amount"));
+    investments.push({date:normDate(g(r,"date"))||todayISO(),name:String(g(r,"name")||"").trim(),
+      type:String(g(r,"type")||"Other").trim()||"Other",amount,current:num(g(r,"current value"))||amount,notes:String(g(r,"notes")||"")});
+  });
+  investments=investments.filter(r=>r.name||r.amount);
+
+  const sDebt=find("debts");
+  if(sDebt)XLSX.utils.sheet_to_json(wb.Sheets[sDebt],{defval:""}).forEach(r=>{
+    let type=String(g(r,"type")||"").trim().toLowerCase();
+    type=type.startsWith("t")||type.includes("borrow")||type.includes("loan")?"Taken":"Given";
+    debts.push({date:normDate(g(r,"date"))||todayISO(),person:String(g(r,"person")||g(r,"party")||"").trim(),
+      type,amount:num(g(r,"amount")),repaid:num(g(r,"repaid")),
+      due:normDate(g(r,"due date")||g(r,"due")),notes:String(g(r,"notes")||"")});
+  });
+  debts=debts.filter(r=>r.person||r.amount);
+
+  const sSet=find("settings");
+  if(sSet)XLSX.utils.sheet_to_json(wb.Sheets[sSet],{defval:""}).forEach(r=>{
+    const key=String(g(r,"key")).toLowerCase(),val=g(r,"value");
+    if(key==="currency"&&val)currency=String(val).toUpperCase();
+    if(key==="owner"&&val)owner=String(val);
+    if(key==="username"&&val)username=String(val);
+    if(key==="passwordhash"&&val)passHash=String(val);
+  });
+
+  fileName=name;
+  const sel=$("#currency");
+  if(![...sel.options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;sel.appendChild(o);}
+  sel.value=currency;
+  setDirty(false);
+
+  if(username&&passHash)showLogin();
+  else showSetCreds();
+}
+
+/* ---------- Excel: build ---------- */
+function buildWorkbook(){
+  const wb=XLSX.utils.book_new();
+  const wsInc=XLSX.utils.json_to_sheet(income.map(r=>({"Date":r.date,"Source":r.source,"Category":r.category,"Amount":r.amount,"Notes":r.notes})),
+    {header:["Date","Source","Category","Amount","Notes"]});
+  const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Payment Method":r.pay})),
+    {header:["Date","Category","Description","Amount","Payment Method"]});
+  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Notes":r.notes})),
+    {header:["Date","Name","Type","Amount Invested","Current Value","Notes"]});
+  const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Notes":r.notes})),
+    {header:["Date","Person","Type","Amount","Repaid","Due Date","Notes"]});
+  const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash}];
+  const wsSet=XLSX.utils.json_to_sheet(settings);
+  wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:26}];
+  wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:18}];
+  wsInv["!cols"]=[{wch:12},{wch:24},{wch:14},{wch:16},{wch:16},{wch:26}];
+  wsDebt["!cols"]=[{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:12},{wch:26}];
+  wsSet["!cols"]=[{wch:14},{wch:70}];
+  XLSX.utils.book_append_sheet(wb,wsInc,"Income");
+  XLSX.utils.book_append_sheet(wb,wsExp,"Expenses");
+  XLSX.utils.book_append_sheet(wb,wsInv,"Investments");
+  XLSX.utils.book_append_sheet(wb,wsDebt,"Debts");
+  XLSX.utils.book_append_sheet(wb,wsSet,"Settings");
+  return wb;
+}
+
+/* ---------- GitHub API ---------- */
+const ghUrl=()=>`https://api.github.com/repos/${gh.repo}/contents/${gh.path.replace(/^\/+/,"")}`;
+const ghHeaders=()=>({ "Authorization":"Bearer "+gh.token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" });
+
+async function ghLoad(){
+  const res=await fetch(ghUrl()+"?ref="+encodeURIComponent(gh.branch),{headers:ghHeaders()});
+  if(res.status===404)return {notFound:true};
+  if(res.status===401||res.status===403)throw new Error("GitHub rejected the token. Check it has “Contents: read & write” on "+gh.repo+".");
+  if(!res.ok)throw new Error("GitHub error "+res.status+". Check the repo name, path and branch.");
+  const json=await res.json();
+  gh.sha=json.sha;
+  return {buf:b64ToAb(json.content)};
+}
+async function ghCommit(buf){
+  const body={message:"Ledgr: update "+gh.path+" ("+new Date().toISOString()+")",content:abToB64(buf),branch:gh.branch};
+  if(gh.sha)body.sha=gh.sha;
+  const res=await fetch(ghUrl(),{method:"PUT",headers:{...ghHeaders(),"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(res.status===409||res.status===422){
+    // sha out of date — refetch and retry once
+    const cur=await fetch(ghUrl()+"?ref="+encodeURIComponent(gh.branch),{headers:ghHeaders()});
+    if(cur.ok){gh.sha=(await cur.json()).sha;body.sha=gh.sha;
+      const retry=await fetch(ghUrl(),{method:"PUT",headers:{...ghHeaders(),"Content-Type":"application/json"},body:JSON.stringify(body)});
+      if(!retry.ok)throw new Error("Commit failed ("+retry.status+") — the file may have changed in the repo. Reload and try again.");
+      gh.sha=(await retry.json()).content.sha;return;
+    }
+    throw new Error("Commit conflict — the file changed in the repo. Reload before saving.");
+  }
+  if(res.status===401||res.status===403)throw new Error("GitHub rejected the token for writing. Check its permissions.");
+  if(!res.ok)throw new Error("GitHub commit failed ("+res.status+").");
+  gh.sha=(await res.json()).content.sha;
+}
+
+/* ---------- save ---------- */
+async function saveFile(){
+  const btn=$("#btnSave");btn.disabled=true;btn.textContent="Saving…";
+  try{
+    const wb=buildWorkbook();
+    const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    if(storageMode==="github"){
+      await ghCommit(buf);
+      setDirty(false);toast("Committed to "+gh.repo+" ✓");
+    }else if(hasFS){
+      if(!fileHandle){
+        fileHandle=await window.showSaveFilePicker({suggestedName:fileName||"my-money.xlsx",
+          types:[{description:"Excel workbook",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
+        fileName=fileHandle.name;
+      }
+      const w=await fileHandle.createWritable();
+      await w.write(new Blob([buf]));await w.close();
+      setDirty(false);toast("Saved to "+fileName);
+    }else{
+      XLSX.writeFile(wb,fileName||"my-money.xlsx");
+      setDirty(false);toast("Updated workbook downloaded — replace your old file with it");
+    }
+  }catch(err){
+    if(!(err&&err.name==="AbortError")){console.error(err);toast(err.message||"Could not save.");}
+  }finally{btn.disabled=false;btn.textContent="Save";}
+}
+
+/* ---------- open local ---------- */
+async function openLocal(){
+  try{
+    storageMode="local";
+    if(hasFS){
+      const [h]=await window.showOpenFilePicker({types:[{description:"Excel workbook",
+        accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx",".xlsm"]}}],multiple:false});
+      fileHandle=h;const f=await h.getFile();
+      loadWorkbook(await f.arrayBuffer(),f.name);
+    }else{
+      const inp=document.createElement("input");
+      inp.type="file";inp.accept=".xlsx,.xlsm";
+      inp.onchange=async()=>{const f=inp.files[0];if(!f)return;fileHandle=null;loadWorkbook(await f.arrayBuffer(),f.name);};
+      inp.click();
+    }
+  }catch(err){
+    if(err&&err.name==="AbortError")return;
+    console.error(err);toast("Could not open that file.");
+  }
+}
+
+/* ---------- auth flow ---------- */
+function showView(id){
+  $("#authScreen").style.display="flex";$("#app").style.display="none";
+  $$(".a-view").forEach(v=>v.style.display=v.id===id?"block":"none");
+}
+function showLogin(){
+  $("#loginAvatar").textContent=(owner||username||"L").trim().charAt(0).toUpperCase();
+  $("#loginTitle").textContent=owner?`Welcome back, ${owner}`:"Sign in";
+  $("#loginFile").textContent="Your login is checked against this workbook’s Settings sheet.";
+  $("#loginMode").innerHTML=storageMode==="github"?`GitHub · <b>${esc(gh.repo)}/${esc(gh.path)}</b>`:`Local file · <b>${esc(fileName)}</b>`;
+  $("#loginError").style.display="none";
+  $("#lUser").value="";$("#lPin").value="";
+  showView("vLogin");
+  setTimeout(()=>$("#lUser").focus(),50);
+}
+function showSetCreds(){
+  $("#setCredsError").style.display="none";
+  showView("vSetCreds");
+}
+function enterApp(){
+  $("#authScreen").style.display="none";$("#app").style.display="block";
+  $("#ownerLabel").textContent=owner?owner+"’s ledger":"Excel-backed finance";
+  setDirty(dirty);renderAll();
+}
+
+$("#goOpenLocal").addEventListener("click",openLocal);
+$("#goGithub").addEventListener("click",()=>{$("#ghError").style.display="none";showView("vGithub");});
+$("#goCreate").addEventListener("click",()=>{creatingToGithub=false;$("#createError").style.display="none";$("#createSub").textContent="Creates a fresh Excel workbook with Income, Expenses, Investments and Debts sheets. Your login is stored (hashed) inside it.";showView("vCreate");});
+$$("[data-back]").forEach(b=>b.addEventListener("click",()=>showView("vLanding")));
+
+$("#ghConnect").addEventListener("click",async()=>{
+  const err=$("#ghError");err.style.display="none";
+  gh.token=$("#ghToken").value.trim();
+  gh.repo=$("#ghRepo").value.trim().replace(/^https:\/\/github\.com\//,"").replace(/\/+$/,"");
+  gh.path=$("#ghPath").value.trim().replace(/^\/+/,"");
+  gh.branch=$("#ghBranch").value.trim()||"main";
+  gh.sha=null;
+  if(!gh.token||!gh.repo||!gh.path){err.textContent="Token, repository and file path are all required.";err.style.display="block";return;}
+  const b=$("#ghConnect");b.disabled=true;b.textContent="Connecting…";
+  try{
+    storageMode="github";fileHandle=null;
+    const r=await ghLoad();
+    if(r.notFound){
+      creatingToGithub=true;
+      $("#createError").style.display="none";
+      $("#createSub").textContent=`“${gh.path}” doesn’t exist in ${gh.repo} yet — set up your new database and it will be committed there on first save.`;
+      showView("vCreate");
+    }else{
+      loadWorkbook(r.buf,gh.path.split("/").pop());
+    }
+  }catch(e){err.textContent=e.message;err.style.display="block";storageMode="local";}
+  finally{b.disabled=false;b.textContent="Connect & load";}
+});
+
+$("#btnCreateGo").addEventListener("click",async()=>{
+  const err=$("#createError");
+  const user=$("#cUser").value.trim(),pin=$("#cPin").value,pin2=$("#cPin2").value;
+  if(!user){err.textContent="Choose a login ID.";err.style.display="block";return;}
+  if(pin.length<4){err.textContent="Password must be at least 4 characters.";err.style.display="block";return;}
+  if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
+  owner=$("#cName").value.trim();username=user;
+  currency=$("#cCurrency").value;$("#currency").value=currency;
+  passHash=await hashPin(pin);
+  income=[];expenses=[];investments=[];debts=[];
+  if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();}
+  else{storageMode="local";fileHandle=null;fileName="my-money.xlsx";}
+  setDirty(true);enterApp();
+  toast(creatingToGithub?`Click “Save” to commit ${gh.path} to ${gh.repo}`:"Click “Save” to choose where your workbook lives");
+});
+
+$("#loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const u=$("#lUser").value.trim().toLowerCase();
+  const ok=u===username.trim().toLowerCase()&&await verifyPin($("#lPin").value,passHash);
+  if(ok){enterApp();toast("Signed in ✓");}
+  else{$("#loginError").style.display="block";$("#lPin").value="";$("#lPin").focus();}
+});
+
+$("#btnSetCreds").addEventListener("click",async()=>{
+  const err=$("#setCredsError");
+  const user=$("#sUser").value.trim(),pin=$("#sPin").value,pin2=$("#sPin2").value;
+  if(!user){err.textContent="Choose a login ID.";err.style.display="block";return;}
+  if(pin.length<4){err.textContent="Password must be at least 4 characters.";err.style.display="block";return;}
+  if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
+  username=user;passHash=await hashPin(pin);
+  setDirty(true);enterApp();
+  toast("Login created — click “Save” to store it in your Excel file");
+});
+
+$("#btnLock").addEventListener("click",()=>{
+  if(dirty&&!confirm("You have unsaved changes. Sign out anyway? (Changes stay in memory until you sign in and save.)"))return;
+  showLogin();
+});
+
+/* ---------- nav ---------- */
+$$(".pill").forEach(b=>b.addEventListener("click",()=>{
+  $$(".pill").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+  $$(".panel").forEach(p=>p.classList.remove("active"));
+  $("#panel-"+b.dataset.tab).classList.add("active");
+  if(b.dataset.tab==="home")renderOverview();
+}));
+$("#currency").addEventListener("change",e=>{currency=e.target.value;setDirty(true);renderAll();});
+$("#btnSave").addEventListener("click",saveFile);
+
+/* ---------- aggregation ---------- */
+const monthKey=d=>d.slice(0,7);
+const thisMonth=()=>new Date().toISOString().slice(0,7);
+function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
+const sumBy=(arr,pred)=>arr.filter(pred).reduce((s,r)=>s+r.amount,0);
+const outstanding=r=>Math.max(0,r.amount-r.repaid);
+
+/* ---------- overview ---------- */
+function renderOverview(){
+  const mk=thisMonth();
+  const incM=sumBy(income,r=>monthKey(r.date)===mk);
+  const expM=sumBy(expenses,r=>monthKey(r.date)===mk);
+  const net=incM-expM;
+  const invested=investments.reduce((s,r)=>s+r.amount,0);
+  const value=investments.reduce((s,r)=>s+r.current,0);
+  const gain=value-invested,pct=invested?gain/invested*100:0;
+  const given=debts.filter(r=>r.type==="Given"),taken=debts.filter(r=>r.type==="Taken");
+  const lentOut=given.reduce((s,r)=>s+outstanding(r),0);
+  const oweOut=taken.reduce((s,r)=>s+outstanding(r),0);
+
+  $("#kIncome").textContent=fmt(incM);
+  $("#kIncomeSub").textContent=`${fmt(income.reduce((s,r)=>s+r.amount,0))} all time`;
+  $("#kExpense").textContent=fmt(expM);
+  $("#kExpenseSub").textContent=`${fmt(expenses.reduce((s,r)=>s+r.amount,0))} all time`;
+  $("#kSavings").textContent=fmt(net);
+  $("#kSavingsSub").innerHTML=incM?`You kept <span class="${net>=0?'up':'down'}">${(net/incM*100).toFixed(0)}%</span> of this month’s income`:"Add income to see your savings rate";
+  $("#kPortfolio").textContent=fmt(value);
+  $("#kPortfolioSub").innerHTML=`<span class="${gain>=0?'up':'down'}">${gain>=0?"▲":"▼"} ${fmt(Math.abs(gain))} (${pct.toFixed(1)}%)</span> vs invested`;
+  $("#kLent").textContent=fmt(lentOut);
+  $("#kLentSub").textContent=`${given.filter(r=>outstanding(r)>0).length} open · debt given`;
+  $("#kBorrowed").textContent=fmt(oweOut);
+  $("#kBorrowedSub").textContent=`${taken.filter(r=>outstanding(r)>0).length} open · loans taken`;
+
+  drawCharts();renderTxList();
+}
+
+function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function drawCharts(){
+  Chart.defaults.color="#8B95AE";
+  Chart.defaults.borderColor="rgba(255,255,255,.07)";
+  Chart.defaults.font.family="'Inter',sans-serif";
+  const legendSide=window.innerWidth<700?"bottom":"right";
+
+  const months=lastMonths(6);
+  const labels=months.map(m=>new Date(m+"-01").toLocaleString(undefined,{month:"short"}));
+  killChart("cash");
+  charts.cash=new Chart($("#chCash"),{type:"bar",
+    data:{labels,datasets:[
+      {label:"Income",data:months.map(m=>sumBy(income,r=>monthKey(r.date)===m)),backgroundColor:"#3DDCA3",borderRadius:6,maxBarThickness:26},
+      {label:"Expenses",data:months.map(m=>sumBy(expenses,r=>monthKey(r.date)===m)),backgroundColor:"#FF6E61",borderRadius:6,maxBarThickness:26}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:"top",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
+      scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true}}}});
+
+  const mk=thisMonth();
+  let scoped=expenses.filter(r=>monthKey(r.date)===mk);
+  $("#chExpScope").textContent="this month";
+  if(!scoped.length){scoped=expenses;$("#chExpScope").textContent="all time";}
+  const byCat={};scoped.forEach(r=>byCat[r.category]=(byCat[r.category]||0)+r.amount);
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  killChart("expCat");
+  charts.expCat=new Chart($("#chExpCat"),{type:"doughnut",
+    data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:"#0E1526"}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+      plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+
+  const byType={};investments.forEach(r=>byType[r.type]=(byType[r.type]||0)+r.current);
+  const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  killChart("invAlloc");
+  charts.invAlloc=new Chart($("#chInvAlloc"),{type:"doughnut",
+    data:{labels:types.map(t=>t[0]),datasets:[{data:types.map(t=>t[1]),backgroundColor:types.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderColor:"#0E1526"}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+      plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+}
+
+function renderTxList(){
+  const rows=[
+    ...income.map(r=>({date:r.date,label:r.source,sub:r.category,amount:r.amount,kind:"in"})),
+    ...expenses.map(r=>({date:r.date,label:r.desc,sub:r.category,amount:r.amount,kind:"out"}))
+  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  $("#txList").innerHTML=rows.length?rows.map(r=>`
+    <div class="tx"><div class="ic ${r.kind}">${r.kind==="in"?"↓":"↑"}</div>
+      <div class="who"><b>${esc(r.label)}</b><span>${esc(r.sub)} · ${esc(r.date)}</span></div>
+      <div class="amt ${r.kind}">${r.kind==="in"?"+":"−"}${fmt(r.amount)}</div></div>`).join("")
+    :'<div class="empty-mini">No activity yet — add income or expenses to see it here.</div>';
+}
+
+/* ---------- income ---------- */
+function renderInc(){
+  const q=$("#searchInc").value.trim().toLowerCase(),fm=$("#filterIncMonth").value;
+  const months=[...new Set(income.map(r=>monthKey(r.date)))].sort().reverse();
+  const sel=$("#filterIncMonth"),cur=sel.value;
+  sel.innerHTML='<option value="">All months</option>'+months.map(m=>{
+    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
+    return `<option value="${m}"${m===cur?" selected":""}>${l}</option>`;}).join("");
+  const rows=income.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.source+" "+r.notes+" "+r.category).toLowerCase().includes(q))&&(!fm||r.date.startsWith(fm)))
+    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  $("#incFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
+  $("#incTotalHead").textContent=fmt(income.reduce((s,r)=>s+r.amount,0))+" all time";
+  $("#tblInc tbody").innerHTML=rows.map(({r,i})=>{
+    if(i===editing.inc)return `<tr data-i="${i}">
+      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Source"><input type="text" class="e-src" value="${esc(r.source)}"></td>
+      <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
+      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInc">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    return `<tr data-i="${i}">
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Source"><strong>${esc(r.source)}</strong></td>
+      <td data-l="Category"><span class="tag in">${esc(r.category)}</span></td>
+      <td data-l="Amount" class="num"><span class="pos">+${fmt(r.amount)}</span></td>
+      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editInc">Edit</button><button type="button" class="icon-btn danger" data-act="delInc">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyInc").style.display=income.length?"none":"block";
+  $("#tblInc").style.display=income.length?"":"none";
+}
+
+/* ---------- expenses ---------- */
+function renderExp(){
+  const q=$("#searchExp").value.trim().toLowerCase(),fc=$("#filterExpCat").value,fm=$("#filterExpMonth").value;
+  const cats=[...new Set(expenses.map(r=>r.category))].sort();
+  const selC=$("#filterExpCat"),curC=selC.value;
+  selC.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option${c===curC?" selected":""}>${esc(c)}</option>`).join("");
+  const months=[...new Set(expenses.map(r=>monthKey(r.date)))].sort().reverse();
+  const selM=$("#filterExpMonth"),curM=selM.value;
+  selM.innerHTML='<option value="">All months</option>'+months.map(m=>{
+    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
+    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
+  const rows=expenses.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.desc+" "+r.category+" "+r.pay).toLowerCase().includes(q))&&(!fc||r.category===fc)&&(!fm||r.date.startsWith(fm)))
+    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  $("#expFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
+  $("#expTotalHead").textContent=fmt(expenses.reduce((s,r)=>s+r.amount,0))+" all time";
+  $("#tblExp tbody").innerHTML=rows.map(({r,i})=>{
+    if(i===editing.exp)return `<tr data-i="${i}">
+      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
+      <td data-l="Description"><input type="text" class="e-desc" value="${esc(r.desc)}"></td>
+      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Paid with"><input type="text" class="e-pay" value="${esc(r.pay)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveExp">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    return `<tr data-i="${i}">
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Category"><span class="tag out">${esc(r.category)}</span></td>
+      <td data-l="Description">${esc(r.desc)}</td>
+      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
+      <td data-l="Paid with" style="color:var(--muted);font-size:.83rem">${esc(r.pay)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editExp">Edit</button><button type="button" class="icon-btn danger" data-act="delExp">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyExp").style.display=expenses.length?"none":"block";
+  $("#tblExp").style.display=expenses.length?"":"none";
+}
+
+/* ---------- investments ---------- */
+function renderInv(){
+  const q=$("#searchInv").value.trim().toLowerCase(),ft=$("#filterInvType").value;
+  const types=[...new Set(investments.map(r=>r.type))].sort();
+  const sel=$("#filterInvType"),cur=sel.value;
+  sel.innerHTML='<option value="">All types</option>'+types.map(t=>`<option${t===cur?" selected":""}>${esc(t)}</option>`).join("");
+  const rows=investments.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.name+" "+r.notes+" "+r.type).toLowerCase().includes(q))&&(!ft||r.type===ft))
+    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  const invested=investments.reduce((s,r)=>s+r.amount,0);
+  const value=investments.reduce((s,r)=>s+r.current,0);
+  $("#invTotalHead").textContent=`${fmt(value)} current · ${fmt(invested)} invested`;
+  $("#tblInv tbody").innerHTML=rows.map(({r,i})=>{
+    if(i===editing.inv)return `<tr data-i="${i}">
+      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Name"><input type="text" class="e-name" value="${esc(r.name)}"></td>
+      <td data-l="Type"><input type="text" class="e-type" value="${esc(r.type)}"></td>
+      <td data-l="Invested" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Current" class="num"><input type="number" step="0.01" class="e-cur" value="${r.current}"></td>
+      <td data-l="Gain / loss" class="num">—</td>
+      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInv">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    const g=r.current-r.amount,cls=g>0?"pos":g<0?"neg":"";
+    return `<tr data-i="${i}">
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Name"><strong>${esc(r.name)}</strong></td>
+      <td data-l="Type"><span class="tag iv">${esc(r.type)}</span></td>
+      <td data-l="Invested" class="num">${fmt(r.amount)}</td>
+      <td data-l="Current" class="num">${fmt(r.current)}</td>
+      <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
+      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editInv">Edit</button><button type="button" class="icon-btn danger" data-act="delInv">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyInv").style.display=investments.length?"none":"block";
+  $("#tblInv").style.display=investments.length?"":"none";
+}
+
+/* ---------- debts ---------- */
+function renderDebt(){
+  const q=$("#searchDebt").value.trim().toLowerCase();
+  const ft=$("#filterDebtType").value,fs=$("#filterDebtStatus").value;
+  const rows=debts.map((r,i)=>({r,i}))
+    .filter(({r})=>{
+      const settled=outstanding(r)<=0;
+      return (!q||(r.person+" "+r.notes).toLowerCase().includes(q))
+        &&(!ft||r.type===ft)
+        &&(!fs||(fs==="open"&&!settled)||(fs==="settled"&&settled));
+    })
+    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  const lentOut=debts.filter(r=>r.type==="Given").reduce((s,r)=>s+outstanding(r),0);
+  const oweOut=debts.filter(r=>r.type==="Taken").reduce((s,r)=>s+outstanding(r),0);
+  $("#debtTotalHead").textContent=`${fmt(lentOut)} owed to you · ${fmt(oweOut)} you owe`;
+  $("#debtFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+outstanding(r),0))} outstanding`:"";
+  $("#tblDebt tbody").innerHTML=rows.map(({r,i})=>{
+    if(i===editing.debt)return `<tr data-i="${i}">
+      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Person"><input type="text" class="e-person" value="${esc(r.person)}"></td>
+      <td data-l="Type"><select class="e-type"><option value="Given"${r.type==="Given"?" selected":""}>Given</option><option value="Taken"${r.type==="Taken"?" selected":""}>Taken</option></select></td>
+      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Repaid" class="num"><input type="number" step="0.01" class="e-repaid" value="${r.repaid}"></td>
+      <td data-l="Outstanding" class="num">—</td>
+      <td data-l="Due"><input type="date" class="e-due" value="${esc(r.due)}"></td>
+      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveDebt">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    const out=outstanding(r),settled=out<=0;
+    const overdue=!settled&&r.due&&r.due<todayISO();
+    return `<tr data-i="${i}">
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Person"><strong>${esc(r.person)}</strong></td>
+      <td data-l="Type"><span class="tag ${r.type==="Given"?"given":"taken"}">${r.type==="Given"?"Given · owed to me":"Taken · I owe"}</span></td>
+      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
+      <td data-l="Repaid" class="num">${fmt(r.repaid)}</td>
+      <td data-l="Outstanding" class="num">${settled?'<span class="tag done">Settled ✓</span>':`<span class="${r.type==="Given"?"pos":"neg"}">${fmt(out)}</span>`}</td>
+      <td data-l="Due" style="color:${overdue?"var(--coral)":"var(--muted)"};font-size:.83rem">${esc(r.due)||"—"}${overdue?" ⚠":""}</td>
+      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editDebt">Edit</button><button type="button" class="icon-btn danger" data-act="delDebt">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyDebt").style.display=debts.length?"none":"block";
+  $("#tblDebt").style.display=debts.length?"":"none";
+}
+
+function renderAll(){renderOverview();renderInc();renderExp();renderInv();renderDebt();}
+
+/* ---------- forms ---------- */
+$("#formInc").addEventListener("submit",e=>{
+  e.preventDefault();
+  income.push({date:$("#inDate").value||todayISO(),source:$("#inSrc").value.trim(),category:$("#inCat").value,amount:num($("#inAmt").value),notes:$("#inNotes").value.trim()});
+  e.target.reset();$("#inDate").value=todayISO();setDirty(true);renderAll();
+});
+$("#formExp").addEventListener("submit",e=>{
+  e.preventDefault();
+  expenses.push({date:$("#exDate").value||todayISO(),category:$("#exCat").value,desc:$("#exDesc").value.trim(),amount:num($("#exAmt").value),pay:$("#exPay").value});
+  e.target.reset();$("#exDate").value=todayISO();setDirty(true);renderAll();
+});
+$("#formInv").addEventListener("submit",e=>{
+  e.preventDefault();
+  const amount=num($("#ivAmt").value);
+  investments.push({date:$("#ivDate").value||todayISO(),name:$("#ivName").value.trim(),type:$("#ivType").value,amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),notes:$("#ivNotes").value.trim()});
+  e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
+});
+$("#formDebt").addEventListener("submit",e=>{
+  e.preventDefault();
+  debts.push({date:$("#dbDate").value||todayISO(),person:$("#dbPerson").value.trim(),type:$("#dbType").value,amount:num($("#dbAmt").value),repaid:num($("#dbRepaid").value),due:$("#dbDue").value||"",notes:$("#dbNotes").value.trim()});
+  e.target.reset();$("#dbDate").value=todayISO();setDirty(true);renderAll();
+});
+
+["searchInc","filterIncMonth"].forEach(id=>$("#"+id).addEventListener("input",renderInc));
+["searchExp","filterExpCat","filterExpMonth"].forEach(id=>$("#"+id).addEventListener("input",renderExp));
+["searchInv","filterInvType"].forEach(id=>$("#"+id).addEventListener("input",renderInv));
+["searchDebt","filterDebtType","filterDebtStatus"].forEach(id=>$("#"+id).addEventListener("input",renderDebt));
+
+/* ---------- row actions ---------- */
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-act]");if(!btn)return;
+  const tr=btn.closest("tr");const i=tr?+tr.dataset.i:-1;
+  const done=()=>{setDirty(true);renderAll();};
+  switch(btn.dataset.act){
+    case "cancel":editing={inc:-1,exp:-1,inv:-1,debt:-1};renderAll();break;
+    case "editInc":editing={inc:i,exp:-1,inv:-1,debt:-1};renderAll();break;
+    case "editExp":editing={inc:-1,exp:i,inv:-1,debt:-1};renderAll();break;
+    case "editInv":editing={inc:-1,exp:-1,inv:i,debt:-1};renderAll();break;
+    case "editDebt":editing={inc:-1,exp:-1,inv:-1,debt:i};renderAll();break;
+    case "delInc":if(confirm(`Delete "${income[i].source}"? Removed from Excel on next save.`)){income.splice(i,1);done();}break;
+    case "delExp":if(confirm(`Delete "${expenses[i].desc}"? Removed from Excel on next save.`)){expenses.splice(i,1);done();}break;
+    case "delInv":if(confirm(`Delete "${investments[i].name}"? Removed from Excel on next save.`)){investments.splice(i,1);done();}break;
+    case "delDebt":if(confirm(`Delete the record for "${debts[i].person}"? Removed from Excel on next save.`)){debts.splice(i,1);done();}break;
+    case "saveInc":{const r=income[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.source=tr.querySelector(".e-src").value.trim();
+      r.category=tr.querySelector(".e-cat").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
+      r.notes=tr.querySelector(".e-notes").value.trim();editing.inc=-1;done();break;}
+    case "saveExp":{const r=expenses[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.category=tr.querySelector(".e-cat").value.trim()||"Other";
+      r.desc=tr.querySelector(".e-desc").value.trim();r.amount=num(tr.querySelector(".e-amt").value);
+      r.pay=tr.querySelector(".e-pay").value.trim();editing.exp=-1;done();break;}
+    case "saveInv":{const r=investments[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.name=tr.querySelector(".e-name").value.trim();
+      r.type=tr.querySelector(".e-type").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
+      r.current=num(tr.querySelector(".e-cur").value);r.notes=tr.querySelector(".e-notes").value.trim();
+      editing.inv=-1;done();break;}
+    case "saveDebt":{const r=debts[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.person=tr.querySelector(".e-person").value.trim();
+      r.type=tr.querySelector(".e-type").value;r.amount=num(tr.querySelector(".e-amt").value);
+      r.repaid=num(tr.querySelector(".e-repaid").value);r.due=tr.querySelector(".e-due").value||"";
+      r.notes=tr.querySelector(".e-notes").value.trim();editing.debt=-1;done();break;}
+  }
+});
+
+/* ---------- shortcuts & guards ---------- */
+window.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"&&$("#app").style.display==="block"){e.preventDefault();saveFile();}
+});
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+
+/* ---------- defaults ---------- */
+$("#inDate").value=todayISO();
+$("#exDate").value=todayISO();
+$("#ivDate").value=todayISO();
+$("#dbDate").value=todayISO();
+</script>
+</body>
+</html>

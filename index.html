@@ -12,7 +12,7 @@
   :root{
     --bg:#0B101E; --bg-2:#0E1526;
     --card:rgba(255,255,255,.035); --card-solid:#131B2F;
-    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
+    --line:var(--wash-hover); --line-strong:rgba(255,255,255,.14);
     --text:#E9EEF8; --muted:#8B95AE;
     --mint:#3DDCA3; --mint-dim:rgba(61,220,163,.14);
     --coral:#FF6E61; --coral-dim:rgba(255,110,97,.14);
@@ -20,18 +20,34 @@
     --blue:#4D9FFF; --amber:#FFC466; --amber-dim:rgba(255,196,102,.15);
     --pink:#E58BE0; --pink-dim:rgba(229,139,224,.15);
     --grad:linear-gradient(135deg,#3DDCA3 0%,#4D9FFF 100%);
+    --wash:var(--wash); --wash-strong:rgba(255,255,255,.055);
+    --wash-hover:var(--wash-hover); --row-hover:var(--row-hover);
+    --chart-grid:var(--wash-strong);
+    --page-bg:radial-gradient(900px 500px at 85% -10%, rgba(77,159,255,.13), transparent 60%),radial-gradient(800px 500px at -10% 110%, rgba(61,220,163,.10), transparent 60%),var(--bg);
     --r-lg:20px; --r-md:14px;
     --mono:'JetBrains Mono',ui-monospace,monospace;
     --shadow:0 20px 50px rgba(0,0,0,.35);
+  }
+  [data-theme="light"]{
+    --bg:#EEF1F6; --bg-2:#FFFFFF;
+    --card:#FFFFFF; --card-solid:#FFFFFF;
+    --line:rgba(20,30,55,.10); --line-strong:rgba(20,30,55,.18);
+    --text:#182236; --muted:#5B6478;
+    --mint:#0C9B72; --coral:#E2523F; --violet:#6D5BE0; --blue:#2E7FE8;
+    --amber:#B8862B; --pink:#BF56B7;
+    --mint-dim:rgba(12,155,114,.12); --coral-dim:rgba(226,82,63,.12);
+    --violet-dim:rgba(109,91,224,.12); --amber-dim:rgba(184,134,43,.14); --pink-dim:rgba(191,86,183,.13);
+    --wash:rgba(20,30,55,.05); --wash-strong:rgba(20,30,55,.08);
+    --wash-hover:rgba(20,30,55,.11); --row-hover:rgba(20,30,55,.035);
+    --chart-grid:rgba(20,30,55,.09);
+    --shadow:0 18px 44px rgba(30,41,66,.14);
+    --page-bg:radial-gradient(900px 500px at 85% -10%, rgba(46,127,232,.09), transparent 60%),radial-gradient(800px 500px at -10% 110%, rgba(12,155,114,.08), transparent 60%),var(--bg);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{font-size:16px;-webkit-text-size-adjust:100%}
   body{
     font-family:'Inter',system-ui,sans-serif;
-    background:
-      radial-gradient(900px 500px at 85% -10%, rgba(77,159,255,.13), transparent 60%),
-      radial-gradient(800px 500px at -10% 110%, rgba(61,220,163,.10), transparent 60%),
-      var(--bg);
+    background:var(--page-bg);
     color:var(--text); min-height:100vh;
   }
   button{font-family:inherit;cursor:pointer}
@@ -55,37 +71,37 @@
   .stack{display:flex;flex-direction:column;gap:.7rem}
   .btn{
     border-radius:12px;padding:.85rem 1.2rem;font-size:.95rem;font-weight:600;border:1px solid var(--line-strong);
-    background:rgba(255,255,255,.04);color:var(--text);transition:background .15s;
+    background:var(--wash);color:var(--text);transition:background .15s;
     display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;min-height:48px;
   }
-  .btn:hover{background:rgba(255,255,255,.08)}
+  .btn:hover{background:var(--wash-hover)}
   .btn.primary{background:var(--grad);border:none;color:#08111C}
   .btn.primary:hover{filter:brightness(1.07)}
   .btn.ghost{background:none;border:none;color:var(--muted);font-weight:500;font-size:.85rem;min-height:40px}
   .btn.ghost:hover{color:var(--text)}
   .btn:focus-visible,input:focus-visible,select:focus-visible,.pill:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
   .auth-note{font-size:.74rem;color:var(--muted);margin-top:1.3rem;line-height:1.55;text-align:center}
-  .auth-note code{font-family:var(--mono);background:rgba(255,255,255,.06);padding:.05rem .35rem;border-radius:5px}
+  .auth-note code{font-family:var(--mono);background:var(--wash-strong);padding:.05rem .35rem;border-radius:5px}
   .f{margin-bottom:.85rem}
   .f label{display:block;font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.35rem}
   .f label i{font-style:normal;text-transform:none;color:#5A6480;font-weight:500}
-  .f input,.f select{width:100%;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:11px;padding:.72rem .85rem}
+  .f input,.f select{width:100%;background:var(--wash);border:1px solid var(--line);border-radius:11px;padding:.72rem .85rem}
   .f input:focus,.f select:focus{border-color:var(--mint)}
   .f select option{background:var(--card-solid)}
   .f .hint{font-size:.72rem;color:#5A6480;margin-top:.3rem;line-height:1.4}
   .auth-error{background:var(--coral-dim);border:1px solid rgba(255,110,97,.35);color:#FFB3AC;border-radius:10px;padding:.6rem .8rem;font-size:.83rem;margin-bottom:.9rem;display:none}
   .unlock-avatar{width:60px;height:60px;border-radius:50%;background:var(--grad);margin:0 auto 1rem;display:grid;place-items:center;font-family:'Sora';font-weight:800;font-size:1.4rem;color:#08111C}
-  .mode-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:.28rem .7rem;margin-bottom:1rem}
+  .mode-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);background:var(--wash-strong);border:1px solid var(--line);border-radius:999px;padding:.28rem .7rem;margin-bottom:1rem}
   .mode-badge b{color:var(--text);font-weight:600}
 
   /* ================= APP SHELL ================= */
   #app{display:none;max-width:1180px;margin:0 auto;padding:1rem 1.1rem calc(3.5rem + env(safe-area-inset-bottom))}
   .topbar{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;padding:.3rem 0 1rem}
   .topbar .logo{margin:0;margin-right:auto}
-  .chip{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:999px;padding:.38rem .8rem;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip{font-family:var(--mono);font-size:.72rem;color:var(--muted);background:var(--wash);border:1px solid var(--line);border-radius:999px;padding:.38rem .8rem;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .chip.dirty{border-color:var(--amber);color:var(--amber)}
-  .top-btn{border:1px solid var(--line-strong);background:rgba(255,255,255,.04);color:var(--text);border-radius:11px;padding:.55rem .95rem;font-size:.85rem;font-weight:600;min-height:42px}
-  .top-btn:hover{background:rgba(255,255,255,.08)}
+  .top-btn{border:1px solid var(--line-strong);background:var(--wash);color:var(--text);border-radius:11px;padding:.55rem .95rem;font-size:.85rem;font-weight:600;min-height:42px}
+  .top-btn:hover{background:var(--wash-hover)}
   .top-btn.save{background:var(--grad);border:none;color:#08111C}
   .top-btn.save:hover{filter:brightness(1.07)}
   .top-btn.save:disabled{opacity:.6;cursor:wait}
@@ -93,7 +109,7 @@
 
   nav.pills{display:flex;gap:.45rem;margin-bottom:1.3rem;overflow-x:auto;padding-bottom:.25rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.pills::-webkit-scrollbar{display:none}
-  .pill{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--muted);border-radius:999px;padding:.55rem 1.05rem;font-size:.87rem;font-weight:600;display:flex;align-items:center;gap:.45rem;transition:all .15s;white-space:nowrap;flex-shrink:0;min-height:42px}
+  .pill{border:1px solid var(--line);background:var(--wash);color:var(--muted);border-radius:999px;padding:.55rem 1.05rem;font-size:.87rem;font-weight:600;display:flex;align-items:center;gap:.45rem;transition:all .15s;white-space:nowrap;flex-shrink:0;min-height:42px}
   .pill:hover{color:var(--text);border-color:var(--line-strong)}
   .pill.active{background:var(--grad);border-color:transparent;color:#08111C}
   .pill .dot{width:7px;height:7px;border-radius:50%}
@@ -151,7 +167,7 @@
   .add-card button{background:var(--grad);color:#08111C;border:none;border-radius:11px;padding:.78rem 1rem;font-weight:700;font-size:.9rem;min-height:46px}
   .add-card button:hover{filter:brightness(1.07)}
   .toolbar{display:flex;gap:.55rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap}
-  .toolbar input[type="search"],.toolbar select{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem;min-height:42px}
+  .toolbar input[type="search"],.toolbar select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem;min-height:42px}
   .toolbar input[type="search"]{flex:1;min-width:160px;max-width:320px}
   .toolbar select option{background:var(--card-solid)}
   .toolbar .sum{margin-left:auto;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
@@ -161,7 +177,7 @@
   th{text-align:left;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.75rem .9rem;border-bottom:1px solid var(--line);font-weight:600}
   td{padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.88rem;vertical-align:middle}
   tr:last-child td{border-bottom:none}
-  tbody tr:hover{background:rgba(255,255,255,.025)}
+  tbody tr:hover{background:var(--row-hover)}
   td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   td .pos{color:var(--mint)} td .neg{color:var(--coral)}
   .tag{font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .65rem;white-space:nowrap}
@@ -170,8 +186,8 @@
   .tag.iv{background:var(--violet-dim);color:var(--violet)}
   .tag.given{background:var(--amber-dim);color:var(--amber)}
   .tag.taken{background:var(--pink-dim);color:var(--pink)}
-  .tag.done{background:rgba(255,255,255,.07);color:var(--muted)}
-  td input,td select{background:rgba(255,255,255,.05);border:1px solid var(--line-strong);border-radius:8px;padding:.45rem .5rem;width:100%;min-width:78px}
+  .tag.done{background:var(--wash-strong);color:var(--muted)}
+  td input,td select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:8px;padding:.45rem .5rem;width:100%;min-width:78px}
   td select option{background:var(--card-solid)}
   .row-actions{display:flex;gap:.35rem;justify-content:flex-end}
   .icon-btn{border:1px solid var(--line);background:transparent;border-radius:8px;padding:.42rem .7rem;font-size:.78rem;color:var(--muted);min-height:36px}
@@ -180,7 +196,7 @@
   .icon-btn.confirm{background:var(--mint);border-color:var(--mint);color:#08111C;font-weight:700}
   .empty{text-align:center;color:var(--muted);padding:2.2rem 1rem;font-size:.9rem;line-height:1.55}
 
-  #toast{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1B2540;border:1px solid var(--line-strong);color:var(--text);border-radius:12px;padding:.75rem 1.2rem;font-size:.87rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:92vw;box-shadow:var(--shadow)}
+  #toast{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:var(--card-solid);border:1px solid var(--line-strong);color:var(--text);border-radius:12px;padding:.75rem 1.2rem;font-size:.87rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:92vw;box-shadow:var(--shadow)}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -313,6 +329,7 @@
     <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
       <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
     </select>
+    <button class="top-btn" id="btnTheme" title="Switch light / dark">🌙</button>
     <button class="top-btn" id="btnSettings" title="Profile & login settings">Settings</button>
     <button class="top-btn" id="btnLock">Sign out</button>
     <button class="top-btn save" id="btnSave">Save</button>
@@ -356,7 +373,7 @@
       <div class="f"><label for="inDate">Date</label><input type="date" id="inDate" required></div>
       <div class="f"><label for="inSrc">Source</label><input type="text" id="inSrc" placeholder="e.g. Monthly salary" required></div>
       <div class="f"><label for="inCat">Category</label>
-        <select id="inCat"><option>Salary</option><option>Business</option><option>Freelance</option><option>Rental</option><option>Dividends / Profit</option><option>Gift</option><option>Other</option></select></div>
+        <select id="inCat"></select></div>
       <div class="f"><label for="inAmt">Amount</label><input type="number" id="inAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="inNotes">Notes</label><input type="text" id="inNotes" placeholder="optional"></div>
       <div class="f"><button type="submit">+ Add income</button></div>
@@ -378,11 +395,11 @@
     <form class="add-card" id="formExp">
       <div class="f"><label for="exDate">Date</label><input type="date" id="exDate" required></div>
       <div class="f"><label for="exCat">Category</label>
-        <select id="exCat"><option>Groceries</option><option>Rent / Housing</option><option>Utilities</option><option>Transport</option><option>Dining</option><option>Health</option><option>Education</option><option>Shopping</option><option>Travel</option><option>Family</option><option>Other</option></select></div>
+        <select id="exCat"></select></div>
       <div class="f"><label for="exDesc">Description</label><input type="text" id="exDesc" placeholder="e.g. Panda supermarket" required></div>
       <div class="f"><label for="exAmt">Amount</label><input type="number" id="exAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="exPay">Paid with</label>
-        <select id="exPay"><option>Card</option><option>Cash</option><option>Bank transfer</option><option>GPay</option><option>Other</option></select></div>
+        <select id="exPay"></select></div>
       <div class="f"><button type="submit">+ Add expense</button></div>
     </form>
     <div class="toolbar">
@@ -404,7 +421,7 @@
       <div class="f"><label for="ivDate">Date</label><input type="date" id="ivDate" required></div>
       <div class="f"><label for="ivName">Name</label><input type="text" id="ivName" placeholder="e.g. Al Rajhi shares" required></div>
       <div class="f"><label for="ivType">Type</label>
-        <select id="ivType"><option>Stocks</option><option>Funds</option><option>Real estate</option><option>Gold</option><option>Sukuk / Bonds</option><option>Crypto</option><option>Business</option><option>Other</option></select></div>
+        <select id="ivType"></select></div>
       <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
       <div class="f"><label for="ivNotes">Notes</label><input type="text" id="ivNotes" placeholder="optional"></div>
@@ -428,7 +445,7 @@
       <div class="f"><label for="lnDate">Start date</label><input type="date" id="lnDate" required></div>
       <div class="f"><label for="lnLender">Lender / bank</label><input type="text" id="lnLender" placeholder="e.g. SBI Home Loan" required></div>
       <div class="f"><label for="lnType">Type</label>
-        <select id="lnType"><option>Housing</option><option>Car</option><option>Personal</option><option>Education</option><option>Gold</option><option>Other</option></select></div>
+        <select id="lnType"></select></div>
       <div class="f"><label for="lnPrincipal">Principal (borrowed)</label><input type="number" id="lnPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="lnRate">Interest rate % <i>(optional)</i></label><input type="number" id="lnRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
       <div class="f"><label for="lnEmi">EMI amount</label><input type="number" id="lnEmi" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
@@ -497,6 +514,20 @@
     <div class="auth-error" id="settingsError"></div>
     <div class="f"><label for="stName">Your name</label><input type="text" id="stName" autocomplete="off"></div>
     <div class="f"><label for="stUser">Login ID</label><input type="text" id="stUser" autocomplete="username"></div>
+    <div class="f" style="border-top:1px solid var(--line);padding-top:1rem;margin-top:1.1rem"><label for="stListPick">Categories &amp; lists</label>
+      <select id="stListPick">
+        <option value="incomeCats">Income categories</option>
+        <option value="expenseCats">Expense categories</option>
+        <option value="payMethods">Payment methods</option>
+        <option value="investTypes">Investment types</option>
+        <option value="loanTypes">Loan types</option>
+      </select>
+    </div>
+    <div class="f"><label for="stListValues">Values <i>(one per line)</i></label>
+      <textarea id="stListValues" rows="6" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-size:.9rem;color:var(--text);resize:vertical;font-family:inherit"></textarea>
+      <div class="hint">These are stored in your ledger’s master list, so you can also edit them straight in the workbook. Renaming a value here doesn’t change entries already saved with the old name.</div>
+    </div>
+    <div class="f"><button class="btn" id="btnListApply" type="button">Apply list changes</button></div>
     <div class="f" style="border-top:1px solid var(--line);padding-top:1rem;margin-top:1.1rem"><label for="stCur">Current password <i>(only to change password)</i></label><input type="password" id="stCur" autocomplete="current-password"></div>
     <div class="f"><label for="stNew">New password</label><input type="password" id="stNew" autocomplete="new-password"></div>
     <div class="f"><label for="stNew2">Confirm new password</label><input type="password" id="stNew2" autocomplete="new-password"></div>
@@ -515,7 +546,7 @@
     <p class="sub">Paste this one line into your site’s <b>index.html</b>, and every device and browser will open straight at the sign-in screen — no setup, ever. The line contains your connection <b>encrypted with your password</b>; only your password can unlock it, so use a strong one.</p>
     <div class="f">
       <label>Your connection code</label>
-      <textarea id="embedCode" readonly rows="6" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--text);resize:vertical"></textarea>
+      <textarea id="embedCode" readonly rows="6" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--text);resize:vertical"></textarea>
     </div>
     <p class="sub" style="font-size:.8rem;margin-bottom:1rem">How to install it: open your <b>ledger</b> repo on GitHub → <b>index.html</b> → pencil (Edit) → press Ctrl+F and search for <b>LEDGR-EMBED</b> → replace that whole line with the code above → Commit changes. Wait a minute for the site to redeploy, then hard-refresh.</p>
     <div class="stack">
@@ -539,6 +570,16 @@
 const EMBEDDED=null; // LEDGR-EMBED — replace this whole line with your generated connection code
 
 let income=[], expenses=[], investments=[], debts=[], loans=[], loanPays=[];
+const DEFAULT_LISTS={
+  incomeCats:["Salary","Business","Freelance","Rental","Dividends / Profit","Gift","Other"],
+  expenseCats:["Groceries","Rent / Housing","Utilities","Transport","Dining","Health","Education","Shopping","Travel","Family","Other"],
+  payMethods:["Card","Cash","Bank transfer","GPay","Other"],
+  investTypes:["Stocks","Funds","Real estate","Gold","Sukuk / Bonds","Crypto","Business","Other"],
+  loanTypes:["Housing","Car","Personal","Education","Gold","Other"]
+};
+const LIST_HEADERS={incomeCats:"Income Categories",expenseCats:"Expense Categories",payMethods:"Payment Methods",investTypes:"Investment Types",loanTypes:"Loan Types"};
+let lists=JSON.parse(JSON.stringify(DEFAULT_LISTS));
+let theme=(function(){try{return localStorage.getItem("ledgr.theme")==="light"?"light":"dark";}catch(_){return "dark";}})();
 let currency="SAR", owner="", username="", passHash="";
 let storageMode="local";            // "local" | "github"
 let fileHandle=null, fileName="", dirty=false;
@@ -572,6 +613,34 @@ function setDirty(v){
   dirty=v;
   const btn=$("#btnSave");
   if(btn&&!btn.disabled){btn.classList.toggle("dirty",dirty);btn.textContent=dirty?"Save •":"Save";}
+}
+
+/* ---------- theme ---------- */
+function applyTheme(t,persist){
+  theme=t==="light"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",theme);
+  const b=$("#btnTheme");if(b)b.textContent=theme==="dark"?"🌙":"☀️";
+  try{if(persist!==false)localStorage.setItem("ledgr.theme",theme);}catch(_){}
+  if($("#app")&&$("#app").style.display==="block"){try{drawCharts();}catch(_){}}
+}
+
+/* ---------- category lists from the master ---------- */
+const SELECT_LIST_MAP=[["inCat","incomeCats"],["exCat","expenseCats"],["exPay","payMethods"],["ivType","investTypes"],["lnType","loanTypes"]];
+function refreshSelects(){
+  SELECT_LIST_MAP.forEach(([id,key])=>{
+    const sel=$("#"+id);if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML=lists[key].map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("")
+      +'<option value="__add__">＋ Add new…</option>';
+    if(cur&&lists[key].includes(cur))sel.value=cur;
+  });
+}
+function normalizeList(arr){
+  const out=[];
+  arr.map(v=>String(v).trim()).filter(Boolean).forEach(v=>{
+    if(!out.some(x=>x.toLowerCase()===v.toLowerCase()))out.push(v);
+  });
+  return out;
 }
 
 /* ---------- hashing (light lock — anyone with the file can read it in Excel) ---------- */
@@ -702,6 +771,17 @@ function parseWorkbook(buf,name){
   });
   loanPays=loanPays.filter(r=>r.lender||r.amount);
 
+  lists=JSON.parse(JSON.stringify(DEFAULT_LISTS));
+  const sLists=find("lists")||find("categories");
+  if(sLists){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sLists],{defval:""});
+    for(const key in LIST_HEADERS){
+      const col=LIST_HEADERS[key].toLowerCase();
+      const vals=normalizeList(rows.map(r=>g(r,col)));
+      if(vals.length)lists[key]=vals;
+    }
+  }
+
   const sSet=find("settings");
   if(sSet)XLSX.utils.sheet_to_json(wb.Sheets[sSet],{defval:""}).forEach(r=>{
     const key=String(g(r,"key")).toLowerCase(),val=g(r,"value");
@@ -709,7 +789,9 @@ function parseWorkbook(buf,name){
     if(key==="owner"&&val)owner=String(val);
     if(key==="username"&&val)username=String(val);
     if(key==="passwordhash"&&val)passHash=String(val);
+    if(key==="theme"&&val)applyTheme(String(val).toLowerCase()==="light"?"light":"dark");
   });
+  refreshSelects();
 
   fileName=name;
   const sel=$("#currency");
@@ -738,8 +820,13 @@ function buildWorkbook(){
     {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Notes"]});
   const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Notes":r.notes})),
     {header:["Date","Lender","Kind","Amount","Notes"]});
-  const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash}];
+  const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash},{Key:"Theme",Value:theme}];
   const wsSet=XLSX.utils.json_to_sheet(settings);
+  const maxLen=Math.max(...Object.values(lists).map(a=>a.length));
+  const listRows=[];
+  for(let i=0;i<maxLen;i++){const o={};for(const k in LIST_HEADERS)o[LIST_HEADERS[k]]=lists[k][i]??"";listRows.push(o);}
+  const wsLists=XLSX.utils.json_to_sheet(listRows,{header:Object.values(LIST_HEADERS)});
+  wsLists["!cols"]=[{wch:20},{wch:20},{wch:18},{wch:18},{wch:14}];
   wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:26}];
   wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:18}];
   wsInv["!cols"]=[{wch:12},{wch:24},{wch:14},{wch:16},{wch:16},{wch:26}];
@@ -753,6 +840,7 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsLoan,"Loans");
   XLSX.utils.book_append_sheet(wb,wsLpay,"Loan Payments");
   XLSX.utils.book_append_sheet(wb,wsDebt,"Debts");
+  XLSX.utils.book_append_sheet(wb,wsLists,"Lists");
   XLSX.utils.book_append_sheet(wb,wsSet,"Settings");
   return wb;
 }
@@ -976,7 +1064,19 @@ $("#btnSettings").addEventListener("click",()=>{
   $("#settingsError").style.display="none";
   $("#stName").value=owner;$("#stUser").value=username;
   $("#stCur").value="";$("#stNew").value="";$("#stNew2").value="";
+  $("#stListValues").value=lists[$("#stListPick").value].join("\n");
   $("#settingsOverlay").style.display="flex";
+});
+$("#stListPick").addEventListener("change",()=>{$("#stListValues").value=lists[$("#stListPick").value].join("\n");});
+$("#btnListApply").addEventListener("click",()=>{
+  const key=$("#stListPick").value;
+  const vals=normalizeList($("#stListValues").value.split("\n"));
+  const err=$("#settingsError");err.style.display="none";
+  if(!vals.length){err.textContent="The list needs at least one value.";err.style.display="block";return;}
+  lists[key]=vals;
+  $("#stListValues").value=vals.join("\n");
+  refreshSelects();setDirty(true);
+  toast("List updated — click Save to store it");
 });
 $("#btnCloseSettings").addEventListener("click",()=>{$("#settingsOverlay").style.display="none";});
 $("#settingsOverlay").addEventListener("click",e=>{if(e.target.id==="settingsOverlay")$("#settingsOverlay").style.display="none";});
@@ -1026,6 +1126,23 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
 }));
 $("#currency").addEventListener("change",e=>{currency=e.target.value;setDirty(true);renderAll();});
 $("#btnSave").addEventListener("click",saveFile);
+$("#btnTheme").addEventListener("click",()=>{applyTheme(theme==="dark"?"light":"dark");setDirty(true);});
+
+/* "+ Add new…" on category selects */
+SELECT_LIST_MAP.forEach(([id,key])=>{
+  $("#"+id).addEventListener("change",e=>{
+    if(e.target.value!=="__add__")return;
+    const v=(prompt("New value:")||"").trim();
+    if(v){
+      if(!lists[key].some(x=>x.toLowerCase()===v.toLowerCase()))lists[key].push(v);
+      refreshSelects();
+      e.target.value=lists[key].find(x=>x.toLowerCase()===v.toLowerCase());
+      setDirty(true);
+    }else{
+      e.target.selectedIndex=0;
+    }
+  });
+});
 
 /* ---------- aggregation ---------- */
 const monthKey=d=>d.slice(0,7);
@@ -1080,8 +1197,12 @@ function drawCharts(){
     $$(".chart-box").forEach(b=>{if(!b.querySelector(".empty-mini"))b.innerHTML='<div class="empty-mini">Charts couldn’t load — check your connection and refresh.</div>';});
     return;
   }
-  Chart.defaults.color="#8B95AE";
-  Chart.defaults.borderColor="rgba(255,255,255,.07)";
+  const cs=getComputedStyle(document.documentElement);
+  const cMuted=(cs.getPropertyValue("--muted")||"#8B95AE").trim();
+  const cGrid=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.07)").trim();
+  const cBorder=(cs.getPropertyValue("--bg-2")||"#0E1526").trim();
+  Chart.defaults.color=cMuted;
+  Chart.defaults.borderColor=cGrid;
   Chart.defaults.font.family="'Inter',sans-serif";
   const legendSide=window.innerWidth<700?"bottom":"right";
 
@@ -1105,7 +1226,7 @@ function drawCharts(){
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   killChart("expCat");
   charts.expCat=new Chart($("#chExpCat"),{type:"doughnut",
-    data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:"#0E1526"}]},
+    data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
       plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
         tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
@@ -1114,7 +1235,7 @@ function drawCharts(){
   const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   killChart("invAlloc");
   charts.invAlloc=new Chart($("#chInvAlloc"),{type:"doughnut",
-    data:{labels:types.map(t=>t[0]),datasets:[{data:types.map(t=>t[1]),backgroundColor:types.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderColor:"#0E1526"}]},
+    data:{labels:types.map(t=>t[0]),datasets:[{data:types.map(t=>t[1]),backgroundColor:types.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
       plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
         tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
@@ -1463,6 +1584,9 @@ $("#ivDate").value=todayISO();
 $("#dbDate").value=todayISO();
 $("#lnDate").value=todayISO();
 $("#lpDate").value=todayISO();
+
+applyTheme(theme,false);
+refreshSelects();
 
 /* ---------- startup: remembered device or embedded setup goes straight to login ---------- */
 (function init(){

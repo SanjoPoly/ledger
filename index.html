@@ -236,6 +236,12 @@
 <div class="auth-wrap" id="authScreen">
   <div class="auth-card">
 
+    <!-- 0. resuming session -->
+    <div class="a-view" id="vResume" style="display:none;text-align:center">
+      <div class="logo" style="justify-content:center"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Personal finance</span></div></div>
+      <p class="sub" style="text-align:center;margin-bottom:0">Resuming your session…</p>
+    </div>
+
     <!-- 1. landing -->
     <div class="a-view" id="vLanding">
       <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Personal finance</span></div></div>
@@ -718,6 +724,36 @@ async function loadRemoteConfig(){
   }catch(_){return null;}
 }
 function profileCandidates(){return [getProfile(),embeddedProfile(),fetchedProfile].filter(Boolean);}
+
+/* ---------- signed-in session: survives refresh, expires after 15 min idle ---------- */
+const SESSION_KEY="ledgr.session.v1";
+const SESSION_MS=15*60*1000;
+function saveSession(){
+  if(storageMode!=="github"||!gh.token)return;
+  try{localStorage.setItem(SESSION_KEY,btoa(JSON.stringify({t:gh.token,r:gh.repo,p:gh.path,b:gh.branch,o:owner,e:Date.now()+SESSION_MS})));}catch(_){}
+}
+function getSession(){
+  try{
+    const s=JSON.parse(atob(localStorage.getItem(SESSION_KEY)||""));
+    return (s&&s.t&&s.e>Date.now())?s:null;
+  }catch(_){return null;}
+}
+function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch(_){}}
+function touchSession(){
+  const now=Date.now();
+  if(touchSession._last&&now-touchSession._last<30000)return;
+  touchSession._last=now;
+  if($("#app").style.display==="block")saveSession();
+}
+["click","keydown","touchstart","scroll"].forEach(ev=>window.addEventListener(ev,touchSession,{passive:true}));
+setInterval(()=>{
+  if($("#app").style.display!=="block"||storageMode!=="github")return;
+  if(!getSession()){
+    clearSession();sessionPass=null;
+    toast("Signed out after 15 minutes of inactivity");
+    showLogin();
+  }
+},30000);
 async function generateProfileObject(){
   const salt=crypto.getRandomValues(new Uint8Array(16));
   const iv=crypto.getRandomValues(new Uint8Array(12));
@@ -966,6 +1002,7 @@ function showSetCreds(){
 function enterApp(){
   $("#authScreen").style.display="none";$("#app").style.display="block";
   $("#ownerLabel").textContent=owner?owner+"’s ledger":"Personal finance";
+  saveSession();
   setDirty(dirty);renderAll();
 }
 
@@ -1073,7 +1110,7 @@ $("#btnSetCreds").addEventListener("click",async()=>{
 
 $("#btnLock").addEventListener("click",()=>{
   if(dirty&&!confirm("You have unsaved changes. Sign out anyway? (Changes stay in memory until you sign in and save.)"))return;
-  sessionPass=null;
+  clearSession();sessionPass=null;
   showLogin();
 });
 
@@ -1120,7 +1157,7 @@ $("#btnSettingsSave").addEventListener("click",async()=>{
 
 /* ---------- Devices: generate the embeddable connection line ---------- */
 $("#btnEmbed").addEventListener("click",async()=>{
-  if(!sessionPass||!gh.token||storageMode!=="github"){toast("Sign in through GitHub first");return;}
+  if(!sessionPass||!gh.token||storageMode!=="github"){toast("Sign out and sign in with your password first — it\u2019s needed to encrypt the code");return;}
   try{
     $("#embedCode").value=await generateEmbedLine();
     $("#settingsOverlay").style.display="none";
@@ -1135,7 +1172,7 @@ $("#btnCopyEmbed").addEventListener("click",async()=>{
   catch(_){document.execCommand("copy");toast("Copied ✓");}
 });
 $("#btnDownloadCfg").addEventListener("click",async()=>{
-  if(!sessionPass||!gh.token){toast("Sign in through GitHub first");return;}
+  if(!sessionPass||!gh.token){toast("Sign out and sign in with your password first — it\u2019s needed to encrypt the file");return;}
   try{
     const obj=await generateProfileObject();
     const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
@@ -1618,9 +1655,30 @@ $("#lpDate").value=todayISO();
 applyTheme(theme,false);
 refreshSelects();
 
-/* ---------- startup: remembered device, embedded setup, or config file goes straight to login ---------- */
+/* ---------- startup: live session resumes; otherwise saved setup goes to login ---------- */
 (async function init(){
   if(!(crypto&&crypto.subtle))return;
+
+  // 1) an unexpired session (e.g. page refresh) signs back in automatically
+  const s=getSession();
+  if(s){
+    gh.token=s.t;gh.repo=s.r;gh.path=s.p;gh.branch=s.b;gh.sha=null;
+    owner=s.o||"";storageMode="github";fileHandle=null;
+    showView("vResume");
+    try{
+      const r=await ghLoad();
+      if(!r.notFound){
+        parseWorkbook(r.buf,gh.path.split("/").pop());
+        saveSession();
+        enterApp();
+        return;
+      }
+    }catch(_){/* fall through to normal sign-in */}
+    clearSession();
+    showView("vLanding");
+  }
+
+  // 2) otherwise, saved setup (device / embedded / config file) shows the login screen
   let p=(canRemember()?getProfile():null)||embeddedProfile();
   if(!p){
     fetchedProfile=await loadRemoteConfig();

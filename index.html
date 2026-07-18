@@ -365,7 +365,6 @@
     <button class="pill" data-tab="income"><span class="dot"></span>Income</button>
     <button class="pill" data-tab="exp"><span class="dot"></span>Expenses</button>
     <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
-    <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
     <button class="pill" data-tab="loan"><span class="dot"></span>Bank Loans</button>
     <button class="pill" data-tab="debt"><span class="dot"></span>Debts &amp; Loans</button>
@@ -402,6 +401,7 @@
       <div class="f"><label for="inCat">Category</label>
         <select id="inCat"></select></div>
       <div class="f"><label for="inAmt">Amount</label><input type="number" id="inAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="inBank">Deposit to bank</label><select id="inBank"></select></div>
       <div class="f"><label for="inNotes">Notes</label><input type="text" id="inNotes" placeholder="optional"></div>
       <div class="f"><button type="submit">+ Add income</button></div>
     </form>
@@ -425,6 +425,7 @@
         <select id="exCat"></select></div>
       <div class="f"><label for="exDesc">Description</label><input type="text" id="exDesc" placeholder="e.g. Panda supermarket" required></div>
       <div class="f"><label for="exAmt">Amount</label><input type="number" id="exAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="exBank">Paid from bank</label><select id="exBank"></select></div>
       <div class="f"><label for="exPay">Paid with</label>
         <select id="exPay"></select></div>
       <div class="f"><button type="submit">+ Add expense</button></div>
@@ -476,42 +477,7 @@
     </div>
   </section>
 
-  <!-- ============ BANKS & TRANSFERS ============ -->
-  <section class="panel" id="panel-bank">
-    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span></div>
-    <div class="bank-cards" id="bankCards"></div>
-    <div class="section-head"><h2>Add / edit bank</h2></div>
-    <form class="add-card" id="formBank">
-      <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
-      <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct" placeholder="Last 4 digits"></div>
-      <div class="f"><label for="bType">Type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
-      <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
-      <div class="f wide"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
-      <button type="submit" class="btn-accent" style="width:100%">+ Add bank</button>
-    </form>
-    <div class="toolbar"><input type="search" id="searchBank" placeholder="Search…"></div>
-    <div class="table-card">
-      <table id="tblBank"><thead><tr><th>Bank / Account</th><th>Type</th><th>Account #</th><th style="text-align:right">Opening</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyBank">No banks yet.</div>
-    </div>
-
-    <div class="section-head" style="margin-top:1.5rem"><h2>Bank transfers (contra)</h2></div>
-    <div class="add-card">
-      <div class="f"><label for="tFrom">From bank</label><select id="tFrom" class="bank-select"></select></div>
-      <div class="f"><label for="tTo">To bank</label><select id="tTo" class="bank-select"></select></div>
-      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate"></div>
-      <div class="f"><label for="tAmt">Amount</label><input type="number" step="0.01" min="0" id="tAmt"></div>
-      <div class="f wide"><label for="tRef">Reference / notes</label><input type="text" id="tRef" placeholder="e.g. Cheque#, online"></div>
-      <button type="button" id="btnAddTransfer" class="btn-accent" style="grid-column:1/-1">+ Record transfer</button>
-    </div>
-    <div class="toolbar"><input type="search" id="searchTransfer" placeholder="Search…"><input type="date" id="fromTransfer"><input type="date" id="toTransfer"></div>
-    <div class="table-card">
-      <table id="tblTransfer"><thead><tr><th>Date</th><th>From</th><th>To</th><th style="text-align:right">Amount</th><th>Reference</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyTransfer">No transfers yet.</div>
-    </div>
-  </section>
-
-    <!-- ============ INVESTMENTS ============ -->
+      <!-- ============ INVESTMENTS ============ -->
   <section class="panel" id="panel-inv">
     <div class="section-head"><h2>Investments</h2><span class="total" id="invTotalHead"></span></div>
     <form class="add-card" id="formInv">
@@ -706,11 +672,12 @@ const bankBalance=name=>{
   return r2(bal);
 };
 const refreshBankSelects=()=>{
-  const opts=banks.map(b=>`<option>${esc(b.name)}</option>`).join("");
-  ["nIncome","nExp","tFrom","tTo"].forEach(id=>{
+  const opts=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
+  ["inBank","exBank","tFrom","tTo"].forEach(id=>{
     const sel=$("#"+id);
-    if(sel){const cur=sel.value;sel.innerHTML=opts;sel.value=cur||banks[0]?.name||"";}
+    if(sel){const cur=sel.value;sel.innerHTML=opts;if(cur&&banks.some(b=>b.name===cur))sel.value=cur;}
   });
+  const t=$("#tDate");if(t&&!t.value)t.value=todayISO();
 };
 
 const fmtShort=n=>new Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:1}).format(n||0);
@@ -874,12 +841,29 @@ function parseWorkbook(buf,name){
   const find=w=>wb.SheetNames.find(n=>n.trim().toLowerCase()===w)||null;
   const g=(r,k)=>r[Object.keys(r).find(x=>x.trim().toLowerCase()===k)]??"";
 
-  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];owner="";username="";passHash="";
+  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];banks=[];transfers=[];owner="";username="";passHash="";
 
+  
+  // Parse Banks sheet
+  const sB=find("banks");
+  if(sB)XLSX.utils.sheet_to_json(wb.Sheets[sB],{defval:""}).forEach(r=>{
+    banks.push({name:String(g(r,"bank name")||"").trim(),acct:String(g(r,"account number")||"").trim(),
+      type:String(g(r,"account type")||"Savings"),opening:num(g(r,"opening balance")),notes:String(g(r,"notes")||"")});
+  });
+  banks=banks.filter(b=>b.name);
+  
+  const sTr=find("transfers");
+  if(sTr)XLSX.utils.sheet_to_json(wb.Sheets[sTr],{defval:""}).forEach(r=>{
+    transfers.push({date:normDate(g(r,"date")),from:String(g(r,"from bank")||"").trim(),to:String(g(r,"to bank")||"").trim(),
+      amt:num(g(r,"amount")),ref:String(g(r,"reference / notes")||g(r,"reference")||g(r,"notes")||"")});
+  });
+  transfers=transfers.filter(t=>t.from&&t.to&&t.amt);
+  
   const sInc=find("income");
   if(sInc)XLSX.utils.sheet_to_json(wb.Sheets[sInc],{defval:""}).forEach(r=>{
     income.push({date:normDate(g(r,"date"))||todayISO(),source:String(g(r,"source")||"").trim(),
-      category:String(g(r,"category")||"Other").trim()||"Other",amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
+      category:String(g(r,"category")||"Other").trim()||"Other",amount:num(g(r,"amount")),
+      bank:String(g(r,"bank")||"").trim()||(banks[0]?banks[0].name:""),notes:String(g(r,"notes")||"")});
   });
   income=income.filter(r=>r.source||r.amount);
 
@@ -887,6 +871,7 @@ function parseWorkbook(buf,name){
   if(sExp)XLSX.utils.sheet_to_json(wb.Sheets[sExp],{defval:""}).forEach(r=>{
     expenses.push({date:normDate(g(r,"date"))||todayISO(),category:String(g(r,"category")||"Other").trim()||"Other",
       desc:String(g(r,"description")||g(r,"desc")||"").trim(),amount:num(g(r,"amount")),
+      bank:String(g(r,"bank")||"").trim()||(banks[0]?banks[0].name:""),
       pay:String(g(r,"payment method")||g(r,"paid with")||"Card").trim()||"Card"});
   });
   expenses=expenses.filter(r=>r.desc||r.amount);
@@ -924,7 +909,7 @@ function parseWorkbook(buf,name){
     loanPays.push({date:normDate(g(r,"date"))||todayISO(),
       lender:String(g(r,"lender")||g(r,"loan")||"").trim(),
       kind:String(g(r,"kind")||g(r,"payment type")||"EMI").trim()||"EMI",
-      amount:num(g(r,"amount")),bank:String(g(r,"bank")||banks[0]?.name||""),notes:String(g(r,"notes")||"")});
+      amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
   });
   loanPays=loanPays.filter(r=>r.lender||r.amount);
 
@@ -955,21 +940,6 @@ function parseWorkbook(buf,name){
   if(![...sel.options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;sel.appendChild(o);}
   sel.value=currency;
   
-  // Parse Banks sheet
-  const sB=find("banks");
-  if(sB)XLSX.utils.sheet_to_json(wb.Sheets[sB],{defval:""}).forEach(r=>{
-    banks.push({name:String(g(r,"bank name")||"").trim(),acct:String(g(r,"account number")||"").trim(),
-      type:String(g(r,"account type")||"Savings"),opening:num(g(r,"opening balance")),notes:String(g(r,"notes")||"")});
-  });
-  banks=banks.filter(b=>b.name);
-  
-  const sTr=find("transfers");
-  if(sTr)XLSX.utils.sheet_to_json(wb.Sheets[sTr],{defval:""}).forEach(r=>{
-    transfers.push({date:normDate(g(r,"date")),from:String(g(r,"from bank")||"").trim(),to:String(g(r,"to bank")||"").trim(),
-      amt:num(g(r,"amount")),ref:String(g(r,"reference / notes")||"")});
-  });
-  transfers=transfers.filter(t=>t.from&&t.to&&t.amt);
-  
   setDirty(false);
 }
 function loadWorkbook(buf,name){
@@ -981,9 +951,9 @@ function loadWorkbook(buf,name){
 /* ---------- Excel: build ---------- */
 function buildWorkbook(){
   const wb=XLSX.utils.book_new();
-  const wsInc=XLSX.utils.json_to_sheet(income.map(r=>({"Date":r.date,"Source":r.source,"Category":r.category,"Amount":r.amount,"Notes":r.notes})),
+  const wsInc=XLSX.utils.json_to_sheet(income.map(r=>({"Date":r.date,"Source":r.source,"Category":r.category,"Amount":r.amount,"Bank":r.bank||"","Notes":r.notes})),
     {header:["Date","Source","Category","Amount","Bank","Notes"]});
-  const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Payment Method":r.pay})),
+  const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Bank":r.bank||"","Payment Method":r.pay})),
     {header:["Date","Category","Description","Amount","Bank","Payment Method"]});
   const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Notes":r.notes})),
     {header:["Date","Name","Type","Amount Invested","Current Value","Notes"]});
@@ -1000,8 +970,8 @@ function buildWorkbook(){
   for(let i=0;i<maxLen;i++){const o={};for(const k in LIST_HEADERS)o[LIST_HEADERS[k]]=lists[k][i]??"";listRows.push(o);}
   const wsLists=XLSX.utils.json_to_sheet(listRows,{header:Object.values(LIST_HEADERS)});
   wsLists["!cols"]=[{wch:20},{wch:20},{wch:18},{wch:18},{wch:14}];
-  wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:26}];
-  wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:18}];
+  wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:16},{wch:26}];
+  wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:16},{wch:18}];
   wsInv["!cols"]=[{wch:12},{wch:24},{wch:14},{wch:16},{wch:16},{wch:26}];
   wsDebt["!cols"]=[{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:12},{wch:26}];
   wsLoan["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:26}];
@@ -1614,30 +1584,30 @@ function renderBank(){
   $("#bankCards").innerHTML=html;
   
   $("#tblBank tbody").innerHTML=rows.map(({b,i})=>`<tr data-i="${i}">
-    <td><strong>${esc(b.name)}</strong><div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">${b.type}</div></td>
-    <td>${b.type}</td>
-    <td style="font-family:var(--mono);font-size:.8rem">····${(b.acct||"").slice(-4)}</td>
-    <td class="num">${fmt(b.opening)}</td>
-    <td class="num">${fmt(bankBalance(b.name))}</td>
-    <td><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
+    <td data-l="Bank"><strong>${esc(b.name)}</strong>${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>
+    <td data-l="Type">${esc(b.type)}</td>
+    <td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>
+    <td data-l="Opening" class="num">${fmt(b.opening)}</td>
+    <td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>
+    <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
   $("#emptyBank").style.display=banks.length?"none":"block";
 }
 
 function renderTransfer(){
   const q=$("#searchTransfer").value.trim().toLowerCase();
   const from=$("#fromTransfer").value, to=$("#toTransfer").value;
-  const rows=transfers.filter(t=>
+  const rows=transfers.map((t,idx)=>({t,idx})).filter(({t})=>
     (!q||(t.from+" "+t.to+" "+t.ref).toLowerCase().includes(q))&&
     (!from||t.date>=from)&&(!to||t.date<=to)
-  ).sort((a,b)=>b.date.localeCompare(a.date));
+  ).sort((a,b)=>b.t.date.localeCompare(a.t.date));
   
-  $("#tblTransfer tbody").innerHTML=rows.map((t,i)=>`<tr>
-    <td>${t.date}</td>
-    <td><strong>${esc(t.from)}</strong></td>
-    <td><strong>${esc(t.to)}</strong></td>
-    <td class="num">${fmt(t.amt)}</td>
-    <td>${esc(t.ref)}</td>
-    <td><div class="row-actions"><button type="button" class="icon-btn danger" data-tract="del" data-i="${i}">Delete</button></div></td></tr>`).join("");
+  $("#tblTransfer tbody").innerHTML=rows.map(({t,idx})=>`<tr>
+    <td data-l="Date">${esc(t.date)}</td>
+    <td data-l="From"><strong>${esc(t.from)}</strong></td>
+    <td data-l="To"><strong>${esc(t.to)}</strong></td>
+    <td data-l="Amount" class="num">${fmt(t.amt)}</td>
+    <td data-l="Reference">${esc(t.ref)}</td>
+    <td data-l=""><div class="row-actions"><button type="button" class="icon-btn danger" data-tract="del" data-i="${idx}">Delete</button></div></td></tr>`).join("");
   $("#emptyTransfer").style.display=rows.length?"none":"block";
 }
 
@@ -1709,7 +1679,8 @@ function renderLoan(){
 }
 
 function renderAll(){
-  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt].forEach(fn=>{
+  try{refreshBankSelects();}catch(e){console.error("bankSelects",e);}
+  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt,renderBank,renderTransfer].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -1717,12 +1688,12 @@ function renderAll(){
 /* ---------- forms ---------- */
 $("#formInc").addEventListener("submit",e=>{
   e.preventDefault();
-  income.push({date:$("#inDate").value||todayISO(),source:$("#inSrc").value.trim(),category:$("#inCat").value,amount:num($("#inAmt").value),notes:$("#inNotes").value.trim()});
+  income.push({date:$("#inDate").value||todayISO(),source:$("#inSrc").value.trim(),category:$("#inCat").value,amount:num($("#inAmt").value),bank:$("#inBank").value||(banks[0]?banks[0].name:""),notes:$("#inNotes").value.trim()});
   e.target.reset();$("#inDate").value=todayISO();setDirty(true);renderAll();
 });
 $("#formExp").addEventListener("submit",e=>{
   e.preventDefault();
-  expenses.push({date:$("#exDate").value||todayISO(),category:$("#exCat").value,desc:$("#exDesc").value.trim(),amount:num($("#exAmt").value),pay:$("#exPay").value});
+  expenses.push({date:$("#exDate").value||todayISO(),category:$("#exCat").value,desc:$("#exDesc").value.trim(),amount:num($("#exAmt").value),bank:$("#exBank").value||(banks[0]?banks[0].name:""),pay:$("#exPay").value});
   e.target.reset();$("#exDate").value=todayISO();setDirty(true);renderAll();
 });
 $("#formInv").addEventListener("submit",e=>{
@@ -1887,10 +1858,10 @@ document.addEventListener("click",e=>{
     $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;
     $("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
     banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();
-    toast("Edit above, then submit to re-add");
+    toast("Loaded into the form above — edit and press “+ Add bank” to save it back");
   }else if(btn.dataset.bact==="del"){
-    const used=income.some(x=>x.bank===b.name)||expenses.some(x=>x.bank===b.name);
-    if(used){toast("Bank has transactions—delete them first");return;}
+    const used=income.some(x=>x.bank===b.name)||expenses.some(x=>x.bank===b.name)||transfers.some(t=>t.from===b.name||t.to===b.name);
+    if(used){toast("This bank has transactions or transfers — remove those first");return;}
     if(confirm(`Delete "${b.name}"?`)){banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();}
   }
 });

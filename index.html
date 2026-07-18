@@ -311,6 +311,7 @@
     <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
       <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
     </select>
+    <button class="top-btn" id="btnEmbed" title="Use on all devices">Devices</button>
     <button class="top-btn" id="btnLock">Sign out</button>
     <button class="top-btn save" id="btnSave">Save</button>
   </div>
@@ -442,15 +443,34 @@
   </section>
 </main>
 
+<div id="embedOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:560px;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.25rem;margin-bottom:.5rem">Use Ledgr on all your devices</h2>
+    <p class="sub">Paste this one line into your site’s <b>index.html</b>, and every device and browser will open straight at the sign-in screen — no setup, ever. The line contains your connection <b>encrypted with your password</b>; only your password can unlock it, so use a strong one.</p>
+    <div class="f">
+      <label>Your connection code</label>
+      <textarea id="embedCode" readonly rows="6" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <p class="sub" style="font-size:.8rem;margin-bottom:1rem">How to install it: open your <b>ledger</b> repo on GitHub → <b>index.html</b> → pencil (Edit) → press Ctrl+F and search for <b>LEDGR-EMBED</b> → replace that whole line with the code above → Commit changes. Wait a minute for the site to redeploy, then hard-refresh.</p>
+    <div class="stack">
+      <button class="btn primary" id="btnCopyEmbed">Copy code</button>
+      <button class="btn ghost" id="btnCloseEmbed">Close</button>
+    </div>
+    <p class="auth-note">If you ever change your password, open this again and re-install the new code. To revoke everything, delete the token in GitHub → Developer settings.</p>
+  </div>
+</div>
+
 <div id="toast" role="status"></div>
 
 <script>
 "use strict";
 /* ============================================================
-   Ledgr v3 — Excel-as-database, local file or GitHub repo.
-   Sheets: Income, Expenses, Investments, Debts, Settings
-   Settings keys: Currency, Owner, Username, PasswordHash
+   Ledgr v3 — data synced to a private GitHub repo.
+   To make every device open straight at the login screen,
+   sign in once, open “Devices” in the top bar, and paste the
+   generated line over the EMBEDDED line below.
 ============================================================ */
+const EMBEDDED=null; // LEDGR-EMBED — replace this whole line with your generated connection code
 
 let income=[], expenses=[], investments=[], debts=[];
 let currency="SAR", owner="", username="", passHash="";
@@ -462,6 +482,7 @@ let charts={};
 let creatingToGithub=false;
 let profilePending=false;   // a saved device profile is waiting for the password
 let rememberDevice=true;
+let sessionPass=null;       // kept in memory after sign-in, for the Devices embed generator
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -543,6 +564,16 @@ async function decryptProfileToken(p,pass){
   const iv=new Uint8Array(b64ToAb(p.iv));
   const buf=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,b64ToAb(p.ct));
   return new TextDecoder().decode(buf);
+}
+const embeddedProfile=()=>(EMBEDDED&&typeof EMBEDDED==="object"&&EMBEDDED.ct)?EMBEDDED:null;
+async function generateEmbedLine(){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const saltB64=abToB64(salt.buffer),ivB64=abToB64(iv.buffer);
+  const key=await deriveKey(sessionPass,saltB64);
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(gh.token));
+  const obj={repo:gh.repo,path:gh.path,branch:gh.branch,owner,username,salt:saltB64,iv:ivB64,ct:abToB64(ct)};
+  return "const EMBEDDED="+JSON.stringify(obj)+"; // LEDGR-EMBED";
 }
 
 /* ---------- Excel: read ---------- */
@@ -774,7 +805,7 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
   owner=$("#cName").value.trim();username=user;
   currency=$("#cCurrency").value;$("#currency").value=currency;
-  passHash=await hashPin(pin);
+  passHash=await hashPin(pin);sessionPass=pin;
   income=[];expenses=[];investments=[];debts=[];
   if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
     if(rememberDevice&&gh.token)await saveProfile(pin);}
@@ -790,23 +821,29 @@ $("#loginForm").addEventListener("submit",async e=>{
   const u=$("#lUser").value.trim().toLowerCase(),p=$("#lPin").value;
   try{
     if(profilePending){
-      const prof=getProfile();
-      if(!prof)throw new Error("Saved connection is missing — connect the repo again.");
-      let tok;
-      try{tok=await decryptProfileToken(prof,p);}catch(_){throw new Error("bad");}
-      gh.token=tok;gh.repo=prof.repo;gh.path=prof.path;gh.branch=prof.branch;gh.sha=null;
+      let tok=null;
+      for(const prof of [getProfile(),embeddedProfile()]){
+        if(!prof)continue;
+        try{
+          tok=await decryptProfileToken(prof,p);
+          gh.repo=prof.repo;gh.path=prof.path;gh.branch=prof.branch;break;
+        }catch(_){/* try next */}
+      }
+      if(!tok)throw new Error("bad");
+      gh.token=tok;gh.sha=null;
       storageMode="github";fileHandle=null;
       const r=await ghLoad();
       if(r.notFound)throw new Error("Your ledger is missing from the repo — reconnect via “Connect a different repo”.");
       parseWorkbook(r.buf,gh.path.split("/").pop());
       if(!(username&&passHash)){profilePending=false;showSetCreds();return;}
       if(u===username.trim().toLowerCase()&&await verifyPin(p,passHash)){
-        profilePending=false;
+        profilePending=false;sessionPass=p;
         await saveProfile(p); // refresh with latest owner/username
         enterApp();toast("Signed in ✓");
       }else throw new Error("bad");
     }else{
       if(u===username.trim().toLowerCase()&&await verifyPin(p,passHash)){
+        sessionPass=p;
         if(rememberDevice&&storageMode==="github"&&gh.token)await saveProfile(p);
         enterApp();toast("Signed in ✓");
       }else throw new Error("bad");
@@ -829,7 +866,7 @@ $("#btnSetCreds").addEventListener("click",async()=>{
   if(!user){err.textContent="Choose a login ID.";err.style.display="block";return;}
   if(pin.length<4){err.textContent="Password must be at least 4 characters.";err.style.display="block";return;}
   if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
-  username=user;passHash=await hashPin(pin);
+  username=user;passHash=await hashPin(pin);sessionPass=pin;
   if(rememberDevice&&storageMode==="github"&&gh.token)await saveProfile(pin);
   setDirty(true);enterApp();
   toast("Login created — click “Save” to store it");
@@ -837,7 +874,24 @@ $("#btnSetCreds").addEventListener("click",async()=>{
 
 $("#btnLock").addEventListener("click",()=>{
   if(dirty&&!confirm("You have unsaved changes. Sign out anyway? (Changes stay in memory until you sign in and save.)"))return;
+  sessionPass=null;
   showLogin();
+});
+
+/* ---------- Devices: generate the embeddable connection line ---------- */
+$("#btnEmbed").addEventListener("click",async()=>{
+  if(!sessionPass||!gh.token||storageMode!=="github"){toast("Sign in through GitHub first");return;}
+  try{
+    $("#embedCode").value=await generateEmbedLine();
+    $("#embedOverlay").style.display="flex";
+  }catch(e){console.error(e);toast("Could not generate the code — try again.");}
+});
+$("#btnCloseEmbed").addEventListener("click",()=>{$("#embedOverlay").style.display="none";});
+$("#embedOverlay").addEventListener("click",e=>{if(e.target.id==="embedOverlay")$("#embedOverlay").style.display="none";});
+$("#btnCopyEmbed").addEventListener("click",async()=>{
+  const ta=$("#embedCode");ta.select();
+  try{await navigator.clipboard.writeText(ta.value);toast("Copied ✓");}
+  catch(_){document.execCommand("copy");toast("Copied ✓");}
 });
 
 /* ---------- nav ---------- */
@@ -1177,10 +1231,10 @@ $("#exDate").value=todayISO();
 $("#ivDate").value=todayISO();
 $("#dbDate").value=todayISO();
 
-/* ---------- startup: remembered device goes straight to login ---------- */
+/* ---------- startup: remembered device or embedded setup goes straight to login ---------- */
 (function init(){
-  if(!canRemember())return;
-  const p=getProfile();
+  if(!(crypto&&crypto.subtle))return;
+  const p=(canRemember()?getProfile():null)||embeddedProfile();
   if(!p)return;
   profilePending=true;
   owner=p.owner||"";username=p.username||"";

@@ -122,6 +122,7 @@
   .pill[data-tab="inv"] .dot{background:var(--violet)}
   .pill[data-tab="loan"] .dot{background:#5EE0E6}
   .pill[data-tab="debt"] .dot{background:var(--amber)}
+  .pill[data-tab="bank"] .dot{background:#48D1E0}
   .pill.active .dot{background:#08111C}
 
   .panel{display:none;animation:fade .25s ease}
@@ -139,6 +140,13 @@
   .kpi .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .kpi .value{font-family:var(--mono);font-size:1.45rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:.25rem}
+  .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
+  .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
+  .bank-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--bc,var(--gold))}
+  .bank-card .label{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+  .bank-card .acct{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.35rem}
+  .bank-card .balance{font-family:var(--mono);font-size:1.1rem;font-weight:700}
+  .bank-select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.5rem .65rem}
   .kpi .sub .up{color:var(--mint)} .kpi .sub .down{color:var(--coral)}
 
   .charts{display:grid;grid-template-columns:1.6fr 1fr;gap:.8rem;margin-bottom:.8rem}
@@ -198,7 +206,14 @@
   .icon-btn:hover{border-color:var(--line-strong);color:var(--text)}
   .icon-btn.danger:hover{border-color:var(--coral);color:var(--coral)}
   .icon-btn.confirm{background:var(--mint);border-color:var(--mint);color:#08111C;font-weight:700}
-  .empty{text-align:center;color:var(--muted);padding:2.2rem 1rem;font-size:.9rem;line-height:1.55}
+  .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
+  .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
+  .bank-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--bc,var(--gold))}
+  .bank-card .label{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .bank-card .acct{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin:.2rem 0}
+  .bank-card .balance{font-family:var(--mono);font-size:1.1rem;font-weight:700;margin-top:.3rem}
+  .bank-select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.5rem .65rem;width:100%}
+    .empty{text-align:center;color:var(--muted);padding:2.2rem 1rem;font-size:.9rem;line-height:1.55}
 
   #toast{position:fixed;bottom:calc(1.2rem + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:var(--card-solid);border:1px solid var(--line-strong);color:var(--text);border-radius:12px;padding:.75rem 1.2rem;font-size:.87rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;max-width:92vw;box-shadow:var(--shadow)}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -349,6 +364,8 @@
     <button class="pill active" data-tab="home">Overview</button>
     <button class="pill" data-tab="income"><span class="dot"></span>Income</button>
     <button class="pill" data-tab="exp"><span class="dot"></span>Expenses</button>
+    <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
+    <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
     <button class="pill" data-tab="loan"><span class="dot"></span>Bank Loans</button>
     <button class="pill" data-tab="debt"><span class="dot"></span>Debts &amp; Loans</button>
@@ -424,7 +441,77 @@
     </div>
   </section>
 
-  <!-- ============ INVESTMENTS ============ -->
+  <!-- ============ BANKS & TRANSFERS ============ -->
+  <section class="panel" id="panel-bank">
+    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span></div>
+    <div class="bank-cards" id="bankCards"></div>
+    <div class="section-head"><h2>Add / edit bank</h2></div>
+    <form class="add-card" id="formBank">
+      <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
+      <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
+      <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
+      <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
+      <div class="f wide"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
+      <button type="submit" class="btn-accent" style="width:100%">+ Add bank</button>
+    </form>
+    <div class="toolbar"><input type="search" id="searchBank" placeholder="Search banks…"></div>
+    <div class="table-card">
+      <table id="tblBank"><thead><tr><th>Bank / Account</th><th>Type</th><th>Account#</th><th style="text-align:right">Opening</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyBank" style="display:none">No banks yet.</div>
+    </div>
+
+    <div class="section-head" style="margin-top:1.5rem"><h2>Bank transfers</h2></div>
+    <div class="add-card">
+      <div class="f"><label for="tFrom">From</label><select id="tFrom" class="bank-select"></select></div>
+      <div class="f"><label for="tTo">To</label><select id="tTo" class="bank-select"></select></div>
+      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate"></div>
+      <div class="f"><label for="tAmt">Amount</label><input type="number" step="0.01" min="0" id="tAmt"></div>
+      <div class="f wide"><label for="tRef">Reference</label><input type="text" id="tRef"></div>
+      <button type="button" id="btnAddTransfer" class="btn-accent" style="grid-column:1/-1">+ Record transfer</button>
+    </div>
+    <div class="toolbar"><input type="search" id="searchTransfer" placeholder="Search…"><input type="date" id="fromTransfer"><input type="date" id="toTransfer"></div>
+    <div class="table-card">
+      <table id="tblTransfer"><thead><tr><th>Date</th><th>From</th><th>To</th><th style="text-align:right">Amount</th><th>Reference</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyTransfer" style="display:none">No transfers.</div>
+    </div>
+  </section>
+
+  <!-- ============ BANKS & TRANSFERS ============ -->
+  <section class="panel" id="panel-bank">
+    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span></div>
+    <div class="bank-cards" id="bankCards"></div>
+    <div class="section-head"><h2>Add / edit bank</h2></div>
+    <form class="add-card" id="formBank">
+      <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
+      <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct" placeholder="Last 4 digits"></div>
+      <div class="f"><label for="bType">Type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
+      <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
+      <div class="f wide"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
+      <button type="submit" class="btn-accent" style="width:100%">+ Add bank</button>
+    </form>
+    <div class="toolbar"><input type="search" id="searchBank" placeholder="Search…"></div>
+    <div class="table-card">
+      <table id="tblBank"><thead><tr><th>Bank / Account</th><th>Type</th><th>Account #</th><th style="text-align:right">Opening</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyBank">No banks yet.</div>
+    </div>
+
+    <div class="section-head" style="margin-top:1.5rem"><h2>Bank transfers (contra)</h2></div>
+    <div class="add-card">
+      <div class="f"><label for="tFrom">From bank</label><select id="tFrom" class="bank-select"></select></div>
+      <div class="f"><label for="tTo">To bank</label><select id="tTo" class="bank-select"></select></div>
+      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate"></div>
+      <div class="f"><label for="tAmt">Amount</label><input type="number" step="0.01" min="0" id="tAmt"></div>
+      <div class="f wide"><label for="tRef">Reference / notes</label><input type="text" id="tRef" placeholder="e.g. Cheque#, online"></div>
+      <button type="button" id="btnAddTransfer" class="btn-accent" style="grid-column:1/-1">+ Record transfer</button>
+    </div>
+    <div class="toolbar"><input type="search" id="searchTransfer" placeholder="Search…"><input type="date" id="fromTransfer"><input type="date" id="toTransfer"></div>
+    <div class="table-card">
+      <table id="tblTransfer"><thead><tr><th>Date</th><th>From</th><th>To</th><th style="text-align:right">Amount</th><th>Reference</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyTransfer">No transfers yet.</div>
+    </div>
+  </section>
+
+    <!-- ============ INVESTMENTS ============ -->
   <section class="panel" id="panel-inv">
     <div class="section-head"><h2>Investments</h2><span class="total" id="invTotalHead"></span></div>
     <form class="add-card" id="formInv">
@@ -582,7 +669,7 @@
 ============================================================ */
 const EMBEDDED=null; // LEDGR-EMBED — replace this whole line with your generated connection code
 
-let income=[], expenses=[], investments=[], debts=[], loans=[], loanPays=[];
+let income=[], expenses=[], investments=[], debts=[], loans=[], loanPays=[], banks=[], transfers=[];
 const DEFAULT_LISTS={
   incomeCats:["Salary","Business","Freelance","Rental","Dividends / Profit","Gift","Other"],
   expenseCats:["Groceries","Rent / Housing","Utilities","Transport","Dining","Health","Education","Shopping","Travel","Family","Other"],
@@ -611,6 +698,21 @@ const PALETTE=["#3DDCA3","#4D9FFF","#8B7CFF","#FFC466","#FF6E61","#5EE0E6","#E58
 
 /* ---------- helpers ---------- */
 const fmt=n=>new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n||0);
+const bankBalance=name=>{
+  let bal=banks.find(b=>b.name===name)?.opening||0;
+  income.forEach(i=>{if(i.bank===name)bal+=i.amount;});
+  expenses.forEach(e=>{if(e.bank===name)bal-=e.amount;});
+  transfers.forEach(t=>{if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;});
+  return r2(bal);
+};
+const refreshBankSelects=()=>{
+  const opts=banks.map(b=>`<option>${esc(b.name)}</option>`).join("");
+  ["nIncome","nExp","tFrom","tTo"].forEach(id=>{
+    const sel=$("#"+id);
+    if(sel){const cur=sel.value;sel.innerHTML=opts;sel.value=cur||banks[0]?.name||"";}
+  });
+};
+
 const fmtShort=n=>new Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:1}).format(n||0);
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2800);}
 const todayISO=()=>new Date().toISOString().slice(0,10);
@@ -822,7 +924,7 @@ function parseWorkbook(buf,name){
     loanPays.push({date:normDate(g(r,"date"))||todayISO(),
       lender:String(g(r,"lender")||g(r,"loan")||"").trim(),
       kind:String(g(r,"kind")||g(r,"payment type")||"EMI").trim()||"EMI",
-      amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
+      amount:num(g(r,"amount")),bank:String(g(r,"bank")||banks[0]?.name||""),notes:String(g(r,"notes")||"")});
   });
   loanPays=loanPays.filter(r=>r.lender||r.amount);
 
@@ -852,6 +954,22 @@ function parseWorkbook(buf,name){
   const sel=$("#currency");
   if(![...sel.options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;sel.appendChild(o);}
   sel.value=currency;
+  
+  // Parse Banks sheet
+  const sB=find("banks");
+  if(sB)XLSX.utils.sheet_to_json(wb.Sheets[sB],{defval:""}).forEach(r=>{
+    banks.push({name:String(g(r,"bank name")||"").trim(),acct:String(g(r,"account number")||"").trim(),
+      type:String(g(r,"account type")||"Savings"),opening:num(g(r,"opening balance")),notes:String(g(r,"notes")||"")});
+  });
+  banks=banks.filter(b=>b.name);
+  
+  const sTr=find("transfers");
+  if(sTr)XLSX.utils.sheet_to_json(wb.Sheets[sTr],{defval:""}).forEach(r=>{
+    transfers.push({date:normDate(g(r,"date")),from:String(g(r,"from bank")||"").trim(),to:String(g(r,"to bank")||"").trim(),
+      amt:num(g(r,"amount")),ref:String(g(r,"reference / notes")||"")});
+  });
+  transfers=transfers.filter(t=>t.from&&t.to&&t.amt);
+  
   setDirty(false);
 }
 function loadWorkbook(buf,name){
@@ -864,9 +982,9 @@ function loadWorkbook(buf,name){
 function buildWorkbook(){
   const wb=XLSX.utils.book_new();
   const wsInc=XLSX.utils.json_to_sheet(income.map(r=>({"Date":r.date,"Source":r.source,"Category":r.category,"Amount":r.amount,"Notes":r.notes})),
-    {header:["Date","Source","Category","Amount","Notes"]});
+    {header:["Date","Source","Category","Amount","Bank","Notes"]});
   const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Payment Method":r.pay})),
-    {header:["Date","Category","Description","Amount","Payment Method"]});
+    {header:["Date","Category","Description","Amount","Bank","Payment Method"]});
   const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Notes":r.notes})),
     {header:["Date","Name","Type","Amount Invested","Current Value","Notes"]});
   const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Notes":r.notes})),
@@ -889,8 +1007,18 @@ function buildWorkbook(){
   wsLoan["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:26}];
   wsLpay["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:12},{wch:26}];
   wsSet["!cols"]=[{wch:14},{wch:70}];
+  const wsB=XLSX.utils.json_to_sheet(banks.map(b=>({"Bank Name":b.name,"Account Number":b.acct,"Account Type":b.type,"Opening Balance":b.opening,"Notes":b.notes})),
+    {header:["Bank Name","Account Number","Account Type","Opening Balance","Notes"]});
+  wsB["!cols"]=[{wch:20},{wch:18},{wch:12},{wch:14},{wch:28}];
+  
+  const wsTr=XLSX.utils.json_to_sheet(transfers.map(t=>({"Date":t.date,"From Bank":t.from,"To Bank":t.to,"Amount":t.amt,"Reference / Notes":t.ref})),
+    {header:["Date","From Bank","To Bank","Amount","Reference / Notes"]});
+  wsTr["!cols"]=[{wch:12},{wch:16},{wch:16},{wch:12},{wch:28}];
+  
   XLSX.utils.book_append_sheet(wb,wsInc,"Income");
   XLSX.utils.book_append_sheet(wb,wsExp,"Expenses");
+  XLSX.utils.book_append_sheet(wb,wsB,"Banks");
+  XLSX.utils.book_append_sheet(wb,wsTr,"Transfers");
   XLSX.utils.book_append_sheet(wb,wsInv,"Investments");
   XLSX.utils.book_append_sheet(wb,wsLoan,"Loans");
   XLSX.utils.book_append_sheet(wb,wsLpay,"Loan Payments");
@@ -1471,6 +1599,48 @@ function renderDebt(){
 }
 
 /* ---------- bank loans ---------- */
+
+function renderBank(){
+  const q=$("#searchBank").value.trim().toLowerCase();
+  const rows=banks.filter(b=>!q||b.name.toLowerCase().includes(q)).map((b,i)=>({b,i}));
+  $("#bankTotalHead").textContent=banks.length+" total";
+  
+  let html="";
+  banks.forEach((b,i)=>{
+    const bal=bankBalance(b.name);
+    const acctLast=(b.acct||"").slice(-4);
+    html+=`<div class="bank-card" data-i="${i}"><div class="label">${esc(b.type)}</div><div class="acct">····${acctLast}</div><div class="label">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div></div>`;
+  });
+  $("#bankCards").innerHTML=html;
+  
+  $("#tblBank tbody").innerHTML=rows.map(({b,i})=>`<tr data-i="${i}">
+    <td><strong>${esc(b.name)}</strong><div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">${b.type}</div></td>
+    <td>${b.type}</td>
+    <td style="font-family:var(--mono);font-size:.8rem">····${(b.acct||"").slice(-4)}</td>
+    <td class="num">${fmt(b.opening)}</td>
+    <td class="num">${fmt(bankBalance(b.name))}</td>
+    <td><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
+  $("#emptyBank").style.display=banks.length?"none":"block";
+}
+
+function renderTransfer(){
+  const q=$("#searchTransfer").value.trim().toLowerCase();
+  const from=$("#fromTransfer").value, to=$("#toTransfer").value;
+  const rows=transfers.filter(t=>
+    (!q||(t.from+" "+t.to+" "+t.ref).toLowerCase().includes(q))&&
+    (!from||t.date>=from)&&(!to||t.date<=to)
+  ).sort((a,b)=>b.date.localeCompare(a.date));
+  
+  $("#tblTransfer tbody").innerHTML=rows.map((t,i)=>`<tr>
+    <td>${t.date}</td>
+    <td><strong>${esc(t.from)}</strong></td>
+    <td><strong>${esc(t.to)}</strong></td>
+    <td class="num">${fmt(t.amt)}</td>
+    <td>${esc(t.ref)}</td>
+    <td><div class="row-actions"><button type="button" class="icon-btn danger" data-tract="del" data-i="${i}">Delete</button></div></td></tr>`).join("");
+  $("#emptyTransfer").style.display=rows.length?"none":"block";
+}
+
 function renderLoan(){
   // loan register table
   $("#loanTotalHead").textContent=loans.length?`${fmt(loans.reduce((s,l)=>s+loanRemaining(l),0))} remaining across ${loans.length} loan${loans.length>1?"s":""}`:"";
@@ -1698,6 +1868,51 @@ refreshSelects();
   showView("vLogin");
   setTimeout(()=>(p.username?$("#lPin"):$("#lUser")).focus(),60);
 })();
+
+/* ---- BANKS & TRANSFERS ---- */
+$("#formBank").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("#bName").value.trim();
+  if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("Bank name already exists");return;}
+  banks.push({name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),notes:$("#bNotes").value.trim()});
+  e.target.reset();$("#bOpen").value="0";
+  refreshBankSelects();setDirty(true);renderAll();
+  toast("Bank added");
+});
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-bact]");
+  if(!btn)return;
+  const i=+btn.closest("tr").dataset.i, b=banks[i];
+  if(btn.dataset.bact==="edit"){
+    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;
+    $("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
+    banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();
+    toast("Edit above, then submit to re-add");
+  }else if(btn.dataset.bact==="del"){
+    const used=income.some(x=>x.bank===b.name)||expenses.some(x=>x.bank===b.name);
+    if(used){toast("Bank has transactions—delete them first");return;}
+    if(confirm(`Delete "${b.name}"?`)){banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();}
+  }
+});
+$("#btnAddTransfer").addEventListener("click",()=>{
+  const from=$("#tFrom").value.trim(), to=$("#tTo").value.trim(), date=$("#tDate").value, amt=num($("#tAmt").value);
+  if(!from||!to||!date||amt<=0){toast("Fill all transfer fields");return;}
+  if(from===to){toast("From and To must be different");return;}
+  transfers.push({date,from,to,amt,ref:$("#tRef").value.trim()});
+  $("#tDate").value=todayISO();$("#tAmt").value="";$("#tRef").value="";
+  setDirty(true);renderAll();toast("Transfer recorded");
+});
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-tract]");
+  if(!btn)return;
+  const i=+btn.dataset.i;
+  if(confirm("Delete this transfer?")){transfers.splice(i,1);setDirty(true);renderAll();}
+});
+$("#searchBank").addEventListener("input",renderBank);
+$("#searchTransfer").addEventListener("input",renderTransfer);
+$("#fromTransfer").addEventListener("input",renderTransfer);
+$("#toTransfer").addEventListener("input",renderTransfer);
+
 </script>
 </body>
 </html>

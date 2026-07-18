@@ -100,6 +100,7 @@
   .pill[data-tab="income"] .dot{background:var(--mint)}
   .pill[data-tab="exp"] .dot{background:var(--coral)}
   .pill[data-tab="inv"] .dot{background:var(--violet)}
+  .pill[data-tab="loan"] .dot{background:#5EE0E6}
   .pill[data-tab="debt"] .dot{background:var(--amber)}
   .pill.active .dot{background:#08111C}
 
@@ -114,6 +115,7 @@
   .kpi.income{--kc:var(--mint)} .kpi.expense{--kc:var(--coral)}
   .kpi.savings{--kc:var(--blue)} .kpi.portfolio{--kc:var(--violet)}
   .kpi.lend{--kc:var(--amber)} .kpi.borrow{--kc:var(--pink)}
+  .kpi.bankloan{--kc:#5EE0E6}
   .kpi .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .kpi .value{font-family:var(--mono);font-size:1.45rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:.25rem}
@@ -311,7 +313,7 @@
     <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
       <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
     </select>
-    <button class="top-btn" id="btnEmbed" title="Use on all devices">Devices</button>
+    <button class="top-btn" id="btnSettings" title="Profile & login settings">Settings</button>
     <button class="top-btn" id="btnLock">Sign out</button>
     <button class="top-btn save" id="btnSave">Save</button>
   </div>
@@ -321,6 +323,7 @@
     <button class="pill" data-tab="income"><span class="dot"></span>Income</button>
     <button class="pill" data-tab="exp"><span class="dot"></span>Expenses</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
+    <button class="pill" data-tab="loan"><span class="dot"></span>Bank Loans</button>
     <button class="pill" data-tab="debt"><span class="dot"></span>Debts &amp; Loans</button>
   </nav>
 
@@ -333,6 +336,7 @@
       <div class="kpi portfolio"><div class="label">Portfolio value</div><div class="value" id="kPortfolio">—</div><div class="sub" id="kPortfolioSub"></div></div>
       <div class="kpi lend"><div class="label">Owed to you</div><div class="value" id="kLent">—</div><div class="sub" id="kLentSub"></div></div>
       <div class="kpi borrow"><div class="label">You owe</div><div class="value" id="kBorrowed">—</div><div class="sub" id="kBorrowedSub"></div></div>
+      <div class="kpi bankloan"><div class="label">Bank loans · remaining</div><div class="value" id="kLoan">—</div><div class="sub" id="kLoanSub"></div></div>
     </div>
 
     <div class="charts">
@@ -378,7 +382,7 @@
       <div class="f"><label for="exDesc">Description</label><input type="text" id="exDesc" placeholder="e.g. Panda supermarket" required></div>
       <div class="f"><label for="exAmt">Amount</label><input type="number" id="exAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="exPay">Paid with</label>
-        <select id="exPay"><option>Card</option><option>Cash</option><option>Bank transfer</option><option>Apple Pay / STC Pay</option><option>Other</option></select></div>
+        <select id="exPay"><option>Card</option><option>Cash</option><option>Bank transfer</option><option>GPay</option><option>Other</option></select></div>
       <div class="f"><button type="submit">+ Add expense</button></div>
     </form>
     <div class="toolbar">
@@ -416,6 +420,49 @@
     </div>
   </section>
 
+  <!-- ============ BANK LOANS ============ -->
+  <section class="panel" id="panel-loan">
+    <div class="section-head"><h2>Bank Loans</h2><span class="total" id="loanTotalHead"></span></div>
+
+    <form class="add-card" id="formLoan">
+      <div class="f"><label for="lnDate">Start date</label><input type="date" id="lnDate" required></div>
+      <div class="f"><label for="lnLender">Lender / bank</label><input type="text" id="lnLender" placeholder="e.g. SBI Home Loan" required></div>
+      <div class="f"><label for="lnType">Type</label>
+        <select id="lnType"><option>Housing</option><option>Car</option><option>Personal</option><option>Education</option><option>Gold</option><option>Other</option></select></div>
+      <div class="f"><label for="lnPrincipal">Principal (borrowed)</label><input type="number" id="lnPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="lnRate">Interest rate % <i>(optional)</i></label><input type="number" id="lnRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
+      <div class="f"><label for="lnEmi">EMI amount</label><input type="number" id="lnEmi" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="lnTenure">Tenure (months) <i>(optional)</i></label><input type="number" id="lnTenure" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
+      <div class="f"><label for="lnNotes">Notes</label><input type="text" id="lnNotes" placeholder="optional"></div>
+      <div class="f"><button type="submit">+ Add loan</button></div>
+    </form>
+
+    <div class="table-card" style="margin-bottom:1.3rem">
+      <table id="tblLoan"><thead><tr><th>Start</th><th>Lender</th><th>Type</th><th style="text-align:right">Principal</th><th style="text-align:right">Rate</th><th style="text-align:right">EMI</th><th style="text-align:right">Paid so far</th><th style="text-align:right">Remaining</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyLoan" style="display:none">No loans yet.<br>Add your housing or other bank loan above, then log each EMI or prepayment below.</div>
+    </div>
+
+    <div class="section-head"><h3 style="font-size:1.05rem;font-weight:700">Repayments</h3><span class="total" id="lpayTotalHead"></span></div>
+    <form class="add-card" id="formLpay">
+      <div class="f"><label for="lpDate">Date</label><input type="date" id="lpDate" required></div>
+      <div class="f"><label for="lpLender">Loan</label><select id="lpLender" required></select></div>
+      <div class="f"><label for="lpKind">Payment type</label>
+        <select id="lpKind"><option>EMI</option><option>Prepayment</option><option>Charges</option><option>Other</option></select></div>
+      <div class="f"><label for="lpAmt">Amount</label><input type="number" id="lpAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="lpNotes">Notes</label><input type="text" id="lpNotes" placeholder="optional"></div>
+      <div class="f"><button type="submit">+ Add repayment</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchLpay" placeholder="Search repayments…">
+      <select id="filterLpayMonth"><option value="">All months</option></select>
+      <span class="sum" id="lpayFilteredSum"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblLpay"><thead><tr><th>Date</th><th>Loan</th><th>Type</th><th style="text-align:right">Amount</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyLpay" style="display:none">No repayments logged yet.<br>Each EMI you record here reduces the loan’s remaining balance above.</div>
+    </div>
+  </section>
+
   <!-- ============ DEBTS & LOANS ============ -->
   <section class="panel" id="panel-debt">
     <div class="section-head"><h2>Debts &amp; Loans</h2><span class="total" id="debtTotalHead"></span></div>
@@ -442,6 +489,25 @@
     </div>
   </section>
 </main>
+
+<div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:480px;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.25rem;margin-bottom:.5rem">Settings</h2>
+    <p class="sub">Update your name and sign-in details. Changes are stored on your next Save.</p>
+    <div class="auth-error" id="settingsError"></div>
+    <div class="f"><label for="stName">Your name</label><input type="text" id="stName" autocomplete="off"></div>
+    <div class="f"><label for="stUser">Login ID</label><input type="text" id="stUser" autocomplete="username"></div>
+    <div class="f" style="border-top:1px solid var(--line);padding-top:1rem;margin-top:1.1rem"><label for="stCur">Current password <i>(only to change password)</i></label><input type="password" id="stCur" autocomplete="current-password"></div>
+    <div class="f"><label for="stNew">New password</label><input type="password" id="stNew" autocomplete="new-password"></div>
+    <div class="f"><label for="stNew2">Confirm new password</label><input type="password" id="stNew2" autocomplete="new-password"></div>
+    <div class="stack">
+      <button class="btn primary" id="btnSettingsSave">Update settings</button>
+      <button class="btn" id="btnEmbed">Get device setup code</button>
+      <button class="btn ghost" id="btnCloseSettings">Close</button>
+    </div>
+    <p class="auth-note">If you change your password, get a fresh device setup code afterwards and re-install it in index.html — the old embedded code only opens with the old password.</p>
+  </div>
+</div>
 
 <div id="embedOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
   <div class="auth-card" style="max-width:560px;max-height:90vh;overflow:auto">
@@ -472,12 +538,12 @@
 ============================================================ */
 const EMBEDDED=null; // LEDGR-EMBED — replace this whole line with your generated connection code
 
-let income=[], expenses=[], investments=[], debts=[];
+let income=[], expenses=[], investments=[], debts=[], loans=[], loanPays=[];
 let currency="SAR", owner="", username="", passHash="";
 let storageMode="local";            // "local" | "github"
 let fileHandle=null, fileName="", dirty=false;
 const gh={token:"",repo:"",path:"",branch:"main",sha:null};
-let editing={inc:-1,exp:-1,inv:-1,debt:-1};
+let editing={inc:-1,exp:-1,inv:-1,debt:-1,loan:-1,lpay:-1};
 let charts={};
 let creatingToGithub=false;
 let profilePending=false;   // a saved device profile is waiting for the password
@@ -582,7 +648,7 @@ function parseWorkbook(buf,name){
   const find=w=>wb.SheetNames.find(n=>n.trim().toLowerCase()===w)||null;
   const g=(r,k)=>r[Object.keys(r).find(x=>x.trim().toLowerCase()===k)]??"";
 
-  income=[];expenses=[];investments=[];debts=[];owner="";username="";passHash="";
+  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];owner="";username="";passHash="";
 
   const sInc=find("income");
   if(sInc)XLSX.utils.sheet_to_json(wb.Sheets[sInc],{defval:""}).forEach(r=>{
@@ -617,6 +683,25 @@ function parseWorkbook(buf,name){
   });
   debts=debts.filter(r=>r.person||r.amount);
 
+  loans=[];loanPays=[];
+  const sLoan=find("loans");
+  if(sLoan)XLSX.utils.sheet_to_json(wb.Sheets[sLoan],{defval:""}).forEach(r=>{
+    loans.push({date:normDate(g(r,"date")||g(r,"start date"))||todayISO(),
+      lender:String(g(r,"lender")||"").trim(),type:String(g(r,"type")||"Housing").trim()||"Housing",
+      principal:num(g(r,"principal")),rate:num(g(r,"interest rate")||g(r,"rate")),
+      emi:num(g(r,"emi")),tenure:Math.round(num(g(r,"tenure months")||g(r,"tenure"))),
+      notes:String(g(r,"notes")||"")});
+  });
+  loans=loans.filter(r=>r.lender||r.principal);
+  const sLpay=find("loan payments");
+  if(sLpay)XLSX.utils.sheet_to_json(wb.Sheets[sLpay],{defval:""}).forEach(r=>{
+    loanPays.push({date:normDate(g(r,"date"))||todayISO(),
+      lender:String(g(r,"lender")||g(r,"loan")||"").trim(),
+      kind:String(g(r,"kind")||g(r,"payment type")||"EMI").trim()||"EMI",
+      amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
+  });
+  loanPays=loanPays.filter(r=>r.lender||r.amount);
+
   const sSet=find("settings");
   if(sSet)XLSX.utils.sheet_to_json(wb.Sheets[sSet],{defval:""}).forEach(r=>{
     const key=String(g(r,"key")).toLowerCase(),val=g(r,"value");
@@ -649,16 +734,24 @@ function buildWorkbook(){
     {header:["Date","Name","Type","Amount Invested","Current Value","Notes"]});
   const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Notes":r.notes})),
     {header:["Date","Person","Type","Amount","Repaid","Due Date","Notes"]});
+  const wsLoan=XLSX.utils.json_to_sheet(loans.map(r=>({"Date":r.date,"Lender":r.lender,"Type":r.type,"Principal":r.principal,"Interest Rate":r.rate,"EMI":r.emi,"Tenure Months":r.tenure,"Notes":r.notes})),
+    {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Notes"]});
+  const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Notes":r.notes})),
+    {header:["Date","Lender","Kind","Amount","Notes"]});
   const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash}];
   const wsSet=XLSX.utils.json_to_sheet(settings);
   wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:26}];
   wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:18}];
   wsInv["!cols"]=[{wch:12},{wch:24},{wch:14},{wch:16},{wch:16},{wch:26}];
   wsDebt["!cols"]=[{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:12},{wch:26}];
+  wsLoan["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:26}];
+  wsLpay["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:12},{wch:26}];
   wsSet["!cols"]=[{wch:14},{wch:70}];
   XLSX.utils.book_append_sheet(wb,wsInc,"Income");
   XLSX.utils.book_append_sheet(wb,wsExp,"Expenses");
   XLSX.utils.book_append_sheet(wb,wsInv,"Investments");
+  XLSX.utils.book_append_sheet(wb,wsLoan,"Loans");
+  XLSX.utils.book_append_sheet(wb,wsLpay,"Loan Payments");
   XLSX.utils.book_append_sheet(wb,wsDebt,"Debts");
   XLSX.utils.book_append_sheet(wb,wsSet,"Settings");
   return wb;
@@ -806,7 +899,7 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   owner=$("#cName").value.trim();username=user;
   currency=$("#cCurrency").value;$("#currency").value=currency;
   passHash=await hashPin(pin);sessionPass=pin;
-  income=[];expenses=[];investments=[];debts=[];
+  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];
   if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
     if(rememberDevice&&gh.token)await saveProfile(pin);}
   else{storageMode="local";fileHandle=null;fileName="my-money.xlsx";}
@@ -878,11 +971,41 @@ $("#btnLock").addEventListener("click",()=>{
   showLogin();
 });
 
+/* ---------- Settings: profile & login ---------- */
+$("#btnSettings").addEventListener("click",()=>{
+  $("#settingsError").style.display="none";
+  $("#stName").value=owner;$("#stUser").value=username;
+  $("#stCur").value="";$("#stNew").value="";$("#stNew2").value="";
+  $("#settingsOverlay").style.display="flex";
+});
+$("#btnCloseSettings").addEventListener("click",()=>{$("#settingsOverlay").style.display="none";});
+$("#settingsOverlay").addEventListener("click",e=>{if(e.target.id==="settingsOverlay")$("#settingsOverlay").style.display="none";});
+$("#btnSettingsSave").addEventListener("click",async()=>{
+  const err=$("#settingsError");err.style.display="none";
+  const name=$("#stName").value.trim(),user=$("#stUser").value.trim();
+  const cur=$("#stCur").value,nw=$("#stNew").value,nw2=$("#stNew2").value;
+  if(!user){err.textContent="Login ID can’t be empty.";err.style.display="block";return;}
+  let passwordChanged=false;
+  if(nw||nw2||cur){
+    if(!cur||!(await verifyPin(cur,passHash))){err.textContent="Current password is wrong.";err.style.display="block";return;}
+    if(nw.length<4){err.textContent="New password must be at least 4 characters.";err.style.display="block";return;}
+    if(nw!==nw2){err.textContent="New passwords don’t match.";err.style.display="block";return;}
+    passHash=await hashPin(nw);sessionPass=nw;passwordChanged=true;
+  }
+  owner=name;username=user;
+  $("#ownerLabel").textContent=owner?owner+"’s ledger":"Personal finance";
+  if(storageMode==="github"&&gh.token&&sessionPass)await saveProfile(sessionPass);
+  setDirty(true);
+  $("#settingsOverlay").style.display="none";
+  toast(passwordChanged?"Updated — click Save to store it, then get a fresh device setup code":"Updated — click Save to store it");
+});
+
 /* ---------- Devices: generate the embeddable connection line ---------- */
 $("#btnEmbed").addEventListener("click",async()=>{
   if(!sessionPass||!gh.token||storageMode!=="github"){toast("Sign in through GitHub first");return;}
   try{
     $("#embedCode").value=await generateEmbedLine();
+    $("#settingsOverlay").style.display="none";
     $("#embedOverlay").style.display="flex";
   }catch(e){console.error(e);toast("Could not generate the code — try again.");}
 });
@@ -910,6 +1033,12 @@ const thisMonth=()=>new Date().toISOString().slice(0,7);
 function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
 const sumBy=(arr,pred)=>arr.filter(pred).reduce((s,r)=>s+r.amount,0);
 const outstanding=r=>Math.max(0,r.amount-r.repaid);
+const paidForLoan=lender=>loanPays.filter(p=>p.lender.trim().toLowerCase()===lender.trim().toLowerCase()).reduce((s,p)=>s+p.amount,0);
+const loanRemaining=l=>{
+  const paid=paidForLoan(l.lender);
+  const total=(l.emi>0&&l.tenure>0)?l.emi*l.tenure:l.principal;
+  return Math.max(0,total-paid);
+};
 
 /* ---------- overview ---------- */
 function renderOverview(){
@@ -936,6 +1065,10 @@ function renderOverview(){
   $("#kLentSub").textContent=`${given.filter(r=>outstanding(r)>0).length} open · debt given`;
   $("#kBorrowed").textContent=fmt(oweOut);
   $("#kBorrowedSub").textContent=`${taken.filter(r=>outstanding(r)>0).length} open · loans taken`;
+  const loanRem=loans.reduce((s,l)=>s+loanRemaining(l),0);
+  const emiTotal=loans.filter(l=>loanRemaining(l)>0).reduce((s,l)=>s+l.emi,0);
+  $("#kLoan").textContent=fmt(loanRem);
+  $("#kLoanSub").textContent=loans.length?`${loans.length} loan${loans.length>1?"s":""}${emiTotal?` · ${fmt(emiTotal)}/mo EMI`:""}`:"No bank loans added";
 
   try{drawCharts();}catch(e){console.error("charts failed:",e);}
   renderTxList();
@@ -1149,8 +1282,76 @@ function renderDebt(){
   $("#tblDebt").style.display=debts.length?"":"none";
 }
 
+/* ---------- bank loans ---------- */
+function renderLoan(){
+  // loan register table
+  $("#loanTotalHead").textContent=loans.length?`${fmt(loans.reduce((s,l)=>s+loanRemaining(l),0))} remaining across ${loans.length} loan${loans.length>1?"s":""}`:"";
+  $("#tblLoan tbody").innerHTML=loans.map((r,i)=>{
+    if(i===editing.loan)return `<tr data-i="${i}">
+      <td data-l="Start"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Lender"><input type="text" class="e-lender" value="${esc(r.lender)}"></td>
+      <td data-l="Type"><input type="text" class="e-type" value="${esc(r.type)}"></td>
+      <td data-l="Principal" class="num"><input type="number" step="0.01" class="e-principal" value="${r.principal}"></td>
+      <td data-l="Rate" class="num"><input type="number" step="0.01" class="e-rate" value="${r.rate}"></td>
+      <td data-l="EMI" class="num"><input type="number" step="0.01" class="e-emi" value="${r.emi}"></td>
+      <td data-l="Paid so far" class="num">—</td>
+      <td data-l="Remaining" class="num"><input type="number" step="1" class="e-tenure" value="${r.tenure}" title="Tenure months"></td>
+      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLoan">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    const paid=paidForLoan(r.lender),rem=loanRemaining(r),closed=rem<=0;
+    return `<tr data-i="${i}">
+      <td data-l="Start">${esc(r.date)}</td>
+      <td data-l="Lender"><strong>${esc(r.lender)}</strong>${r.tenure?`<span style="display:block;font-size:.72rem;color:var(--muted)">${r.tenure} months</span>`:""}</td>
+      <td data-l="Type"><span class="tag iv" style="background:rgba(94,224,230,.14);color:#5EE0E6">${esc(r.type)}</span></td>
+      <td data-l="Principal" class="num">${fmt(r.principal)}</td>
+      <td data-l="Rate" class="num">${r.rate?r.rate.toFixed(2)+"%":"—"}</td>
+      <td data-l="EMI" class="num">${r.emi?fmt(r.emi):"—"}</td>
+      <td data-l="Paid so far" class="num"><span class="pos">${fmt(paid)}</span></td>
+      <td data-l="Remaining" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<span class="neg">${fmt(rem)}</span>`}</td>
+      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editLoan">Edit</button><button type="button" class="icon-btn danger" data-act="delLoan">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyLoan").style.display=loans.length?"none":"block";
+  $("#tblLoan").style.display=loans.length?"":"none";
+
+  // lender select for the repayment form
+  const sel=$("#lpLender"),cur=sel.value;
+  sel.innerHTML=loans.length?loans.map(l=>`<option${l.lender===cur?" selected":""}>${esc(l.lender)}</option>`).join(""):'<option value="">Add a loan first</option>';
+
+  // repayments table
+  const q=$("#searchLpay").value.trim().toLowerCase(),fm=$("#filterLpayMonth").value;
+  const months=[...new Set(loanPays.map(r=>monthKey(r.date)))].sort().reverse();
+  const selM=$("#filterLpayMonth"),curM=selM.value;
+  selM.innerHTML='<option value="">All months</option>'+months.map(m=>{
+    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
+    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
+  const rows=loanPays.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.lender+" "+r.notes+" "+r.kind).toLowerCase().includes(q))&&(!fm||r.date.startsWith(fm)))
+    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
+  $("#lpayFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
+  $("#lpayTotalHead").textContent=loanPays.length?`${fmt(loanPays.reduce((s,r)=>s+r.amount,0))} paid all time`:"";
+  $("#tblLpay tbody").innerHTML=rows.map(({r,i})=>{
+    if(i===editing.lpay)return `<tr data-i="${i}">
+      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
+      <td data-l="Loan"><input type="text" class="e-lender" value="${esc(r.lender)}"></td>
+      <td data-l="Type"><input type="text" class="e-kind" value="${esc(r.kind)}"></td>
+      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLpay">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+    return `<tr data-i="${i}">
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Loan"><strong>${esc(r.lender)}</strong></td>
+      <td data-l="Type"><span class="tag ${r.kind==="Prepayment"?"in":"done"}">${esc(r.kind)}</span></td>
+      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
+      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
+      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editLpay">Edit</button><button type="button" class="icon-btn danger" data-act="delLpay">Delete</button></div></td></tr>`;
+  }).join("");
+  $("#emptyLpay").style.display=loanPays.length?"none":"block";
+  $("#tblLpay").style.display=loanPays.length?"":"none";
+}
+
 function renderAll(){
-  [renderOverview,renderInc,renderExp,renderInv,renderDebt].forEach(fn=>{
+  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -1177,27 +1378,47 @@ $("#formDebt").addEventListener("submit",e=>{
   debts.push({date:$("#dbDate").value||todayISO(),person:$("#dbPerson").value.trim(),type:$("#dbType").value,amount:num($("#dbAmt").value),repaid:num($("#dbRepaid").value),due:$("#dbDue").value||"",notes:$("#dbNotes").value.trim()});
   e.target.reset();$("#dbDate").value=todayISO();setDirty(true);renderAll();
 });
+$("#formLoan").addEventListener("submit",e=>{
+  e.preventDefault();
+  loans.push({date:$("#lnDate").value||todayISO(),lender:$("#lnLender").value.trim(),type:$("#lnType").value,
+    principal:num($("#lnPrincipal").value),rate:num($("#lnRate").value),emi:num($("#lnEmi").value),
+    tenure:Math.round(num($("#lnTenure").value)),notes:$("#lnNotes").value.trim()});
+  e.target.reset();$("#lnDate").value=todayISO();setDirty(true);renderAll();
+});
+$("#formLpay").addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!$("#lpLender").value){toast("Add a loan first");return;}
+  loanPays.push({date:$("#lpDate").value||todayISO(),lender:$("#lpLender").value,kind:$("#lpKind").value,
+    amount:num($("#lpAmt").value),notes:$("#lpNotes").value.trim()});
+  e.target.reset();$("#lpDate").value=todayISO();setDirty(true);renderAll();
+});
 
 ["searchInc","filterIncMonth"].forEach(id=>$("#"+id).addEventListener("input",renderInc));
 ["searchExp","filterExpCat","filterExpMonth"].forEach(id=>$("#"+id).addEventListener("input",renderExp));
 ["searchInv","filterInvType"].forEach(id=>$("#"+id).addEventListener("input",renderInv));
 ["searchDebt","filterDebtType","filterDebtStatus"].forEach(id=>$("#"+id).addEventListener("input",renderDebt));
+["searchLpay","filterLpayMonth"].forEach(id=>$("#"+id).addEventListener("input",renderLoan));
 
 /* ---------- row actions ---------- */
 document.addEventListener("click",e=>{
   const btn=e.target.closest("[data-act]");if(!btn)return;
   const tr=btn.closest("tr");const i=tr?+tr.dataset.i:-1;
   const done=()=>{setDirty(true);renderAll();};
+  const edit=(k,v)=>{editing={inc:-1,exp:-1,inv:-1,debt:-1,loan:-1,lpay:-1};if(k)editing[k]=v;renderAll();};
   switch(btn.dataset.act){
-    case "cancel":editing={inc:-1,exp:-1,inv:-1,debt:-1};renderAll();break;
-    case "editInc":editing={inc:i,exp:-1,inv:-1,debt:-1};renderAll();break;
-    case "editExp":editing={inc:-1,exp:i,inv:-1,debt:-1};renderAll();break;
-    case "editInv":editing={inc:-1,exp:-1,inv:i,debt:-1};renderAll();break;
-    case "editDebt":editing={inc:-1,exp:-1,inv:-1,debt:i};renderAll();break;
+    case "cancel":edit(null);break;
+    case "editInc":edit("inc",i);break;
+    case "editExp":edit("exp",i);break;
+    case "editInv":edit("inv",i);break;
+    case "editDebt":edit("debt",i);break;
+    case "editLoan":edit("loan",i);break;
+    case "editLpay":edit("lpay",i);break;
     case "delInc":if(confirm(`Delete "${income[i].source}"? This is removed on your next save.`)){income.splice(i,1);done();}break;
     case "delExp":if(confirm(`Delete "${expenses[i].desc}"? This is removed on your next save.`)){expenses.splice(i,1);done();}break;
     case "delInv":if(confirm(`Delete "${investments[i].name}"? This is removed on your next save.`)){investments.splice(i,1);done();}break;
     case "delDebt":if(confirm(`Delete the record for "${debts[i].person}"? This is removed on your next save.`)){debts.splice(i,1);done();}break;
+    case "delLoan":if(confirm(`Delete the loan "${loans[i].lender}"? Its repayment history stays until you delete those rows too.`)){loans.splice(i,1);done();}break;
+    case "delLpay":if(confirm(`Delete this repayment of ${fmt(loanPays[i].amount)}? This is removed on your next save.`)){loanPays.splice(i,1);done();}break;
     case "saveInc":{const r=income[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.source=tr.querySelector(".e-src").value.trim();
       r.category=tr.querySelector(".e-cat").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
@@ -1216,6 +1437,16 @@ document.addEventListener("click",e=>{
       r.type=tr.querySelector(".e-type").value;r.amount=num(tr.querySelector(".e-amt").value);
       r.repaid=num(tr.querySelector(".e-repaid").value);r.due=tr.querySelector(".e-due").value||"";
       r.notes=tr.querySelector(".e-notes").value.trim();editing.debt=-1;done();break;}
+    case "saveLoan":{const r=loans[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
+      r.type=tr.querySelector(".e-type").value.trim()||"Housing";r.principal=num(tr.querySelector(".e-principal").value);
+      r.rate=num(tr.querySelector(".e-rate").value);r.emi=num(tr.querySelector(".e-emi").value);
+      r.tenure=Math.round(num(tr.querySelector(".e-tenure").value));r.notes=tr.querySelector(".e-notes").value.trim();
+      editing.loan=-1;done();break;}
+    case "saveLpay":{const r=loanPays[i];
+      r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
+      r.kind=tr.querySelector(".e-kind").value.trim()||"EMI";r.amount=num(tr.querySelector(".e-amt").value);
+      r.notes=tr.querySelector(".e-notes").value.trim();editing.lpay=-1;done();break;}
   }
 });
 
@@ -1230,6 +1461,8 @@ $("#inDate").value=todayISO();
 $("#exDate").value=todayISO();
 $("#ivDate").value=todayISO();
 $("#dbDate").value=todayISO();
+$("#lnDate").value=todayISO();
+$("#lpDate").value=todayISO();
 
 /* ---------- startup: remembered device or embedded setup goes straight to login ---------- */
 (function init(){

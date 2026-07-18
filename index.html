@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Ledgr — personal finance, Excel-backed</title>
+<title>Ledgr — personal finance</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -89,6 +89,7 @@
   .top-btn.save{background:var(--grad);border:none;color:#08111C}
   .top-btn.save:hover{filter:brightness(1.07)}
   .top-btn.save:disabled{opacity:.6;cursor:wait}
+  .top-btn.save.dirty{background:var(--amber);box-shadow:0 0 0 3px rgba(255,196,102,.25)}
 
   nav.pills{display:flex;gap:.45rem;margin-bottom:1.3rem;overflow-x:auto;padding-bottom:.25rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.pills::-webkit-scrollbar{display:none}
@@ -215,30 +216,32 @@
 
     <!-- 1. landing -->
     <div class="a-view" id="vLanding">
-      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Excel-backed finance</span></div></div>
+      <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Personal finance</span></div></div>
       <h2>Your money,<br><span class="grad-text">clearly in view.</span></h2>
-      <p class="sub">Income, expenses, investments, debts and loans — all stored in an Excel workbook you own, on your computer or in your GitHub repo.</p>
+      <p class="sub">Income, expenses, investments, debts and loans — synced securely to your private GitHub repo.</p>
       <div class="stack">
-        <button class="btn primary" id="goOpenLocal">Open Excel from this device</button>
-        <button class="btn" id="goGithub">Connect GitHub repo</button>
-        <button class="btn" id="goCreate">Create a new database</button>
+        <button class="btn primary" id="goGithub">Connect GitHub repo</button>
       </div>
-      <p class="auth-note">Direct save-back to a local file needs <code>Chrome</code> or <code>Edge</code>. GitHub sync works in any modern browser.</p>
+      <p class="auth-note">One-time setup per device — after that, this page opens straight at your sign-in.</p>
     </div>
 
     <!-- 2. github connect -->
     <div class="a-view" id="vGithub" style="display:none">
       <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>GitHub sync</span></div></div>
       <h2>Connect your repo</h2>
-      <p class="sub">Ledgr reads and commits your Excel file through the GitHub API. Use a <b>private</b> repo — this file holds your finances.</p>
+      <p class="sub">Ledgr reads and saves your data through the GitHub API. Use a <b>private</b> repo — it holds your finances.</p>
       <div class="auth-error" id="ghError"></div>
       <div class="f"><label for="ghToken">Personal access token</label>
         <input type="password" id="ghToken" placeholder="github_pat_… or ghp_…" autocomplete="off">
-        <div class="hint">Create a fine-grained token limited to this one repo with “Contents: read &amp; write”. It stays in memory only — you’ll paste it each time you open this page, and it is never written into the Excel or the repo.</div>
+        <div class="hint">Create a fine-grained token limited to this one repo with “Contents: read &amp; write”. It stays on your device only and is never uploaded anywhere.</div>
       </div>
       <div class="f"><label for="ghRepo">Repository</label><input type="text" id="ghRepo" placeholder="username/my-finance" autocomplete="off"></div>
       <div class="f"><label for="ghPath">File path in repo</label><input type="text" id="ghPath" value="my-money.xlsx" autocomplete="off"></div>
       <div class="f"><label for="ghBranch">Branch</label><input type="text" id="ghBranch" value="main" autocomplete="off"></div>
+      <div class="f" style="display:flex;align-items:flex-start;gap:.55rem">
+        <input type="checkbox" id="ghRemember" checked style="width:auto;margin-top:.15rem;accent-color:var(--mint)">
+        <label for="ghRemember" style="margin:0;text-transform:none;letter-spacing:0;font-size:.78rem;font-weight:500;color:var(--muted);line-height:1.45">Remember this connection on this device — next time, the page opens straight at the login screen. The token is stored encrypted with your login password.</label>
+      </div>
       <div class="stack">
         <button class="btn primary" id="ghConnect">Connect &amp; load</button>
         <button class="btn ghost" data-back>← Back</button>
@@ -249,7 +252,7 @@
     <div class="a-view" id="vCreate" style="display:none">
       <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>New database</span></div></div>
       <h2>Set up your ledger</h2>
-      <p class="sub" id="createSub">Creates a fresh Excel workbook with Income, Expenses, Investments and Debts sheets. Your login is stored (hashed) inside it.</p>
+      <p class="sub" id="createSub">Creates a fresh ledger with Income, Expenses, Investments and Debts. Your login is stored securely inside it.</p>
       <div class="auth-error" id="createError"></div>
       <div class="f"><label for="cName">Your name</label><input type="text" id="cName" placeholder="e.g. Ahmed" autocomplete="off"></div>
       <div class="f"><label for="cUser">Login ID</label><input type="text" id="cUser" placeholder="e.g. ahmed" autocomplete="username"></div>
@@ -262,7 +265,7 @@
         <button class="btn primary" id="btnCreateGo">Create my database</button>
         <button class="btn ghost" data-back>← Back</button>
       </div>
-      <p class="auth-note">The login is checked by this page against a hash stored in your own Excel file. It keeps casual eyes out, but anyone who has the .xlsx (or repo access) can open the data in Excel — so keep the file and repo private.</p>
+      <p class="auth-note">Keep your repo private — anyone with access to it can read your data.</p>
     </div>
 
     <!-- 4. login -->
@@ -276,8 +279,9 @@
         <div class="f"><label for="lUser">Login ID</label><input type="text" id="lUser" autocomplete="username" required></div>
         <div class="f"><label for="lPin">Password</label><input type="password" id="lPin" autocomplete="current-password" required></div>
         <div class="stack">
-          <button class="btn primary" type="submit">Sign in</button>
-          <button class="btn ghost" type="button" data-back>Use a different file</button>
+          <button class="btn primary" type="submit" id="loginSubmitBtn">Sign in</button>
+          <button class="btn ghost" type="button" data-back>Connect a different repo</button>
+          <button class="btn ghost" type="button" id="btnForget" style="display:none">Forget saved connection on this device</button>
         </div>
       </form>
     </div>
@@ -286,7 +290,7 @@
     <div class="a-view" id="vSetCreds" style="display:none">
       <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span>Secure this file</span></div></div>
       <h2>Create your login</h2>
-      <p class="sub">This workbook doesn’t have a login yet. Set one now — it’s saved into the file’s Settings sheet on your next save.</p>
+      <p class="sub">This ledger doesn’t have a login yet. Set one now — it’s stored securely on your next save.</p>
       <div class="auth-error" id="setCredsError"></div>
       <div class="f"><label for="sUser">Login ID</label><input type="text" id="sUser" autocomplete="username"></div>
       <div class="f"><label for="sPin">Password</label><input type="password" id="sPin" autocomplete="new-password"></div>
@@ -303,8 +307,7 @@
 <!-- ======================= APP ======================= -->
 <main id="app">
   <div class="topbar">
-    <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span id="ownerLabel">Excel-backed finance</span></div></div>
-    <div class="chip" id="fileChip">no file</div>
+    <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span id="ownerLabel">Personal finance</span></div></div>
     <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
       <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
     </select>
@@ -360,7 +363,7 @@
     </div>
     <div class="table-card">
       <table id="tblInc"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th style="text-align:right">Amount</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyInc" style="display:none">No income recorded yet.<br>Add your salary or other income above — it goes into the “Income” sheet of your Excel file.</div>
+      <div class="empty" id="emptyInc" style="display:none">No income recorded yet.<br>Add your salary or other income above — </div>
     </div>
   </section>
 
@@ -385,7 +388,7 @@
     </div>
     <div class="table-card">
       <table id="tblExp"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Paid with</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyExp" style="display:none">No expenses yet.<br>Add one above — it goes into the “Expenses” sheet of your Excel file.</div>
+      <div class="empty" id="emptyExp" style="display:none">No expenses yet.<br>Add one above — </div>
     </div>
   </section>
 
@@ -408,7 +411,7 @@
     </div>
     <div class="table-card">
       <table id="tblInv"><thead><tr><th>Date</th><th>Name</th><th>Type</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyInv" style="display:none">No investments yet.<br>Add your first one above — it goes into the “Investments” sheet of your Excel file.</div>
+      <div class="empty" id="emptyInv" style="display:none">No investments yet.<br>Add your first one above — </div>
     </div>
   </section>
 
@@ -434,7 +437,7 @@
     </div>
     <div class="table-card">
       <table id="tblDebt"><thead><tr><th>Date</th><th>Person</th><th>Type</th><th style="text-align:right">Amount</th><th style="text-align:right">Repaid</th><th style="text-align:right">Outstanding</th><th>Due</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyDebt" style="display:none">Nothing here yet.<br>Record money you’ve lent to others (debt given) or borrowed from others (loan taken) — it goes into the “Debts” sheet of your Excel file.</div>
+      <div class="empty" id="emptyDebt" style="display:none">Nothing here yet.<br>Record money you’ve lent to others (debt given) or borrowed from others (loan taken).</div>
     </div>
   </section>
 </main>
@@ -457,6 +460,8 @@ const gh={token:"",repo:"",path:"",branch:"main",sha:null};
 let editing={inc:-1,exp:-1,inv:-1,debt:-1};
 let charts={};
 let creatingToGithub=false;
+let profilePending=false;   // a saved device profile is waiting for the password
+let rememberDevice=true;
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -478,10 +483,8 @@ const num=v=>{const n=parseFloat(v);return isNaN(n)?0:n;};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function setDirty(v){
   dirty=v;
-  const chip=$("#fileChip");
-  chip.classList.toggle("dirty",dirty);
-  const label=storageMode==="github"?gh.repo+"/"+gh.path:(fileName||"unsaved workbook");
-  chip.textContent=label+(dirty?" • unsaved":"");
+  const btn=$("#btnSave");
+  if(btn&&!btn.disabled){btn.classList.toggle("dirty",dirty);btn.textContent=dirty?"Save •":"Save";}
 }
 
 /* ---------- hashing (light lock — anyone with the file can read it in Excel) ---------- */
@@ -514,8 +517,36 @@ function b64ToAb(b64){
   return bytes.buffer;
 }
 
+/* ---------- remembered device profile (token encrypted with the login password) ---------- */
+const PROFILE_KEY="ledgr.profile.v1";
+const canRemember=()=>{try{return !!(window.localStorage&&crypto&&crypto.subtle);}catch(_){return false;}};
+function getProfile(){try{const p=JSON.parse(localStorage.getItem(PROFILE_KEY));return p&&p.repo&&p.ct?p:null;}catch(_){return null;}}
+function clearProfile(){try{localStorage.removeItem(PROFILE_KEY);}catch(_){}}
+async function deriveKey(pass,saltB64){
+  const salt=new Uint8Array(b64ToAb(saltB64));
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function saveProfile(pass){
+  if(!canRemember()||!gh.token)return;
+  try{
+    const salt=crypto.getRandomValues(new Uint8Array(16));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const saltB64=abToB64(salt.buffer),ivB64=abToB64(iv.buffer);
+    const key=await deriveKey(pass,saltB64);
+    const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(gh.token));
+    localStorage.setItem(PROFILE_KEY,JSON.stringify({repo:gh.repo,path:gh.path,branch:gh.branch,owner,username,salt:saltB64,iv:ivB64,ct:abToB64(ct)}));
+  }catch(e){console.warn("Could not remember this device",e);}
+}
+async function decryptProfileToken(p,pass){
+  const key=await deriveKey(pass,p.salt);
+  const iv=new Uint8Array(b64ToAb(p.iv));
+  const buf=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,b64ToAb(p.ct));
+  return new TextDecoder().decode(buf);
+}
+
 /* ---------- Excel: read ---------- */
-function loadWorkbook(buf,name){
+function parseWorkbook(buf,name){
   const wb=XLSX.read(buf,{type:"array",cellDates:true});
   const find=w=>wb.SheetNames.find(n=>n.trim().toLowerCase()===w)||null;
   const g=(r,k)=>r[Object.keys(r).find(x=>x.trim().toLowerCase()===k)]??"";
@@ -569,7 +600,9 @@ function loadWorkbook(buf,name){
   if(![...sel.options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;sel.appendChild(o);}
   sel.value=currency;
   setDirty(false);
-
+}
+function loadWorkbook(buf,name){
+  parseWorkbook(buf,name);
   if(username&&passHash)showLogin();
   else showSetCreds();
 }
@@ -634,29 +667,29 @@ async function ghCommit(buf){
 
 /* ---------- save ---------- */
 async function saveFile(){
-  const btn=$("#btnSave");btn.disabled=true;btn.textContent="Saving…";
+  const btn=$("#btnSave");btn.disabled=true;btn.classList.remove("dirty");btn.textContent="Saving…";
   try{
     const wb=buildWorkbook();
     const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
     if(storageMode==="github"){
       await ghCommit(buf);
-      setDirty(false);toast("Committed to "+gh.repo+" ✓");
+      setDirty(false);toast("Saved ✓");
     }else if(hasFS){
       if(!fileHandle){
         fileHandle=await window.showSaveFilePicker({suggestedName:fileName||"my-money.xlsx",
-          types:[{description:"Excel workbook",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
+          types:[{description:"Workbook",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
         fileName=fileHandle.name;
       }
       const w=await fileHandle.createWritable();
       await w.write(new Blob([buf]));await w.close();
-      setDirty(false);toast("Saved to "+fileName);
+      setDirty(false);toast("Saved ✓");
     }else{
       XLSX.writeFile(wb,fileName||"my-money.xlsx");
-      setDirty(false);toast("Updated workbook downloaded — replace your old file with it");
+      setDirty(false);toast("Updated copy downloaded");
     }
   }catch(err){
     if(!(err&&err.name==="AbortError")){console.error(err);toast(err.message||"Could not save.");}
-  }finally{btn.disabled=false;btn.textContent="Save";}
+  }finally{btn.disabled=false;setDirty(dirty);}
 }
 
 /* ---------- open local ---------- */
@@ -688,8 +721,8 @@ function showView(id){
 function showLogin(){
   $("#loginAvatar").textContent=(owner||username||"L").trim().charAt(0).toUpperCase();
   $("#loginTitle").textContent=owner?`Welcome back, ${owner}`:"Sign in";
-  $("#loginFile").textContent="Your login is checked against this workbook’s Settings sheet.";
-  $("#loginMode").innerHTML=storageMode==="github"?`GitHub · <b>${esc(gh.repo)}/${esc(gh.path)}</b>`:`Local file · <b>${esc(fileName)}</b>`;
+  $("#loginFile").textContent="Sign in to open your ledger.";
+  $("#loginMode").innerHTML="🔒 Private &amp; secure";
   $("#loginError").style.display="none";
   $("#lUser").value="";$("#lPin").value="";
   showView("vLogin");
@@ -701,14 +734,12 @@ function showSetCreds(){
 }
 function enterApp(){
   $("#authScreen").style.display="none";$("#app").style.display="block";
-  $("#ownerLabel").textContent=owner?owner+"’s ledger":"Excel-backed finance";
+  $("#ownerLabel").textContent=owner?owner+"’s ledger":"Personal finance";
   setDirty(dirty);renderAll();
 }
 
-$("#goOpenLocal").addEventListener("click",openLocal);
 $("#goGithub").addEventListener("click",()=>{$("#ghError").style.display="none";showView("vGithub");});
-$("#goCreate").addEventListener("click",()=>{creatingToGithub=false;$("#createError").style.display="none";$("#createSub").textContent="Creates a fresh Excel workbook with Income, Expenses, Investments and Debts sheets. Your login is stored (hashed) inside it.";showView("vCreate");});
-$$("[data-back]").forEach(b=>b.addEventListener("click",()=>showView("vLanding")));
+$$("[data-back]").forEach(b=>b.addEventListener("click",()=>{profilePending=false;showView("vLanding");}));
 
 $("#ghConnect").addEventListener("click",async()=>{
   const err=$("#ghError");err.style.display="none";
@@ -717,6 +748,7 @@ $("#ghConnect").addEventListener("click",async()=>{
   gh.path=$("#ghPath").value.trim().replace(/^\/+/,"");
   gh.branch=$("#ghBranch").value.trim()||"main";
   gh.sha=null;
+  rememberDevice=$("#ghRemember").checked;
   if(!gh.token||!gh.repo||!gh.path){err.textContent="Token, repository and file path are all required.";err.style.display="block";return;}
   const b=$("#ghConnect");b.disabled=true;b.textContent="Connecting…";
   try{
@@ -725,7 +757,7 @@ $("#ghConnect").addEventListener("click",async()=>{
     if(r.notFound){
       creatingToGithub=true;
       $("#createError").style.display="none";
-      $("#createSub").textContent=`“${gh.path}” doesn’t exist in ${gh.repo} yet — set up your new database and it will be committed there on first save.`;
+      $("#createSub").textContent="No ledger found in that repo yet — set up a new one and it will be stored there on your first save.";
       showView("vCreate");
     }else{
       loadWorkbook(r.buf,gh.path.split("/").pop());
@@ -744,18 +776,51 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   currency=$("#cCurrency").value;$("#currency").value=currency;
   passHash=await hashPin(pin);
   income=[];expenses=[];investments=[];debts=[];
-  if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();}
+  if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
+    if(rememberDevice&&gh.token)await saveProfile(pin);}
   else{storageMode="local";fileHandle=null;fileName="my-money.xlsx";}
   setDirty(true);enterApp();
-  toast(creatingToGithub?`Click “Save” to commit ${gh.path} to ${gh.repo}`:"Click “Save” to choose where your workbook lives");
+  toast("All set — click “Save” to store your new ledger");
 });
 
 $("#loginForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const u=$("#lUser").value.trim().toLowerCase();
-  const ok=u===username.trim().toLowerCase()&&await verifyPin($("#lPin").value,passHash);
-  if(ok){enterApp();toast("Signed in ✓");}
-  else{$("#loginError").style.display="block";$("#lPin").value="";$("#lPin").focus();}
+  const btn=$("#loginSubmitBtn");btn.disabled=true;btn.textContent="Signing in…";
+  const errEl=$("#loginError");errEl.style.display="none";
+  const u=$("#lUser").value.trim().toLowerCase(),p=$("#lPin").value;
+  try{
+    if(profilePending){
+      const prof=getProfile();
+      if(!prof)throw new Error("Saved connection is missing — connect the repo again.");
+      let tok;
+      try{tok=await decryptProfileToken(prof,p);}catch(_){throw new Error("bad");}
+      gh.token=tok;gh.repo=prof.repo;gh.path=prof.path;gh.branch=prof.branch;gh.sha=null;
+      storageMode="github";fileHandle=null;
+      const r=await ghLoad();
+      if(r.notFound)throw new Error("Your ledger is missing from the repo — reconnect via “Connect a different repo”.");
+      parseWorkbook(r.buf,gh.path.split("/").pop());
+      if(!(username&&passHash)){profilePending=false;showSetCreds();return;}
+      if(u===username.trim().toLowerCase()&&await verifyPin(p,passHash)){
+        profilePending=false;
+        await saveProfile(p); // refresh with latest owner/username
+        enterApp();toast("Signed in ✓");
+      }else throw new Error("bad");
+    }else{
+      if(u===username.trim().toLowerCase()&&await verifyPin(p,passHash)){
+        if(rememberDevice&&storageMode==="github"&&gh.token)await saveProfile(p);
+        enterApp();toast("Signed in ✓");
+      }else throw new Error("bad");
+    }
+  }catch(err){
+    errEl.textContent=err.message==="bad"?"Wrong login ID or password — try again.":err.message;
+    errEl.style.display="block";$("#lPin").value="";$("#lPin").focus();
+  }finally{btn.disabled=false;btn.textContent="Sign in";}
+});
+
+$("#btnForget").addEventListener("click",()=>{
+  clearProfile();profilePending=false;$("#btnForget").style.display="none";
+  toast("Saved connection removed from this device");
+  showView("vLanding");
 });
 
 $("#btnSetCreds").addEventListener("click",async()=>{
@@ -765,8 +830,9 @@ $("#btnSetCreds").addEventListener("click",async()=>{
   if(pin.length<4){err.textContent="Password must be at least 4 characters.";err.style.display="block";return;}
   if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
   username=user;passHash=await hashPin(pin);
+  if(rememberDevice&&storageMode==="github"&&gh.token)await saveProfile(pin);
   setDirty(true);enterApp();
-  toast("Login created — click “Save” to store it in your Excel file");
+  toast("Login created — click “Save” to store it");
 });
 
 $("#btnLock").addEventListener("click",()=>{
@@ -817,11 +883,16 @@ function renderOverview(){
   $("#kBorrowed").textContent=fmt(oweOut);
   $("#kBorrowedSub").textContent=`${taken.filter(r=>outstanding(r)>0).length} open · loans taken`;
 
-  drawCharts();renderTxList();
+  try{drawCharts();}catch(e){console.error("charts failed:",e);}
+  renderTxList();
 }
 
 function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function drawCharts(){
+  if(typeof Chart==="undefined"){
+    $$(".chart-box").forEach(b=>{if(!b.querySelector(".empty-mini"))b.innerHTML='<div class="empty-mini">Charts couldn’t load — check your connection and refresh.</div>';});
+    return;
+  }
   Chart.defaults.color="#8B95AE";
   Chart.defaults.borderColor="rgba(255,255,255,.07)";
   Chart.defaults.font.family="'Inter',sans-serif";
@@ -1024,7 +1095,11 @@ function renderDebt(){
   $("#tblDebt").style.display=debts.length?"":"none";
 }
 
-function renderAll(){renderOverview();renderInc();renderExp();renderInv();renderDebt();}
+function renderAll(){
+  [renderOverview,renderInc,renderExp,renderInv,renderDebt].forEach(fn=>{
+    try{fn();}catch(e){console.error(fn.name+" failed:",e);}
+  });
+}
 
 /* ---------- forms ---------- */
 $("#formInc").addEventListener("submit",e=>{
@@ -1065,10 +1140,10 @@ document.addEventListener("click",e=>{
     case "editExp":editing={inc:-1,exp:i,inv:-1,debt:-1};renderAll();break;
     case "editInv":editing={inc:-1,exp:-1,inv:i,debt:-1};renderAll();break;
     case "editDebt":editing={inc:-1,exp:-1,inv:-1,debt:i};renderAll();break;
-    case "delInc":if(confirm(`Delete "${income[i].source}"? Removed from Excel on next save.`)){income.splice(i,1);done();}break;
-    case "delExp":if(confirm(`Delete "${expenses[i].desc}"? Removed from Excel on next save.`)){expenses.splice(i,1);done();}break;
-    case "delInv":if(confirm(`Delete "${investments[i].name}"? Removed from Excel on next save.`)){investments.splice(i,1);done();}break;
-    case "delDebt":if(confirm(`Delete the record for "${debts[i].person}"? Removed from Excel on next save.`)){debts.splice(i,1);done();}break;
+    case "delInc":if(confirm(`Delete "${income[i].source}"? This is removed on your next save.`)){income.splice(i,1);done();}break;
+    case "delExp":if(confirm(`Delete "${expenses[i].desc}"? This is removed on your next save.`)){expenses.splice(i,1);done();}break;
+    case "delInv":if(confirm(`Delete "${investments[i].name}"? This is removed on your next save.`)){investments.splice(i,1);done();}break;
+    case "delDebt":if(confirm(`Delete the record for "${debts[i].person}"? This is removed on your next save.`)){debts.splice(i,1);done();}break;
     case "saveInc":{const r=income[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.source=tr.querySelector(".e-src").value.trim();
       r.category=tr.querySelector(".e-cat").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
@@ -1101,6 +1176,25 @@ $("#inDate").value=todayISO();
 $("#exDate").value=todayISO();
 $("#ivDate").value=todayISO();
 $("#dbDate").value=todayISO();
+
+/* ---------- startup: remembered device goes straight to login ---------- */
+(function init(){
+  if(!canRemember())return;
+  const p=getProfile();
+  if(!p)return;
+  profilePending=true;
+  owner=p.owner||"";username=p.username||"";
+  gh.repo=p.repo;gh.path=p.path;gh.branch=p.branch;
+  storageMode="github";
+  $("#loginAvatar").textContent=(owner||username||"L").trim().charAt(0).toUpperCase();
+  $("#loginTitle").textContent=owner?`Welcome back, ${owner}`:"Sign in";
+  $("#loginFile").textContent="Sign in to open your ledger.";
+  $("#loginMode").innerHTML="🔒 Private &amp; secure";
+  if(p.username)$("#lUser").value=p.username;
+  $("#btnForget").style.display="flex";
+  showView("vLogin");
+  setTimeout(()=>(p.username?$("#lPin"):$("#lUser")).focus(),60);
+})();
 </script>
 </body>
 </html>

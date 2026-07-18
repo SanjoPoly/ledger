@@ -543,17 +543,20 @@
 <div id="embedOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
   <div class="auth-card" style="max-width:560px;max-height:90vh;overflow:auto">
     <h2 style="font-size:1.25rem;margin-bottom:.5rem">Use Ledgr on all your devices</h2>
-    <p class="sub">Paste this one line into your site’s <b>index.html</b>, and every device and browser will open straight at the sign-in screen — no setup, ever. The line contains your connection <b>encrypted with your password</b>; only your password can unlock it, so use a strong one.</p>
-    <div class="f">
-      <label>Your connection code</label>
-      <textarea id="embedCode" readonly rows="6" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--text);resize:vertical"></textarea>
+    <p class="sub"><b>Easiest way:</b> download the setup file below and upload it to your website repo (the one serving this page) — top level, next to index.html. Every device and browser will then open straight at the sign-in screen. The file holds your connection <b>encrypted with your password</b>; only your password can unlock it, so use a strong one.</p>
+    <div class="stack" style="margin-bottom:1.2rem">
+      <button class="btn primary" id="btnDownloadCfg">Download setup file (ledgr-config.json)</button>
     </div>
-    <p class="sub" style="font-size:.8rem;margin-bottom:1rem">How to install it: open your <b>ledger</b> repo on GitHub → <b>index.html</b> → pencil (Edit) → press Ctrl+F and search for <b>LEDGR-EMBED</b> → replace that whole line with the code above → Commit changes. Wait a minute for the site to redeploy, then hard-refresh.</p>
+    <p class="sub" style="font-size:.8rem;margin-bottom:1rem">Upload steps: open your website repo on GitHub → <b>Add file → Upload files</b> → drop in <b>ledgr-config.json</b> → Commit. Wait a minute, then test in an incognito window.</p>
+    <div class="f">
+      <label>Alternative: paste this line into index.html <i>(replaces the LEDGR-EMBED line)</i></label>
+      <textarea id="embedCode" readonly rows="5" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-family:var(--mono);font-size:.72rem;color:var(--text);resize:vertical"></textarea>
+    </div>
     <div class="stack">
-      <button class="btn primary" id="btnCopyEmbed">Copy code</button>
+      <button class="btn" id="btnCopyEmbed">Copy code</button>
       <button class="btn ghost" id="btnCloseEmbed">Close</button>
     </div>
-    <p class="auth-note">If you ever change your password, open this again and re-install the new code. To revoke everything, delete the token in GitHub → Developer settings.</p>
+    <p class="auth-note">If you ever change your password, generate and upload a fresh setup file — the old one only opens with the old password. To revoke everything, delete the token in GitHub → Developer settings.</p>
   </div>
 </div>
 
@@ -701,14 +704,26 @@ async function decryptProfileToken(p,pass){
   return new TextDecoder().decode(buf);
 }
 const embeddedProfile=()=>(EMBEDDED&&typeof EMBEDDED==="object"&&EMBEDDED.ct)?EMBEDDED:null;
-async function generateEmbedLine(){
+let fetchedProfile=null;
+async function loadRemoteConfig(){
+  try{
+    const res=await fetch("ledgr-config.json?v="+Date.now(),{cache:"no-store"});
+    if(!res.ok)return null;
+    const j=await res.json();
+    return (j&&j.repo&&j.ct)?j:null;
+  }catch(_){return null;}
+}
+function profileCandidates(){return [getProfile(),embeddedProfile(),fetchedProfile].filter(Boolean);}
+async function generateProfileObject(){
   const salt=crypto.getRandomValues(new Uint8Array(16));
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const saltB64=abToB64(salt.buffer),ivB64=abToB64(iv.buffer);
   const key=await deriveKey(sessionPass,saltB64);
   const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(gh.token));
-  const obj={repo:gh.repo,path:gh.path,branch:gh.branch,owner,username,salt:saltB64,iv:ivB64,ct:abToB64(ct)};
-  return "const EMBEDDED="+JSON.stringify(obj)+"; // LEDGR-EMBED";
+  return {repo:gh.repo,path:gh.path,branch:gh.branch,owner,username,salt:saltB64,iv:ivB64,ct:abToB64(ct)};
+}
+async function generateEmbedLine(){
+  return "const EMBEDDED="+JSON.stringify(await generateProfileObject())+"; // LEDGR-EMBED";
 }
 
 /* ---------- Excel: read ---------- */
@@ -1003,8 +1018,7 @@ $("#loginForm").addEventListener("submit",async e=>{
   try{
     if(profilePending){
       let tok=null;
-      for(const prof of [getProfile(),embeddedProfile()]){
-        if(!prof)continue;
+      for(const prof of profileCandidates()){
         try{
           tok=await decryptProfileToken(prof,p);
           gh.repo=prof.repo;gh.path=prof.path;gh.branch=prof.branch;break;
@@ -1115,6 +1129,18 @@ $("#btnCopyEmbed").addEventListener("click",async()=>{
   const ta=$("#embedCode");ta.select();
   try{await navigator.clipboard.writeText(ta.value);toast("Copied ✓");}
   catch(_){document.execCommand("copy");toast("Copied ✓");}
+});
+$("#btnDownloadCfg").addEventListener("click",async()=>{
+  if(!sessionPass||!gh.token){toast("Sign in through GitHub first");return;}
+  try{
+    const obj=await generateProfileObject();
+    const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);a.download="ledgr-config.json";
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast("Downloaded — upload it to your website repo");
+  }catch(e){console.error(e);toast("Could not generate the file — try again.");}
 });
 
 /* ---------- nav ---------- */
@@ -1588,10 +1614,14 @@ $("#lpDate").value=todayISO();
 applyTheme(theme,false);
 refreshSelects();
 
-/* ---------- startup: remembered device or embedded setup goes straight to login ---------- */
-(function init(){
+/* ---------- startup: remembered device, embedded setup, or config file goes straight to login ---------- */
+(async function init(){
   if(!(crypto&&crypto.subtle))return;
-  const p=(canRemember()?getProfile():null)||embeddedProfile();
+  let p=(canRemember()?getProfile():null)||embeddedProfile();
+  if(!p){
+    fetchedProfile=await loadRemoteConfig();
+    p=fetchedProfile;
+  }
   if(!p)return;
   profilePending=true;
   owner=p.owner||"";username=p.username||"";

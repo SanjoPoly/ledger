@@ -664,6 +664,7 @@ const PALETTE=["#3DDCA3","#4D9FFF","#8B7CFF","#FFC466","#FF6E61","#5EE0E6","#E58
 
 /* ---------- helpers ---------- */
 const fmt=n=>new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n||0);
+const r2=n=>Math.round(((+n||0)+Number.EPSILON)*100)/100;
 const bankBalance=name=>{
   let bal=banks.find(b=>b.name===name)?.opening||0;
   income.forEach(i=>{if(i.bank===name)bal+=i.amount;});

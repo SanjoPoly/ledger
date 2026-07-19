@@ -1289,6 +1289,7 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   $$(".panel").forEach(p=>p.classList.remove("active"));
   $("#panel-"+b.dataset.tab).classList.add("active");
   if(b.dataset.tab==="home")renderOverview();
+  if(b.dataset.tab==="bank"){refreshBankSelects();renderBank();renderTransfer();}
 }));
 $("#currency").addEventListener("change",e=>{currency=e.target.value;setDirty(true);renderAll();});
 $("#btnSave").addEventListener("click",saveFile);
@@ -1572,26 +1573,37 @@ function renderDebt(){
 /* ---------- bank loans ---------- */
 
 function renderBank(){
-  const q=$("#searchBank").value.trim().toLowerCase();
-  const rows=banks.filter(b=>!q||b.name.toLowerCase().includes(q)).map((b,i)=>({b,i}));
-  $("#bankTotalHead").textContent=banks.length+" total";
-  
-  let html="";
-  banks.forEach((b,i)=>{
-    const bal=bankBalance(b.name);
-    const acctLast=(b.acct||"").slice(-4);
-    html+=`<div class="bank-card" data-i="${i}"><div class="label">${esc(b.type)}</div><div class="acct">····${acctLast}</div><div class="label">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div></div>`;
-  });
-  $("#bankCards").innerHTML=html;
-  
-  $("#tblBank tbody").innerHTML=rows.map(({b,i})=>`<tr data-i="${i}">
-    <td data-l="Bank"><strong>${esc(b.name)}</strong>${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>
-    <td data-l="Type">${esc(b.type)}</td>
-    <td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>
-    <td data-l="Opening" class="num">${fmt(b.opening)}</td>
-    <td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>
-    <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
-  $("#emptyBank").style.display=banks.length?"none":"block";
+  const cardBox=document.getElementById("bankCards");
+  const tblBody=document.querySelector("#tblBank tbody");
+  const emptyEl=document.getElementById("emptyBank");
+  const head=document.getElementById("bankTotalHead");
+  if(!cardBox||!tblBody){return;}
+  const qEl=document.getElementById("searchBank");
+  const q=(qEl?qEl.value:"").trim().toLowerCase();
+  if(head)head.textContent=banks.length+" total";
+
+  try{
+    cardBox.innerHTML=banks.map((b,i)=>{
+      const bal=bankBalance(b.name);
+      const last=(b.acct||"").toString().slice(-4);
+      return `<div class="bank-card" data-i="${i}"><div class="label">${esc(b.type||"")}</div>`+
+        `<div class="acct">${last?"····"+esc(last):"&nbsp;"}</div>`+
+        `<div class="label">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div></div>`;
+    }).join("");
+
+    const rows=banks.map((b,i)=>({b,i})).filter(({b})=>!q||b.name.toLowerCase().includes(q));
+    tblBody.innerHTML=rows.map(({b,i})=>`<tr data-i="${i}">`+
+      `<td data-l="Bank"><strong>${esc(b.name)}</strong>${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>`+
+      `<td data-l="Type">${esc(b.type||"")}</td>`+
+      `<td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>`+
+      `<td data-l="Opening" class="num">${fmt(b.opening)}</td>`+
+      `<td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>`+
+      `<td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
+  }catch(e){
+    console.error("renderBank error:",e);
+    tblBody.innerHTML=`<tr><td colspan="6" style="padding:1rem;color:var(--coral)">Couldn't render banks: ${esc(e.message)}</td></tr>`;
+  }
+  if(emptyEl)emptyEl.style.display=banks.length?"none":"block";
 }
 
 function renderTransfer(){

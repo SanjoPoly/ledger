@@ -137,6 +137,7 @@
   .kpi.savings{--kc:var(--blue)} .kpi.portfolio{--kc:var(--violet)}
   .kpi.lend{--kc:var(--amber)} .kpi.borrow{--kc:var(--pink)}
   .kpi.bankloan{--kc:#5EE0E6}
+  .kpi.bank{--kc:#48D1E0} .kpi.networth{--kc:var(--violet)}
   .kpi .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .kpi .value{font-family:var(--mono);font-size:1.45rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:.25rem}
@@ -380,11 +381,17 @@
       <div class="kpi lend"><div class="label">Owed to you</div><div class="value" id="kLent">—</div><div class="sub" id="kLentSub"></div></div>
       <div class="kpi borrow"><div class="label">You owe</div><div class="value" id="kBorrowed">—</div><div class="sub" id="kBorrowedSub"></div></div>
       <div class="kpi bankloan"><div class="label">Bank loans · remaining</div><div class="value" id="kLoan">—</div><div class="sub" id="kLoanSub"></div></div>
+      <div class="kpi bank"><div class="label">Bank balance · total</div><div class="value" id="kBankBal">—</div><div class="sub" id="kBankBalSub"></div></div>
+      <div class="kpi networth"><div class="label">Net worth</div><div class="value" id="kNetWorth">—</div><div class="sub" id="kNetWorthSub"></div></div>
     </div>
 
     <div class="charts">
       <div class="chart-card"><h3>Cash flow <small>income vs expenses · last 6 months</small></h3><div class="chart-box"><canvas id="chCash"></canvas></div></div>
       <div class="chart-card"><h3>Spending by category <small id="chExpScope">this month</small></h3><div class="chart-box"><canvas id="chExpCat"></canvas></div></div>
+    </div>
+    <div class="charts">
+      <div class="chart-card"><h3>Bank balances <small>current, per account</small></h3><div class="chart-box"><canvas id="chBankBal"></canvas></div></div>
+      <div class="chart-card"><h3>Investment gain / loss <small>by holding</small></h3><div class="chart-box"><canvas id="chInvGain"></canvas></div></div>
     </div>
     <div class="charts-row2">
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
@@ -411,7 +418,7 @@
       <span class="sum" id="incFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblInc"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th style="text-align:right">Amount</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblInc"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th style="text-align:right">Amount</th><th>Bank</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyInc" style="display:none">No income recorded yet.<br>Add your salary or other income above — </div>
     </div>
   </section>
@@ -437,7 +444,7 @@
       <span class="sum" id="expFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblExp"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Paid with</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblExp"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Bank</th><th>Paid with</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyExp" style="display:none">No expenses yet.<br>Add one above — </div>
     </div>
   </section>
@@ -487,6 +494,7 @@
         <select id="ivType"></select></div>
       <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
+      <div class="f"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
       <div class="f"><label for="ivNotes">Notes</label><input type="text" id="ivNotes" placeholder="optional"></div>
       <div class="f"><button type="submit">+ Add investment</button></div>
     </form>
@@ -495,7 +503,7 @@
       <select id="filterInvType"><option value="">All types</option></select>
     </div>
     <div class="table-card">
-      <table id="tblInv"><thead><tr><th>Date</th><th>Name</th><th>Type</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblInv"><thead><tr><th>Date</th><th>Name</th><th>Type</th><th>Bank</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyInv" style="display:none">No investments yet.<br>Add your first one above — </div>
     </div>
   </section>
@@ -529,6 +537,7 @@
       <div class="f"><label for="lpKind">Payment type</label>
         <select id="lpKind"><option>EMI</option><option>Prepayment</option><option>Charges</option><option>Other</option></select></div>
       <div class="f"><label for="lpAmt">Amount</label><input type="number" id="lpAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="lpBank">Paid from bank</label><select id="lpBank"></select></div>
       <div class="f"><label for="lpNotes">Notes</label><input type="text" id="lpNotes" placeholder="optional"></div>
       <div class="f"><button type="submit">+ Add repayment</button></div>
     </form>
@@ -538,7 +547,7 @@
       <span class="sum" id="lpayFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblLpay"><thead><tr><th>Date</th><th>Loan</th><th>Type</th><th style="text-align:right">Amount</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblLpay"><thead><tr><th>Date</th><th>Loan</th><th>Type</th><th style="text-align:right">Amount</th><th>Bank</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyLpay" style="display:none">No repayments logged yet.<br>Each EMI you record here reduces the loan’s remaining balance above.</div>
     </div>
   </section>
@@ -553,6 +562,7 @@
         <select id="dbType"><option value="Given">Debt given (they owe me)</option><option value="Taken">Loan taken (I owe them)</option></select></div>
       <div class="f"><label for="dbAmt">Amount</label><input type="number" id="dbAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="dbRepaid">Repaid so far</label><input type="number" id="dbRepaid" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="dbBank">Bank used</label><select id="dbBank"></select></div>
       <div class="f"><label for="dbDue">Due date <i>(optional)</i></label><input type="date" id="dbDue"></div>
       <div class="f"><label for="dbNotes">Notes</label><input type="text" id="dbNotes" placeholder="optional"></div>
       <div class="f"><button type="submit">+ Add record</button></div>
@@ -564,7 +574,7 @@
       <span class="sum" id="debtFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblDebt"><thead><tr><th>Date</th><th>Person</th><th>Type</th><th style="text-align:right">Amount</th><th style="text-align:right">Repaid</th><th style="text-align:right">Outstanding</th><th>Due</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblDebt"><thead><tr><th>Date</th><th>Person</th><th>Type</th><th>Bank</th><th style="text-align:right">Amount</th><th style="text-align:right">Repaid</th><th style="text-align:right">Outstanding</th><th>Due</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyDebt" style="display:none">Nothing here yet.<br>Record money you’ve lent to others (debt given) or borrowed from others (loan taken).</div>
     </div>
   </section>
@@ -665,16 +675,29 @@ const PALETTE=["#3DDCA3","#4D9FFF","#8B7CFF","#FFC466","#FF6E61","#5EE0E6","#E58
 /* ---------- helpers ---------- */
 const fmt=n=>new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n||0);
 const r2=n=>Math.round(((+n||0)+Number.EPSILON)*100)/100;
+const bankOptions=sel=>{
+  if(!banks.length)return '<option value="">— no banks —</option>';
+  return banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join("");
+};
+const bankCell=(cls,val)=>`<select class="${cls}">${bankOptions(val)}</select>`;
+const bankTag=name=>name?`<span class="tag" style="background:var(--wash-strong);color:var(--muted)">${esc(name)}</span>`:'<span style="color:var(--muted)">—</span>';
 const bankBalance=name=>{
   let bal=banks.find(b=>b.name===name)?.opening||0;
   income.forEach(i=>{if(i.bank===name)bal+=i.amount;});
   expenses.forEach(e=>{if(e.bank===name)bal-=e.amount;});
   transfers.forEach(t=>{if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;});
+  investments.forEach(v=>{if(v.bank===name)bal-=v.amount;});
+  debts.forEach(d=>{if(d.bank===name){
+    // money given out leaves the bank; repaid comes back. Taken adds cash, repaying it leaves.
+    if(d.type==="Given")bal-=(d.amount-d.repaid);
+    else bal+=(d.amount-d.repaid);
+  }});
+  loanPays.forEach(p=>{if(p.bank===name)bal-=p.amount;});
   return r2(bal);
 };
 const refreshBankSelects=()=>{
   const opts=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
-  ["inBank","exBank","tFrom","tTo"].forEach(id=>{
+  ["inBank","exBank","ivBank","dbBank","lpBank","tFrom","tTo"].forEach(id=>{
     const sel=$("#"+id);
     if(sel){const cur=sel.value;sel.innerHTML=opts;if(cur&&banks.some(b=>b.name===cur))sel.value=cur;}
   });
@@ -881,7 +904,8 @@ function parseWorkbook(buf,name){
   if(sInv)XLSX.utils.sheet_to_json(wb.Sheets[sInv],{defval:""}).forEach(r=>{
     const amount=num(g(r,"amount invested")||g(r,"amount"));
     investments.push({date:normDate(g(r,"date"))||todayISO(),name:String(g(r,"name")||"").trim(),
-      type:String(g(r,"type")||"Other").trim()||"Other",amount,current:num(g(r,"current value"))||amount,notes:String(g(r,"notes")||"")});
+      type:String(g(r,"type")||"Other").trim()||"Other",amount,current:num(g(r,"current value"))||amount,
+      bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
   });
   investments=investments.filter(r=>r.name||r.amount);
 
@@ -891,7 +915,7 @@ function parseWorkbook(buf,name){
     type=type.startsWith("t")||type.includes("borrow")||type.includes("loan")?"Taken":"Given";
     debts.push({date:normDate(g(r,"date"))||todayISO(),person:String(g(r,"person")||g(r,"party")||"").trim(),
       type,amount:num(g(r,"amount")),repaid:num(g(r,"repaid")),
-      due:normDate(g(r,"due date")||g(r,"due")),notes:String(g(r,"notes")||"")});
+      due:normDate(g(r,"due date")||g(r,"due")),bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
   });
   debts=debts.filter(r=>r.person||r.amount);
 
@@ -910,7 +934,7 @@ function parseWorkbook(buf,name){
     loanPays.push({date:normDate(g(r,"date"))||todayISO(),
       lender:String(g(r,"lender")||g(r,"loan")||"").trim(),
       kind:String(g(r,"kind")||g(r,"payment type")||"EMI").trim()||"EMI",
-      amount:num(g(r,"amount")),notes:String(g(r,"notes")||"")});
+      amount:num(g(r,"amount")),bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
   });
   loanPays=loanPays.filter(r=>r.lender||r.amount);
 
@@ -956,14 +980,14 @@ function buildWorkbook(){
     {header:["Date","Source","Category","Amount","Bank","Notes"]});
   const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Bank":r.bank||"","Payment Method":r.pay})),
     {header:["Date","Category","Description","Amount","Bank","Payment Method"]});
-  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Notes":r.notes})),
-    {header:["Date","Name","Type","Amount Invested","Current Value","Notes"]});
-  const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Notes":r.notes})),
-    {header:["Date","Person","Type","Amount","Repaid","Due Date","Notes"]});
+  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Bank":r.bank||"","Notes":r.notes})),
+    {header:["Date","Name","Type","Amount Invested","Current Value","Bank","Notes"]});
+  const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Bank":r.bank||"","Notes":r.notes})),
+    {header:["Date","Person","Type","Amount","Repaid","Due Date","Bank","Notes"]});
   const wsLoan=XLSX.utils.json_to_sheet(loans.map(r=>({"Date":r.date,"Lender":r.lender,"Type":r.type,"Principal":r.principal,"Interest Rate":r.rate,"EMI":r.emi,"Tenure Months":r.tenure,"Notes":r.notes})),
     {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Notes"]});
-  const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Notes":r.notes})),
-    {header:["Date","Lender","Kind","Amount","Notes"]});
+  const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Bank":r.bank||"","Notes":r.notes})),
+    {header:["Date","Lender","Kind","Amount","Bank","Notes"]});
   const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash},{Key:"Theme",Value:theme}];
   const wsSet=XLSX.utils.json_to_sheet(settings);
   const maxLen=Math.max(...Object.values(lists).map(a=>a.length));
@@ -1354,6 +1378,13 @@ function renderOverview(){
   $("#kLoan").textContent=fmt(loanRem);
   $("#kLoanSub").textContent=loans.length?`${loans.length} loan${loans.length>1?"s":""}${emiTotal?` · ${fmt(emiTotal)}/mo EMI`:""}`:"No bank loans added";
 
+  const totalBank=banks.reduce((s,b)=>s+bankBalance(b.name),0);
+  $("#kBankBal").textContent=fmt(totalBank);
+  $("#kBankBalSub").textContent=banks.length?`across ${banks.length} account${banks.length>1?"s":""}`:"Add a bank to track balances";
+  const netWorth=totalBank+value+lentOut-oweOut-loanRem;
+  $("#kNetWorth").textContent=fmt(netWorth);
+  $("#kNetWorthSub").innerHTML=`Cash ${fmtShort(totalBank)} · Inv ${fmtShort(value)} · Loans −${fmtShort(loanRem)}`;
+
   try{drawCharts();}catch(e){console.error("charts failed:",e);}
   renderTxList();
 }
@@ -1398,6 +1429,28 @@ function drawCharts(){
       plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
         tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
 
+  killChart("bankBal");
+  if($("#chBankBal")){
+    const bb=banks.map(b=>({name:b.name,bal:bankBalance(b.name)}));
+    charts.bankBal=new Chart($("#chBankBal"),{type:"bar",
+      data:{labels:bb.map(x=>x.name),datasets:[{label:"Balance",data:bb.map(x=>x.bal),
+        backgroundColor:bb.map((x,i)=>x.bal<0?"#FF6E61":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:40}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.parsed.x)}`}}},
+        scales:{x:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true},y:{grid:{display:false}}}}});
+  }
+  killChart("invGain");
+  if($("#chInvGain")){
+    const gainRows=investments.map(r=>({name:r.name,g:r.current-r.amount})).filter(x=>x.g!==0)
+      .sort((a,b)=>Math.abs(b.g)-Math.abs(a.g)).slice(0,8);
+    charts.invGain=new Chart($("#chInvGain"),{type:"bar",
+      data:{labels:gainRows.map(x=>x.name),datasets:[{label:"Gain / loss",data:gainRows.map(x=>x.g),
+        backgroundColor:gainRows.map(x=>x.g>=0?"#3DDCA3":"#FF6E61"),borderRadius:6,maxBarThickness:34}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y>=0?"+":""}${fmt(c.parsed.y)}`}}},
+        scales:{x:{grid:{display:false},ticks:{maxRotation:40,minRotation:0,font:{size:10}}},y:{ticks:{callback:v=>fmtShort(v)}}}}});
+  }
+
   const byType={};investments.forEach(r=>byType[r.type]=(byType[r.type]||0)+r.current);
   const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   killChart("invAlloc");
@@ -1439,6 +1492,7 @@ function renderInc(){
       <td data-l="Source"><input type="text" class="e-src" value="${esc(r.source)}"></td>
       <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
       <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
       <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInc">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
     return `<tr data-i="${i}">
@@ -1446,6 +1500,7 @@ function renderInc(){
       <td data-l="Source"><strong>${esc(r.source)}</strong></td>
       <td data-l="Category"><span class="tag in">${esc(r.category)}</span></td>
       <td data-l="Amount" class="num"><span class="pos">+${fmt(r.amount)}</span></td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editInc">Edit</button><button type="button" class="icon-btn danger" data-act="delInc">Delete</button></div></td></tr>`;
   }).join("");
@@ -1475,6 +1530,7 @@ function renderExp(){
       <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
       <td data-l="Description"><input type="text" class="e-desc" value="${esc(r.desc)}"></td>
       <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
       <td data-l="Paid with"><input type="text" class="e-pay" value="${esc(r.pay)}"></td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveExp">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
     return `<tr data-i="${i}">
@@ -1482,6 +1538,7 @@ function renderExp(){
       <td data-l="Category"><span class="tag out">${esc(r.category)}</span></td>
       <td data-l="Description">${esc(r.desc)}</td>
       <td data-l="Amount" class="num">${fmt(r.amount)}</td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Paid with" style="color:var(--muted);font-size:.83rem">${esc(r.pay)}</td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editExp">Edit</button><button type="button" class="icon-btn danger" data-act="delExp">Delete</button></div></td></tr>`;
   }).join("");
@@ -1506,6 +1563,7 @@ function renderInv(){
       <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
       <td data-l="Name"><input type="text" class="e-name" value="${esc(r.name)}"></td>
       <td data-l="Type"><input type="text" class="e-type" value="${esc(r.type)}"></td>
+      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
       <td data-l="Invested" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
       <td data-l="Current" class="num"><input type="number" step="0.01" class="e-cur" value="${r.current}"></td>
       <td data-l="Gain / loss" class="num">—</td>
@@ -1516,6 +1574,7 @@ function renderInv(){
       <td data-l="Date">${esc(r.date)}</td>
       <td data-l="Name"><strong>${esc(r.name)}</strong></td>
       <td data-l="Type"><span class="tag iv">${esc(r.type)}</span></td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Invested" class="num">${fmt(r.amount)}</td>
       <td data-l="Current" class="num">${fmt(r.current)}</td>
       <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
@@ -1547,6 +1606,7 @@ function renderDebt(){
       <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
       <td data-l="Person"><input type="text" class="e-person" value="${esc(r.person)}"></td>
       <td data-l="Type"><select class="e-type"><option value="Given"${r.type==="Given"?" selected":""}>Given</option><option value="Taken"${r.type==="Taken"?" selected":""}>Taken</option></select></td>
+      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
       <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
       <td data-l="Repaid" class="num"><input type="number" step="0.01" class="e-repaid" value="${r.repaid}"></td>
       <td data-l="Outstanding" class="num">—</td>
@@ -1559,6 +1619,7 @@ function renderDebt(){
       <td data-l="Date">${esc(r.date)}</td>
       <td data-l="Person"><strong>${esc(r.person)}</strong></td>
       <td data-l="Type"><span class="tag ${r.type==="Given"?"given":"taken"}">${r.type==="Given"?"Given · owed to me":"Taken · I owe"}</span></td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Amount" class="num">${fmt(r.amount)}</td>
       <td data-l="Repaid" class="num">${fmt(r.repaid)}</td>
       <td data-l="Outstanding" class="num">${settled?'<span class="tag done">Settled ✓</span>':`<span class="${r.type==="Given"?"pos":"neg"}">${fmt(out)}</span>`}</td>
@@ -1677,6 +1738,7 @@ function renderLoan(){
       <td data-l="Loan"><input type="text" class="e-lender" value="${esc(r.lender)}"></td>
       <td data-l="Type"><input type="text" class="e-kind" value="${esc(r.kind)}"></td>
       <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
+      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
       <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLpay">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
     return `<tr data-i="${i}">
@@ -1684,6 +1746,7 @@ function renderLoan(){
       <td data-l="Loan"><strong>${esc(r.lender)}</strong></td>
       <td data-l="Type"><span class="tag ${r.kind==="Prepayment"?"in":"done"}">${esc(r.kind)}</span></td>
       <td data-l="Amount" class="num">${fmt(r.amount)}</td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editLpay">Edit</button><button type="button" class="icon-btn danger" data-act="delLpay">Delete</button></div></td></tr>`;
   }).join("");
@@ -1712,12 +1775,12 @@ $("#formExp").addEventListener("submit",e=>{
 $("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
   const amount=num($("#ivAmt").value);
-  investments.push({date:$("#ivDate").value||todayISO(),name:$("#ivName").value.trim(),type:$("#ivType").value,amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),notes:$("#ivNotes").value.trim()});
+  investments.push({date:$("#ivDate").value||todayISO(),name:$("#ivName").value.trim(),type:$("#ivType").value,amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank:$("#ivBank").value||(banks[0]?banks[0].name:""),notes:$("#ivNotes").value.trim()});
   e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
 });
 $("#formDebt").addEventListener("submit",e=>{
   e.preventDefault();
-  debts.push({date:$("#dbDate").value||todayISO(),person:$("#dbPerson").value.trim(),type:$("#dbType").value,amount:num($("#dbAmt").value),repaid:num($("#dbRepaid").value),due:$("#dbDue").value||"",notes:$("#dbNotes").value.trim()});
+  debts.push({date:$("#dbDate").value||todayISO(),person:$("#dbPerson").value.trim(),type:$("#dbType").value,amount:num($("#dbAmt").value),repaid:num($("#dbRepaid").value),due:$("#dbDue").value||"",bank:$("#dbBank").value||(banks[0]?banks[0].name:""),notes:$("#dbNotes").value.trim()});
   e.target.reset();$("#dbDate").value=todayISO();setDirty(true);renderAll();
 });
 $("#formLoan").addEventListener("submit",e=>{
@@ -1731,7 +1794,7 @@ $("#formLpay").addEventListener("submit",e=>{
   e.preventDefault();
   if(!$("#lpLender").value){toast("Add a loan first");return;}
   loanPays.push({date:$("#lpDate").value||todayISO(),lender:$("#lpLender").value,kind:$("#lpKind").value,
-    amount:num($("#lpAmt").value),notes:$("#lpNotes").value.trim()});
+    amount:num($("#lpAmt").value),bank:$("#lpBank").value||(banks[0]?banks[0].name:""),notes:$("#lpNotes").value.trim()});
   e.target.reset();$("#lpDate").value=todayISO();setDirty(true);renderAll();
 });
 
@@ -1764,21 +1827,28 @@ document.addEventListener("click",e=>{
     case "saveInc":{const r=income[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.source=tr.querySelector(".e-src").value.trim();
       r.category=tr.querySelector(".e-cat").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
-      r.notes=tr.querySelector(".e-notes").value.trim();editing.inc=-1;done();break;}
+      r.notes=tr.querySelector(".e-notes").value.trim();
+      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
+      editing.inc=-1;done();break;}
     case "saveExp":{const r=expenses[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.category=tr.querySelector(".e-cat").value.trim()||"Other";
       r.desc=tr.querySelector(".e-desc").value.trim();r.amount=num(tr.querySelector(".e-amt").value);
-      r.pay=tr.querySelector(".e-pay").value.trim();editing.exp=-1;done();break;}
+      r.pay=tr.querySelector(".e-pay").value.trim();
+      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
+      editing.exp=-1;done();break;}
     case "saveInv":{const r=investments[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.name=tr.querySelector(".e-name").value.trim();
       r.type=tr.querySelector(".e-type").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
       r.current=num(tr.querySelector(".e-cur").value);r.notes=tr.querySelector(".e-notes").value.trim();
+      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
       editing.inv=-1;done();break;}
     case "saveDebt":{const r=debts[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.person=tr.querySelector(".e-person").value.trim();
       r.type=tr.querySelector(".e-type").value;r.amount=num(tr.querySelector(".e-amt").value);
       r.repaid=num(tr.querySelector(".e-repaid").value);r.due=tr.querySelector(".e-due").value||"";
-      r.notes=tr.querySelector(".e-notes").value.trim();editing.debt=-1;done();break;}
+      r.notes=tr.querySelector(".e-notes").value.trim();
+      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
+      editing.debt=-1;done();break;}
     case "saveLoan":{const r=loans[i];
       r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
       r.type=tr.querySelector(".e-type").value.trim()||"Housing";r.principal=num(tr.querySelector(".e-principal").value);
@@ -1786,6 +1856,7 @@ document.addEventListener("click",e=>{
       r.tenure=Math.round(num(tr.querySelector(".e-tenure").value));r.notes=tr.querySelector(".e-notes").value.trim();
       editing.loan=-1;done();break;}
     case "saveLpay":{const r=loanPays[i];
+      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
       r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
       r.kind=tr.querySelector(".e-kind").value.trim()||"EMI";r.amount=num(tr.querySelector(".e-amt").value);
       r.notes=tr.querySelector(".e-notes").value.trim();editing.lpay=-1;done();break;}

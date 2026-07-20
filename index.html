@@ -151,6 +151,7 @@
   .bank-card .balance{font-family:var(--mono);font-size:1.2rem;font-weight:700;letter-spacing:-.01em}
   .bank-card .bname{font-size:.9rem;font-weight:700;margin-bottom:.35rem}
   .bank-card.neg .balance{color:var(--coral)}
+  .rec-chip{margin-top:.5rem;display:inline-block;font-size:.66rem;font-weight:700;color:var(--mint);background:var(--mint-dim);border-radius:999px;padding:.2rem .55rem}
   .bank-select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.5rem .65rem}
   /* settings tabs */
   .set-tabs{display:flex;gap:.35rem;margin-bottom:1.1rem;background:var(--wash);border:1px solid var(--line);border-radius:12px;padding:.3rem;overflow-x:auto;scrollbar-width:none}
@@ -270,9 +271,6 @@
   }
 </style>
 </head>
-<body>
-
-<!-- ======================= AUTH ======================= -->
 <div class="auth-wrap" id="authScreen">
   <div class="auth-card">
 
@@ -373,36 +371,35 @@
 </div>
 
 <!-- ======================= APP ======================= -->
+
+<!-- ======================= APP ======================= -->
 <main id="app">
   <div class="topbar">
     <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span id="ownerLabel">Personal finance</span></div></div>
     <button class="top-btn" id="btnTheme" title="Switch light / dark">🌙</button>
-    <button class="top-btn" id="btnSettings" title="Profile & login settings">Settings</button>
-    <button class="top-btn" id="btnLock">Sign out</button>
+    <button class="top-btn" id="btnSettings" title="Setups &amp; settings">Setups</button>
+    <button class="top-btn" id="btnLock" title="Sign out">Sign out</button>
     <button class="top-btn save" id="btnSave">Save</button>
   </div>
 
   <nav class="pills">
-    <button class="pill active" data-tab="home">Overview</button>
-    <button class="pill" data-tab="income"><span class="dot"></span>Income</button>
-    <button class="pill" data-tab="exp"><span class="dot"></span>Expenses</button>
+    <button class="pill active" data-tab="home">Dashboard</button>
+    <button class="pill" data-tab="txn"><span class="dot"></span>Transactions</button>
     <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
+    <button class="pill" data-tab="ld"><span class="dot"></span>Loans &amp; Debts</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
-    <button class="pill" data-tab="loan"><span class="dot"></span>Bank Loans</button>
-    <button class="pill" data-tab="debt"><span class="dot"></span>Debts &amp; Loans</button>
   </nav>
 
-  <!-- ============ OVERVIEW ============ -->
+  <!-- ============ DASHBOARD ============ -->
   <section class="panel active" id="panel-home">
     <div class="kpis">
+      <div class="kpi bank"><div class="label">Cash across banks</div><div class="value" id="kCash">—</div><div class="sub" id="kCashSub"></div></div>
       <div class="kpi income"><div class="label">Income · this month</div><div class="value" id="kIncome">—</div><div class="sub" id="kIncomeSub"></div></div>
       <div class="kpi expense"><div class="label">Expenses · this month</div><div class="value" id="kExpense">—</div><div class="sub" id="kExpenseSub"></div></div>
-      <div class="kpi savings"><div class="label">Net savings · this month</div><div class="value" id="kSavings">—</div><div class="sub" id="kSavingsSub"></div></div>
+      <div class="kpi savings"><div class="label">Net · this month</div><div class="value" id="kNet">—</div><div class="sub" id="kNetSub"></div></div>
       <div class="kpi portfolio"><div class="label">Portfolio value</div><div class="value" id="kPortfolio">—</div><div class="sub" id="kPortfolioSub"></div></div>
-      <div class="kpi lend"><div class="label">Owed to you</div><div class="value" id="kLent">—</div><div class="sub" id="kLentSub"></div></div>
-      <div class="kpi borrow"><div class="label">You owe</div><div class="value" id="kBorrowed">—</div><div class="sub" id="kBorrowedSub"></div></div>
-      <div class="kpi bankloan"><div class="label">Bank loans · remaining</div><div class="value" id="kLoan">—</div><div class="sub" id="kLoanSub"></div></div>
-      <div class="kpi bank"><div class="label">Bank balance · total</div><div class="value" id="kBankBal">—</div><div class="sub" id="kBankBalSub"></div></div>
+      <div class="kpi lend"><div class="label">Owed to you</div><div class="value" id="kRecv">—</div><div class="sub" id="kRecvSub"></div></div>
+      <div class="kpi bankloan"><div class="label">Loans payable</div><div class="value" id="kPay">—</div><div class="sub" id="kPaySub"></div></div>
       <div class="kpi networth"><div class="label">Net worth</div><div class="value" id="kNetWorth">—</div><div class="sub" id="kNetWorthSub"></div></div>
     </div>
 
@@ -416,93 +413,50 @@
     </div>
     <div class="charts-row2">
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
-      <div class="chart-card"><h3>Recent activity <small>latest income &amp; expenses</small></h3><div class="tx-list" id="txList"></div></div>
+      <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
     </div>
   </section>
 
-  <!-- ============ INCOME ============ -->
-  <section class="panel" id="panel-income">
-    <div class="section-head"><h2>Income</h2><span class="total" id="incTotalHead"></span></div>
-    <form class="add-card" id="formInc">
-      <div class="f"><label for="inDate">Date</label><input type="date" id="inDate" required></div>
-      <div class="f"><label for="inSrc">Source</label><input type="text" id="inSrc" placeholder="e.g. Monthly salary" required></div>
-      <div class="f"><label for="inCat">Category</label>
-        <select id="inCat"></select></div>
-      <div class="f"><label for="inAmt">Amount</label><input type="number" id="inAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="inBank">Deposit to bank</label><select id="inBank"></select></div>
-      <div class="f"><label for="inNotes">Notes</label><input type="text" id="inNotes" placeholder="optional"></div>
-      <div class="f"><button type="submit">+ Add income</button></div>
+  <!-- ============ TRANSACTIONS ============ -->
+  <section class="panel" id="panel-txn">
+    <div class="section-head"><h2>Transactions</h2><span class="total" id="txnTotalHead"></span></div>
+    <form class="add-card" id="formTxn">
+      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
+      <div class="f"><label for="tType">Type</label><select id="tType"><option>Income</option><option>Expense</option><option>Transfer</option></select></div>
+      <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Category / Source</label><select id="tCat"></select></div>
+      <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
+      <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f" id="tBankWrap"><label for="tBank" id="tBankLabel">Bank / Account</label><select id="tBank"></select></div>
+      <div class="f" id="tBankToWrap" style="display:none"><label for="tBankTo">To account</label><select id="tBankTo"></select></div>
+      <div class="f" id="tPayWrap"><label for="tPay">Payment method</label><select id="tPay"></select></div>
+      <div class="f"><button type="submit">+ Add transaction</button></div>
     </form>
     <div class="toolbar">
-      <input type="search" id="searchInc" placeholder="Search income…">
-      <select id="filterIncMonth"><option value="">All months</option></select>
-      <span class="sum" id="incFilteredSum"></span>
+      <input type="search" id="searchTxn" placeholder="Search description / category / ref…">
+      <select id="filterTxnType"><option value="">All types</option><option>Income</option><option>Expense</option><option>Transfer</option></select>
+      <select id="filterTxnBank"><option value="">All accounts</option></select>
+      <select id="filterTxnMonth"><option value="">All months</option></select>
+      <span class="sum" id="txnFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblInc"><thead><tr><th>Date</th><th>Source</th><th>Category</th><th style="text-align:right">Amount</th><th>Bank</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyInc" style="display:none">No income recorded yet.<br>Add your salary or other income above — </div>
+      <table id="tblTxn"><thead><tr><th>Txn ID</th><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Account</th><th>Method</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyTxn" style="display:none">No transactions yet — add income or an expense above.</div>
     </div>
   </section>
 
-  <!-- ============ EXPENSES ============ -->
-  <section class="panel" id="panel-exp">
-    <div class="section-head"><h2>Expenses</h2><span class="total" id="expTotalHead"></span></div>
-    <form class="add-card" id="formExp">
-      <div class="f"><label for="exDate">Date</label><input type="date" id="exDate" required></div>
-      <div class="f"><label for="exCat">Category</label>
-        <select id="exCat"></select></div>
-      <div class="f"><label for="exDesc">Description</label><input type="text" id="exDesc" placeholder="e.g. Panda supermarket" required></div>
-      <div class="f"><label for="exAmt">Amount</label><input type="number" id="exAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="exBank">Paid from bank</label><select id="exBank"></select></div>
-      <div class="f"><label for="exPay">Paid with</label>
-        <select id="exPay"></select></div>
-      <div class="f"><button type="submit">+ Add expense</button></div>
-    </form>
-    <div class="toolbar">
-      <input type="search" id="searchExp" placeholder="Search expenses…">
-      <select id="filterExpCat"><option value="">All categories</option></select>
-      <select id="filterExpMonth"><option value="">All months</option></select>
-      <span class="sum" id="expFilteredSum"></span>
-    </div>
-    <div class="table-card">
-      <table id="tblExp"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th style="text-align:right">Amount</th><th>Bank</th><th>Paid with</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyExp" style="display:none">No expenses yet.<br>Add one above — </div>
-    </div>
-  </section>
-
-  <!-- ============ BANKS & TRANSFERS ============ -->
+  <!-- ============ BANKS ============ -->
   <section class="panel" id="panel-bank">
-    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span><span style="margin-left:auto"></span><button class="top-btn" id="btnVerifyBanks" type="button" style="min-height:38px">✓ Verify against statement</button></div>
+    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span><span style="margin-left:auto"></span><button class="top-btn" id="btnAddBankJump" type="button" style="min-height:38px">+ Add bank (in Setups)</button></div>
     <div class="bank-cards" id="bankCards"></div>
-    <div class="section-head"><h2>Add / edit bank</h2></div>
-    <form class="add-card" id="formBank">
-      <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
-      <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
-      <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
-      <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
-      <div class="f wide"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
-      <button type="submit" class="btn-accent" style="width:100%">+ Add bank</button>
-    </form>
-    <div class="toolbar"><input type="search" id="searchBank" placeholder="Search banks…"></div>
-    <div class="table-card">
-      <table id="tblBank"><thead><tr><th>Bank / Account</th><th>Type</th><th>Account#</th><th style="text-align:right">Opening</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyBank" style="display:none">No banks yet.</div>
-    </div>
 
-    <div class="section-head" style="margin-top:1.5rem"><h2>Bank transfers</h2></div>
-    <div class="add-card">
-      <div class="f"><label for="tFrom">From</label><select id="tFrom" class="bank-select"></select></div>
-      <div class="f"><label for="tTo">To</label><select id="tTo" class="bank-select"></select></div>
-      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate"></div>
-      <div class="f"><label for="tAmt">Amount</label><input type="number" step="0.01" min="0" id="tAmt"></div>
-      <div class="f wide"><label for="tRef">Reference</label><input type="text" id="tRef"></div>
-      <button type="button" id="btnAddTransfer" class="btn-accent" style="grid-column:1/-1">+ Record transfer</button>
+    <div class="section-head"><h2>Verify a bank balance</h2></div>
+    <div class="add-card" id="verifyCard">
+      <div class="f"><label for="recBank">Bank account</label><select id="recBank" class="bank-select"></select></div>
+      <div class="f"><label for="recDate">Statement date <i>(balance as of)</i></label><input type="date" id="recDate"></div>
+      <div class="f"><label for="recBal">Statement closing balance</label><input type="number" step="0.01" id="recBal" placeholder="0.00"></div>
+      <button class="btn-accent" id="btnReconcile" type="button" style="grid-column:1/-1">Verify balance</button>
     </div>
-    <div class="toolbar"><input type="search" id="searchTransfer" placeholder="Search…"><input type="date" id="fromTransfer"><input type="date" id="toTransfer"></div>
-    <div class="table-card">
-      <table id="tblTransfer"><thead><tr><th>Date</th><th>From</th><th>To</th><th style="text-align:right">Amount</th><th>Reference</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyTransfer" style="display:none">No transfers.</div>
-    </div>
+    <div id="recOutput"></div>
 
     <div class="section-head" style="margin-top:1.5rem"><h2>Bank statement</h2><span class="total" id="stmtHead"></span></div>
     <div class="toolbar">
@@ -516,101 +470,60 @@
     </div>
   </section>
 
-      <!-- ============ INVESTMENTS ============ -->
-  <section class="panel" id="panel-inv">
-    <div class="section-head"><h2>Investments</h2><span class="total" id="invTotalHead"></span></div>
-    <form class="add-card" id="formInv">
-      <div class="f"><label for="ivDate">Date</label><input type="date" id="ivDate" required></div>
-      <div class="f"><label for="ivName">Name</label><input type="text" id="ivName" placeholder="e.g. Al Rajhi shares" required></div>
-      <div class="f"><label for="ivType">Type</label>
-        <select id="ivType"></select></div>
-      <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
-      <div class="f"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
-      <div class="f"><label for="ivNotes">Notes</label><input type="text" id="ivNotes" placeholder="optional"></div>
-      <div class="f"><button type="submit">+ Add investment</button></div>
-    </form>
-    <div class="toolbar">
-      <input type="search" id="searchInv" placeholder="Search investments…">
-      <select id="filterInvType"><option value="">All types</option></select>
-    </div>
-    <div class="table-card">
-      <table id="tblInv"><thead><tr><th>Date</th><th>Name</th><th>Type</th><th>Bank</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyInv" style="display:none">No investments yet.<br>Add your first one above — </div>
-    </div>
-  </section>
-
-  <!-- ============ BANK LOANS ============ -->
-  <section class="panel" id="panel-loan">
-    <div class="section-head"><h2>Bank Loans</h2><span class="total" id="loanTotalHead"></span></div>
-
-    <form class="add-card" id="formLoan">
-      <div class="f"><label for="lnDate">Start date</label><input type="date" id="lnDate" required></div>
-      <div class="f"><label for="lnLender">Lender / bank</label><input type="text" id="lnLender" placeholder="e.g. SBI Home Loan" required></div>
-      <div class="f"><label for="lnType">Type</label>
-        <select id="lnType"></select></div>
-      <div class="f"><label for="lnPrincipal">Principal (borrowed)</label><input type="number" id="lnPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="lnRate">Interest rate % <i>(optional)</i></label><input type="number" id="lnRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
-      <div class="f"><label for="lnEmi">EMI amount</label><input type="number" id="lnEmi" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-      <div class="f"><label for="lnTenure">Tenure (months) <i>(optional)</i></label><input type="number" id="lnTenure" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
-      <div class="f"><label for="lnNotes">Notes</label><input type="text" id="lnNotes" placeholder="optional"></div>
-      <div class="f"><button type="submit">+ Add loan</button></div>
-    </form>
-
-    <div class="table-card" style="margin-bottom:1.3rem">
-      <table id="tblLoan"><thead><tr><th>Start</th><th>Lender</th><th>Type</th><th style="text-align:right">Principal</th><th style="text-align:right">Rate</th><th style="text-align:right">EMI</th><th style="text-align:right">Paid so far</th><th style="text-align:right">Remaining</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyLoan" style="display:none">No loans yet.<br>Add your housing or other bank loan above, then log each EMI or prepayment below.</div>
-    </div>
-
-    <div class="section-head"><h3 style="font-size:1.05rem;font-weight:700">Repayments</h3><span class="total" id="lpayTotalHead"></span></div>
-    <form class="add-card" id="formLpay">
-      <div class="f"><label for="lpDate">Date</label><input type="date" id="lpDate" required></div>
-      <div class="f"><label for="lpLender">Loan</label><select id="lpLender" required></select></div>
-      <div class="f"><label for="lpKind">Payment type</label>
-        <select id="lpKind"><option>EMI</option><option>Prepayment</option><option>Charges</option><option>Other</option></select></div>
-      <div class="f"><label for="lpAmt">Amount</label><input type="number" id="lpAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="lpBank">Paid from bank</label><select id="lpBank"></select></div>
-      <div class="f"><label for="lpNotes">Notes</label><input type="text" id="lpNotes" placeholder="optional"></div>
-      <div class="f"><button type="submit">+ Add repayment</button></div>
-    </form>
-    <div class="toolbar">
-      <input type="search" id="searchLpay" placeholder="Search repayments…">
-      <select id="filterLpayMonth"><option value="">All months</option></select>
-      <span class="sum" id="lpayFilteredSum"></span>
-    </div>
-    <div class="table-card">
-      <table id="tblLpay"><thead><tr><th>Date</th><th>Loan</th><th>Type</th><th style="text-align:right">Amount</th><th>Bank</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyLpay" style="display:none">No repayments logged yet.<br>Each EMI you record here reduces the loan’s remaining balance above.</div>
-    </div>
-  </section>
-
-  <!-- ============ DEBTS & LOANS ============ -->
-  <section class="panel" id="panel-debt">
-    <div class="section-head"><h2>Debts &amp; Loans</h2><span class="total" id="debtTotalHead"></span></div>
-    <form class="add-card" id="formDebt">
-      <div class="f"><label for="dbDate">Date</label><input type="date" id="dbDate" required></div>
-      <div class="f"><label for="dbPerson">Person / party</label><input type="text" id="dbPerson" placeholder="e.g. Khalid" required></div>
-      <div class="f"><label for="dbType">Type</label>
-        <select id="dbType"><option value="Given">Debt given (they owe me)</option><option value="Taken">Loan taken (I owe them)</option></select></div>
-      <div class="f"><label for="dbAmt">Amount</label><input type="number" id="dbAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="dbRepaid">Repaid so far</label><input type="number" id="dbRepaid" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-      <div class="f"><label for="dbBank">Bank used</label><select id="dbBank"></select></div>
-      <div class="f"><label for="dbDue">Due date <i>(optional)</i></label><input type="date" id="dbDue"></div>
-      <div class="f"><label for="dbNotes">Notes</label><input type="text" id="dbNotes" placeholder="optional"></div>
+  <!-- ============ LOANS & DEBTS ============ -->
+  <section class="panel" id="panel-ld">
+    <div class="section-head"><h2>Loans &amp; Debts</h2><span class="total" id="ldTotalHead"></span></div>
+    <form class="add-card" id="formLD">
+      <div class="f"><label for="ldType">Type</label>
+        <select id="ldType">
+          <option value="Debt Receivable">Debt receivable (they owe me)</option>
+          <option value="Debt Payable">Debt payable (I owe a person)</option>
+          <option value="Bank Loan Payable">Bank loan (I owe a bank)</option>
+        </select></div>
+      <div class="f"><label for="ldPerson" id="ldPersonLabel">Person / Lender</label><input type="text" id="ldPerson" required></div>
+      <div class="f"><label for="ldPurpose">Category / Purpose</label><input type="text" id="ldPurpose" placeholder="e.g. Money given, Housing loan"></div>
+      <div class="f"><label for="ldPrincipal">Principal / Original</label><input type="number" id="ldPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
+      <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
+      <div class="f" id="ldFundWrap"><label for="ldFundBank" id="ldFundLabel">Funded from bank <i>(optional)</i></label><select id="ldFundBank"></select></div>
       <div class="f"><button type="submit">+ Add record</button></div>
     </form>
     <div class="toolbar">
-      <input type="search" id="searchDebt" placeholder="Search by person…">
-      <select id="filterDebtType"><option value="">All</option><option value="Given">Given (owed to me)</option><option value="Taken">Taken (I owe)</option></select>
-      <select id="filterDebtStatus"><option value="">Open &amp; settled</option><option value="open">Open only</option><option value="settled">Settled only</option></select>
-      <span class="sum" id="debtFilteredSum"></span>
+      <input type="search" id="searchLD" placeholder="Search person / purpose…">
+      <select id="filterLDType"><option value="">All types</option><option value="Debt Receivable">Receivable</option><option value="Debt Payable">Payable (person)</option><option value="Bank Loan Payable">Bank loan</option></select>
+      <select id="filterLDStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
+      <span class="sum" id="ldFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblDebt"><thead><tr><th>Date</th><th>Person</th><th>Type</th><th>Bank</th><th style="text-align:right">Amount</th><th style="text-align:right">Repaid</th><th style="text-align:right">Outstanding</th><th>Due</th><th>Notes</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyDebt" style="display:none">Nothing here yet.<br>Record money you’ve lent to others (debt given) or borrowed from others (loan taken).</div>
+      <table id="tblLD"><thead><tr><th>Record</th><th>Type</th><th>Person / Lender</th><th>Purpose</th><th style="text-align:right">Principal</th><th style="text-align:right">Balance due</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyLD" style="display:none">No loans or debts yet.</div>
+    </div>
+  </section>
+
+  <!-- ============ INVESTMENTS ============ -->
+  <section class="panel" id="panel-inv">
+    <div class="section-head"><h2>Investments</h2><span class="total" id="invTotalHead"></span></div>
+    <form class="add-card" id="formInv">
+      <div class="f"><label for="ivName">Asset name</label><input type="text" id="ivName" placeholder="e.g. APY Pension" required></div>
+      <div class="f"><label for="ivType">Asset type</label><select id="ivType"></select></div>
+      <div class="f"><label for="ivDate">Invested date</label><input type="date" id="ivDate" required></div>
+      <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
+      <div class="f"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
+      <div class="f"><button type="submit">+ Add investment</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchInv" placeholder="Search asset…">
+      <select id="filterInvStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
+      <span class="sum" id="invFilteredSum"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblInv"><thead><tr><th>Inv ID</th><th>Asset</th><th>Type</th><th>Bank</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyInv" style="display:none">No investments yet.</div>
     </div>
   </section>
 </main>
+
 
 <div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
   <div class="auth-card" style="max-width:480px;max-height:90vh;overflow:auto">
@@ -619,21 +532,29 @@
     <div class="auth-error" id="settingsError"></div>
 
     <div class="set-tabs">
-      <button class="set-tab active" data-sec="secReconcile" type="button">Verify balance</button>
+      <button class="set-tab active" data-sec="secBanks" type="button">Banks</button>
       <button class="set-tab" data-sec="secProfile" type="button">Profile</button>
       <button class="set-tab" data-sec="secLists" type="button">Lists</button>
       <button class="set-tab" data-sec="secSecurity" type="button">Security</button>
       <button class="set-tab" data-sec="secDevice" type="button">Devices</button>
     </div>
 
-    <!-- ===== Reconcile / verify ===== -->
-    <div class="set-sec active" id="secReconcile">
-      <p class="sub" style="margin-bottom:1rem">Check your ledger against your real bank statement. Enter the closing balance from your statement and its date — Bilr computes what your ledger says for that account up to that date, and shows the difference.</p>
-      <div class="f"><label for="recBank">Bank account</label><select id="recBank" class="bank-select" style="width:100%"></select></div>
-      <div class="f"><label for="recDate">Statement date <i>(balance as of)</i></label><input type="date" id="recDate"></div>
-      <div class="f"><label for="recBal">Statement closing balance</label><input type="number" step="0.01" id="recBal" placeholder="0.00"></div>
-      <button class="btn primary" id="btnReconcile" type="button">Verify balance</button>
-      <div id="recOutput"></div>
+    <!-- ===== Banks setup ===== -->
+    <div class="set-sec active" id="secBanks">
+      <p class="sub" style="margin-bottom:1rem">Add and manage your bank accounts and opening balances here. Balances and statements appear on the Banks tab.</p>
+      <form class="add-card" id="formBank" style="grid-template-columns:1fr 1fr">
+        <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
+        <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
+        <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
+        <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
+        <div class="f wide" style="grid-column:1/-1"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
+        <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add bank</button>
+      </form>
+      <div class="toolbar"><input type="search" id="searchBank" placeholder="Search banks…"></div>
+      <div class="table-card">
+        <table id="tblBank"><thead><tr><th>Bank / Account</th><th>Type</th><th>Account#</th><th style="text-align:right">Opening</th><th style="text-align:right">Balance</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="empty" id="emptyBank" style="display:none">No banks yet — add one above.</div>
+      </div>
     </div>
 
     <!-- ===== Profile ===== -->
@@ -673,7 +594,7 @@
 
     <!-- ===== Devices ===== -->
     <div class="set-sec" id="secDevice">
-      <p class="sub">Install Bilr on another device by generating a one-time setup code, then pasting it into that device’s index.html.</p>
+      <p class="sub">Install Ledgr on another device by generating a one-time setup code, then pasting it into that device’s index.html.</p>
       <div class="f"><button class="btn" id="btnEmbed" type="button">Get device setup code</button></div>
       <p class="auth-note" style="text-align:left">If you change your password, get a fresh device setup code afterwards and re-install it in index.html — the old embedded code only opens with the old password.</p>
     </div>
@@ -724,6 +645,8 @@
 
 <div id="toast" role="status"></div>
 
+
+
 <script>
 "use strict";
 /* ============================================================
@@ -734,13 +657,12 @@
 ============================================================ */
 const EMBEDDED=null; // LEDGR-EMBED — replace this whole line with your generated connection code
 
-let income=[], expenses=[], investments=[], debts=[], loans=[], loanPays=[], banks=[], transfers=[];
 const DEFAULT_LISTS={
-  incomeCats:["Salary","Business","Freelance","Rental","Dividends / Profit","Gift","Other"],
-  expenseCats:["Groceries","Rent / Housing","Utilities","Transport","Dining","Health","Education","Shopping","Travel","Family","Other"],
-  payMethods:["Card","Cash","Bank transfer","GPay","Other"],
-  investTypes:["Stocks","Funds","Real estate","Gold","Sukuk / Bonds","Crypto","Business","Other"],
-  loanTypes:["Housing","Car","Personal","Education","Gold","Other"]
+  incomeCats:["Salary","Business","Freelance","Rental","Dividends / Profit","Allowance","Interest","Debt Settlement","Investment Redemption","Gift","Other"],
+  expenseCats:["Groceries","Rent / Housing","Utilities","Transport","Dining","Health","Education","Shopping","Travel","Family","Credit Card","Loan Repayment","GST","Investment","Debt Given","Other"],
+  payMethods:["Direct Credit","Bank Transfer","GPay","Card","Cash","Cheque","Other"],
+  investTypes:["Stocks","Funds","Real estate","Gold","Bonds","Crypto","Pension","Business","Other"],
+  loanTypes:["Housing","Car","Personal","Education","Gold","Business","Other"]
 };
 const LIST_HEADERS={incomeCats:"Income Categories",expenseCats:"Expense Categories",payMethods:"Payment Methods",investTypes:"Investment Types",loanTypes:"Loan Types"};
 let lists=JSON.parse(JSON.stringify(DEFAULT_LISTS));
@@ -764,38 +686,7 @@ const PALETTE=["#3DDCA3","#4D9FFF","#8B7CFF","#FFC466","#FF6E61","#5EE0E6","#E58
 /* ---------- helpers ---------- */
 const fmt=n=>new Intl.NumberFormat(undefined,{style:"currency",currency,maximumFractionDigits:2}).format(n||0);
 const r2=n=>Math.round(((+n||0)+Number.EPSILON)*100)/100;
-const bankOptions=sel=>{
-  if(!banks.length)return '<option value="">— no banks —</option>';
-  return banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join("");
-};
-const bankCell=(cls,val)=>`<select class="${cls}">${bankOptions(val)}</select>`;
 const bankTag=name=>name?`<span class="tag" style="background:var(--wash-strong);color:var(--muted)">${esc(name)}</span>`:'<span style="color:var(--muted)">—</span>';
-const bankBalance=(name,asOf)=>{
-  const le=d=>!asOf||(d&&d<=asOf);
-  let bal=banks.find(b=>b.name===name)?.opening||0;
-  income.forEach(i=>{if(i.bank===name&&le(i.date))bal+=i.amount;});
-  expenses.forEach(e=>{if(e.bank===name&&le(e.date))bal-=e.amount;});
-  transfers.forEach(t=>{if(le(t.date)){if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;}});
-  investments.forEach(v=>{if(v.bank===name&&le(v.date))bal-=v.amount;});
-  investments.forEach(v=>{if(v.status==="Closed"&&v.bank===name&&le(v.closedDate))bal+=(v.closedValue||0);});
-  debts.forEach(d=>{if(d.bank===name&&le(d.date)){
-    // money given out leaves the bank; repaid comes back. Taken adds cash, repaying it leaves.
-    if(d.type==="Given")bal-=(d.amount-d.repaid);
-    else bal+=(d.amount-d.repaid);
-  }});
-  loanPays.forEach(p=>{if(p.bank===name&&le(p.date))bal-=p.amount;});
-  loans.forEach(l=>{if(l.status==="Closed"&&l.closeBank===name&&le(l.closedDate))bal-=(l.closeAmount||0);});
-  return r2(bal);
-};
-const refreshBankSelects=()=>{
-  const opts=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
-  ["inBank","exBank","ivBank","dbBank","lpBank","tFrom","tTo"].forEach(id=>{
-    const sel=$("#"+id);
-    if(sel){const cur=sel.value;sel.innerHTML=opts;if(cur&&banks.some(b=>b.name===cur))sel.value=cur;}
-  });
-  const t=$("#tDate");if(t&&!t.value)t.value=todayISO();
-};
-
 const fmtShort=n=>new Intl.NumberFormat(undefined,{notation:"compact",maximumFractionDigits:1}).format(n||0);
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2800);}
 const todayISO=()=>new Date().toISOString().slice(0,10);
@@ -952,173 +843,6 @@ async function generateEmbedLine(){
 }
 
 /* ---------- Excel: read ---------- */
-function parseWorkbook(buf,name){
-  const wb=XLSX.read(buf,{type:"array",cellDates:true});
-  const find=w=>wb.SheetNames.find(n=>n.trim().toLowerCase()===w)||null;
-  const g=(r,k)=>r[Object.keys(r).find(x=>x.trim().toLowerCase()===k)]??"";
-
-  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];banks=[];transfers=[];owner="";username="";passHash="";
-
-  
-  // Parse Banks sheet
-  const sB=find("banks");
-  if(sB)XLSX.utils.sheet_to_json(wb.Sheets[sB],{defval:""}).forEach(r=>{
-    banks.push({name:String(g(r,"bank name")||"").trim(),acct:String(g(r,"account number")||"").trim(),
-      type:String(g(r,"account type")||"Savings"),opening:num(g(r,"opening balance")),notes:String(g(r,"notes")||"")});
-  });
-  banks=banks.filter(b=>b.name);
-  
-  const sTr=find("transfers");
-  if(sTr)XLSX.utils.sheet_to_json(wb.Sheets[sTr],{defval:""}).forEach(r=>{
-    transfers.push({date:normDate(g(r,"date")),from:String(g(r,"from bank")||"").trim(),to:String(g(r,"to bank")||"").trim(),
-      amt:num(g(r,"amount")),ref:String(g(r,"reference / notes")||g(r,"reference")||g(r,"notes")||"")});
-  });
-  transfers=transfers.filter(t=>t.from&&t.to&&t.amt);
-  
-  const sInc=find("income");
-  if(sInc)XLSX.utils.sheet_to_json(wb.Sheets[sInc],{defval:""}).forEach(r=>{
-    income.push({date:normDate(g(r,"date"))||todayISO(),source:String(g(r,"source")||"").trim(),
-      category:String(g(r,"category")||"Other").trim()||"Other",amount:num(g(r,"amount")),
-      bank:String(g(r,"bank")||"").trim()||(banks[0]?banks[0].name:""),notes:String(g(r,"notes")||"")});
-  });
-  income=income.filter(r=>r.source||r.amount);
-
-  const sExp=find("expenses");
-  if(sExp)XLSX.utils.sheet_to_json(wb.Sheets[sExp],{defval:""}).forEach(r=>{
-    expenses.push({date:normDate(g(r,"date"))||todayISO(),category:String(g(r,"category")||"Other").trim()||"Other",
-      desc:String(g(r,"description")||g(r,"desc")||"").trim(),amount:num(g(r,"amount")),
-      bank:String(g(r,"bank")||"").trim()||(banks[0]?banks[0].name:""),
-      pay:String(g(r,"payment method")||g(r,"paid with")||"Card").trim()||"Card"});
-  });
-  expenses=expenses.filter(r=>r.desc||r.amount);
-
-  const sInv=find("investments");
-  if(sInv)XLSX.utils.sheet_to_json(wb.Sheets[sInv],{defval:""}).forEach(r=>{
-    const amount=num(g(r,"amount invested")||g(r,"amount"));
-    investments.push({date:normDate(g(r,"date"))||todayISO(),name:String(g(r,"name")||"").trim(),
-      type:String(g(r,"type")||"Other").trim()||"Other",amount,current:num(g(r,"current value"))||amount,
-      bank:String(g(r,"bank")||"").trim(),
-      status:String(g(r,"status")||"").trim()||"Open",closedDate:normDate(g(r,"closed date")),closedValue:num(g(r,"closed value")),
-      notes:String(g(r,"notes")||"")});
-  });
-  investments=investments.filter(r=>r.name||r.amount);
-
-  const sDebt=find("debts");
-  if(sDebt)XLSX.utils.sheet_to_json(wb.Sheets[sDebt],{defval:""}).forEach(r=>{
-    let type=String(g(r,"type")||"").trim().toLowerCase();
-    type=type.startsWith("t")||type.includes("borrow")||type.includes("loan")?"Taken":"Given";
-    debts.push({date:normDate(g(r,"date"))||todayISO(),person:String(g(r,"person")||g(r,"party")||"").trim(),
-      type,amount:num(g(r,"amount")),repaid:num(g(r,"repaid")),
-      due:normDate(g(r,"due date")||g(r,"due")),bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
-  });
-  debts=debts.filter(r=>r.person||r.amount);
-
-  loans=[];loanPays=[];
-  const sLoan=find("loans");
-  if(sLoan)XLSX.utils.sheet_to_json(wb.Sheets[sLoan],{defval:""}).forEach(r=>{
-    loans.push({date:normDate(g(r,"date")||g(r,"start date"))||todayISO(),
-      lender:String(g(r,"lender")||"").trim(),type:String(g(r,"type")||"Housing").trim()||"Housing",
-      principal:num(g(r,"principal")),rate:num(g(r,"interest rate")||g(r,"rate")),
-      emi:num(g(r,"emi")),tenure:Math.round(num(g(r,"tenure months")||g(r,"tenure"))),
-      status:String(g(r,"status")||"").trim()||"Open",closedDate:normDate(g(r,"closed date")),
-      closeBank:String(g(r,"close bank")||"").trim(),closeAmount:num(g(r,"close amount")),
-      notes:String(g(r,"notes")||"")});
-  });
-  loans=loans.filter(r=>r.lender||r.principal);
-  const sLpay=find("loan payments");
-  if(sLpay)XLSX.utils.sheet_to_json(wb.Sheets[sLpay],{defval:""}).forEach(r=>{
-    loanPays.push({date:normDate(g(r,"date"))||todayISO(),
-      lender:String(g(r,"lender")||g(r,"loan")||"").trim(),
-      kind:String(g(r,"kind")||g(r,"payment type")||"EMI").trim()||"EMI",
-      amount:num(g(r,"amount")),bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
-  });
-  loanPays=loanPays.filter(r=>r.lender||r.amount);
-
-  lists=JSON.parse(JSON.stringify(DEFAULT_LISTS));
-  const sLists=find("lists")||find("categories");
-  if(sLists){
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sLists],{defval:""});
-    for(const key in LIST_HEADERS){
-      const col=LIST_HEADERS[key].toLowerCase();
-      const vals=normalizeList(rows.map(r=>g(r,col)));
-      if(vals.length)lists[key]=vals;
-    }
-  }
-
-  const sSet=find("settings");
-  if(sSet)XLSX.utils.sheet_to_json(wb.Sheets[sSet],{defval:""}).forEach(r=>{
-    const key=String(g(r,"key")).toLowerCase(),val=g(r,"value");
-    if(key==="currency"&&val)currency=String(val).toUpperCase();
-    if(key==="owner"&&val)owner=String(val);
-    if(key==="username"&&val)username=String(val);
-    if(key==="passwordhash"&&val)passHash=String(val);
-    if(key==="theme"&&val)applyTheme(String(val).toLowerCase()==="light"?"light":"dark");
-  });
-  refreshSelects();
-
-  fileName=name;
-  
-  setDirty(false);
-}
-function loadWorkbook(buf,name){
-  parseWorkbook(buf,name);
-  if(username&&passHash)showLogin();
-  else showSetCreds();
-}
-
-/* ---------- Excel: build ---------- */
-function buildWorkbook(){
-  const wb=XLSX.utils.book_new();
-  const wsInc=XLSX.utils.json_to_sheet(income.map(r=>({"Date":r.date,"Source":r.source,"Category":r.category,"Amount":r.amount,"Bank":r.bank||"","Notes":r.notes})),
-    {header:["Date","Source","Category","Amount","Bank","Notes"]});
-  const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Bank":r.bank||"","Payment Method":r.pay})),
-    {header:["Date","Category","Description","Amount","Bank","Payment Method"]});
-  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Bank":r.bank||"","Status":r.status||"Open","Closed Date":r.closedDate||"","Closed Value":r.closedValue||"","Notes":r.notes})),
-    {header:["Date","Name","Type","Amount Invested","Current Value","Bank","Status","Closed Date","Closed Value","Notes"]});
-  const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Bank":r.bank||"","Notes":r.notes})),
-    {header:["Date","Person","Type","Amount","Repaid","Due Date","Bank","Notes"]});
-  const wsLoan=XLSX.utils.json_to_sheet(loans.map(r=>({"Date":r.date,"Lender":r.lender,"Type":r.type,"Principal":r.principal,"Interest Rate":r.rate,"EMI":r.emi,"Tenure Months":r.tenure,"Status":r.status||"Open","Closed Date":r.closedDate||"","Close Bank":r.closeBank||"","Close Amount":r.closeAmount||"","Notes":r.notes})),
-    {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Status","Closed Date","Close Bank","Close Amount","Notes"]});
-  const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Bank":r.bank||"","Notes":r.notes})),
-    {header:["Date","Lender","Kind","Amount","Bank","Notes"]});
-  const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash},{Key:"Theme",Value:theme}];
-  const wsSet=XLSX.utils.json_to_sheet(settings);
-  const maxLen=Math.max(...Object.values(lists).map(a=>a.length));
-  const listRows=[];
-  for(let i=0;i<maxLen;i++){const o={};for(const k in LIST_HEADERS)o[LIST_HEADERS[k]]=lists[k][i]??"";listRows.push(o);}
-  const wsLists=XLSX.utils.json_to_sheet(listRows,{header:Object.values(LIST_HEADERS)});
-  wsLists["!cols"]=[{wch:20},{wch:20},{wch:18},{wch:18},{wch:14}];
-  wsInc["!cols"]=[{wch:12},{wch:24},{wch:16},{wch:12},{wch:16},{wch:26}];
-  wsExp["!cols"]=[{wch:12},{wch:16},{wch:28},{wch:12},{wch:16},{wch:18}];
-  wsInv["!cols"]=[{wch:12},{wch:24},{wch:14},{wch:16},{wch:16},{wch:26}];
-  wsDebt["!cols"]=[{wch:12},{wch:20},{wch:10},{wch:12},{wch:12},{wch:12},{wch:26}];
-  wsLoan["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:26}];
-  wsLpay["!cols"]=[{wch:12},{wch:22},{wch:12},{wch:12},{wch:26}];
-  wsSet["!cols"]=[{wch:14},{wch:70}];
-  const wsB=XLSX.utils.json_to_sheet(banks.map(b=>({"Bank Name":b.name,"Account Number":b.acct,"Account Type":b.type,"Opening Balance":b.opening,"Notes":b.notes})),
-    {header:["Bank Name","Account Number","Account Type","Opening Balance","Notes"]});
-  wsB["!cols"]=[{wch:20},{wch:18},{wch:12},{wch:14},{wch:28}];
-  
-  const wsTr=XLSX.utils.json_to_sheet(transfers.map(t=>({"Date":t.date,"From Bank":t.from,"To Bank":t.to,"Amount":t.amt,"Reference / Notes":t.ref})),
-    {header:["Date","From Bank","To Bank","Amount","Reference / Notes"]});
-  wsTr["!cols"]=[{wch:12},{wch:16},{wch:16},{wch:12},{wch:28}];
-  
-  XLSX.utils.book_append_sheet(wb,wsInc,"Income");
-  XLSX.utils.book_append_sheet(wb,wsExp,"Expenses");
-  XLSX.utils.book_append_sheet(wb,wsB,"Banks");
-  XLSX.utils.book_append_sheet(wb,wsTr,"Transfers");
-  XLSX.utils.book_append_sheet(wb,wsInv,"Investments");
-  XLSX.utils.book_append_sheet(wb,wsLoan,"Loans");
-  XLSX.utils.book_append_sheet(wb,wsLpay,"Loan Payments");
-  XLSX.utils.book_append_sheet(wb,wsDebt,"Debts");
-  XLSX.utils.book_append_sheet(wb,wsLists,"Lists");
-  XLSX.utils.book_append_sheet(wb,wsSet,"Settings");
-  return wb;
-}
-
-/* ---------- GitHub API ---------- */
-const ghUrl=()=>`https://api.github.com/repos/${gh.repo}/contents/${gh.path.replace(/^\/+/,"")}`;
-const ghHeaders=()=>({ "Authorization":"Bearer "+gh.token, "Accept":"application/vnd.github+json", "X-GitHub-Api-Version":"2022-11-28" });
 
 async function ghLoad(){
   const res=await fetch(ghUrl()+"?ref="+encodeURIComponent(gh.branch),{headers:ghHeaders()});
@@ -1259,7 +983,7 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   owner=$("#cName").value.trim();username=user;
   currency=$("#cCurrency").value;
   passHash=await hashPin(pin);sessionPass=pin;
-  income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];
+  txns=[];banks=[];lends=[];invs=[];
   if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
     if(rememberDevice&&gh.token)await saveProfile(pin);}
   else{storageMode="local";fileHandle=null;fileName="my-money.xlsx";}
@@ -1338,13 +1062,8 @@ $("#btnSettings").addEventListener("click",()=>{
   $("#stListValues").value=lists[$("#stListPick").value].join("\n");
   $("#stCurrency").value=currency;
   if(![...$("#stCurrency").options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;$("#stCurrency").appendChild(o);$("#stCurrency").value=currency;}
-  // reconcile setup
-  const rb=$("#recBank");
-  rb.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
-  if(!$("#recDate").value)$("#recDate").value=todayISO();
-  $("#recOutput").innerHTML="";
-  // default to first tab
-  setSettingsTab("secReconcile");
+  renderBank();
+  setSettingsTab("secBanks");
   $("#settingsOverlay").style.display="flex";
 });
 
@@ -1354,93 +1073,9 @@ function setSettingsTab(id){
   $$(".set-sec").forEach(s=>s.classList.toggle("active",s.id===id));
 }
 $$(".set-tab").forEach(t=>t.addEventListener("click",()=>setSettingsTab(t.dataset.sec)));
-$("#btnVerifyBanks")&&$("#btnVerifyBanks").addEventListener("click",()=>{$("#btnSettings").click();setSettingsTab("secReconcile");});
+$("#btnAddBankJump")&&$("#btnAddBankJump").addEventListener("click",()=>{$("#btnSettings").click();setSettingsTab("secBanks");setTimeout(()=>$("#bName")&&$("#bName").focus(),60);});
 
-/* ---------- close position (investment / loan) ---------- */
-let closeCtx={kind:null,idx:-1};
-function openCloseModal(kind,idx){
-  closeCtx={kind,idx};
-  const err=$("#closeError");err.style.display="none";
-  const bankSel=$("#closeBank");
-  bankSel.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
-  $("#closeDate").value=todayISO();
-  if(kind==="inv"){
-    const r=investments[idx];
-    $("#closeTitle").textContent="Close / redeem investment";
-    $("#closeSub").textContent=`Redeeming “${r.name}”. The proceeds are credited to the bank you pick, and the line is marked Closed.`;
-    $("#closeAmtLabel").textContent="Redemption value received";
-    $("#closeBankLabel").textContent="Credit proceeds to bank";
-    $("#closeAmt").value=r.current||r.amount||"";
-    if(r.bank&&banks.some(b=>b.name===r.bank))bankSel.value=r.bank;
-    const gain=(r.current||0)-(r.amount||0);
-    $("#closeHint").innerHTML=`Invested ${fmt(r.amount)} · current ${fmt(r.current)} · <span class="${gain>=0?'pos':'neg'}">${gain>=0?'gain':'loss'} ${fmt(Math.abs(gain))}</span>. Adjust the value if your actual payout differs.`;
-  }else{
-    const r=loans[idx];
-    const rem=loanRemaining(r);
-    $("#closeTitle").textContent="Close / foreclose loan";
-    $("#closeSub").textContent=`Closing “${r.lender}”. The payoff amount is debited from the bank you pick, and the loan is marked Closed.`;
-    $("#closeAmtLabel").textContent="Final payoff amount";
-    $("#closeBankLabel").textContent="Pay off from bank";
-    $("#closeAmt").value=rem||"";
-    if(r.bank&&banks.some(b=>b.name===r.bank))bankSel.value=r.bank;
-    $("#closeHint").innerHTML=`Outstanding by schedule: ${fmt(rem)}. Enter the actual settlement amount (may be lower after negotiation).`;
-  }
-  $("#closeOverlay").style.display="flex";
-}
-$("#btnCloseCancel").addEventListener("click",()=>{$("#closeOverlay").style.display="none";});
-$("#closeOverlay").addEventListener("click",e=>{if(e.target.id==="closeOverlay")$("#closeOverlay").style.display="none";});
-$("#btnCloseConfirm").addEventListener("click",()=>{
-  const err=$("#closeError");err.style.display="none";
-  const amt=num($("#closeAmt").value),date=$("#closeDate").value,bank=$("#closeBank").value;
-  if(!bank){err.textContent="Add a bank account first (Banks tab).";err.style.display="block";return;}
-  if(!date){err.textContent="Pick the date.";err.style.display="block";return;}
-  if(amt<0){err.textContent="Amount can’t be negative.";err.style.display="block";return;}
-  if(closeCtx.kind==="inv"){
-    const r=investments[closeCtx.idx];
-    r.status="Closed";r.closedDate=date;r.closedValue=amt;r.bank=bank;r.current=amt;
-  }else{
-    const r=loans[closeCtx.idx];
-    r.status="Closed";r.closedDate=date;r.closeAmount=amt;r.closeBank=bank;
-  }
-  $("#closeOverlay").style.display="none";
-  setDirty(true);renderAll();
-  toast("Marked closed — settlement posted to "+bank);
-});
 
-/* bank statement verification */
-$("#btnReconcile").addEventListener("click",()=>{
-  const name=$("#recBank").value, asOf=$("#recDate").value, stmt=num($("#recBal").value);
-  const out=$("#recOutput");
-  if(!name){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Add a bank account first (Banks tab), then come back to verify.</div>';return;}
-  if(!asOf){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Pick the statement date.</div>';return;}
-  const bank=banks.find(b=>b.name===name);
-  const ledger=bankBalance(name,asOf);
-  const diff=r2(stmt-ledger);
-  const abs=Math.abs(diff);
-  const opening=bank?bank.opening:0;
-  // count transactions considered
-  const within=d=>d&&d<=asOf;
-  const nTx=income.filter(i=>i.bank===name&&within(i.date)).length
-    +expenses.filter(e=>e.bank===name&&within(e.date)).length
-    +investments.filter(v=>v.bank===name&&within(v.date)).length
-    +debts.filter(d=>d.bank===name&&within(d.date)).length
-    +loanPays.filter(p=>p.bank===name&&within(p.date)).length
-    +transfers.filter(t=>(t.from===name||t.to===name)&&within(t.date)).length;
-  let badge,statusCls;
-  if(abs<0.01){badge='<div class="rec-badge ok">✓ Matched — your ledger agrees with the statement</div>';statusCls="ok";}
-  else if(abs<=Math.max(1,Math.abs(stmt)*0.005)){badge=`<div class="rec-badge near">≈ Almost matched — off by ${fmt(abs)}</div>`;statusCls="near";}
-  else{badge=`<div class="rec-badge off">✕ Difference of ${fmt(abs)} — needs review</div>`;statusCls="off";}
-  const dir=diff>0?"Your statement is higher — you may have income/deposits not yet entered.":diff<0?"Your ledger is higher — you may have expenses/withdrawals not yet entered, or a duplicate entry.":"";
-  out.innerHTML=`
-    <div class="rec-result ${statusCls}">
-      <div class="rec-row"><span>Opening balance</span><span>${fmt(opening)}</span></div>
-      <div class="rec-row"><span>Ledger balance · as of ${esc(asOf)}</span><span>${fmt(ledger)}</span></div>
-      <div class="rec-row"><span>Statement balance</span><span>${fmt(stmt)}</span></div>
-      <div class="rec-row rec-diff"><span>Difference</span><span class="${diff===0?'':diff>0?'pos':'neg'}">${diff>0?'+':''}${fmt(diff)}</span></div>
-      ${badge}
-      <div class="rec-hint">${nTx} transaction${nTx===1?'':'s'} on this account up to that date.${dir?' '+dir:''}</div>
-    </div>`;
-});
 $("#stListPick").addEventListener("change",()=>{$("#stListValues").value=lists[$("#stListPick").value].join("\n");});
 $("#btnListApply").addEventListener("click",()=>{
   const key=$("#stListPick").value;
@@ -1504,101 +1139,352 @@ $("#btnDownloadCfg").addEventListener("click",async()=>{
   }catch(e){console.error(e);toast("Could not generate the file — try again.");}
 });
 
-/* ---------- nav ---------- */
-$$(".pill").forEach(b=>b.addEventListener("click",()=>{
-  $$(".pill").forEach(x=>x.classList.remove("active"));b.classList.add("active");
-  $$(".panel").forEach(p=>p.classList.remove("active"));
-  $("#panel-"+b.dataset.tab).classList.add("active");
-  if(b.dataset.tab==="home")renderOverview();
-  if(b.dataset.tab==="bank"){refreshBankSelects();renderBank();renderTransfer();renderStatement();}
-}));
-$("#btnSave").addEventListener("click",saveFile);
-$("#btnTheme").addEventListener("click",()=>{applyTheme(theme==="dark"?"light":"dark");setDirty(true);});
 
-/* "+ Add new…" on category selects */
-SELECT_LIST_MAP.forEach(([id,key])=>{
-  $("#"+id).addEventListener("change",e=>{
-    if(e.target.value!=="__add__")return;
-    const v=(prompt("New value:")||"").trim();
-    if(v){
-      if(!lists[key].some(x=>x.toLowerCase()===v.toLowerCase()))lists[key].push(v);
-      refreshSelects();
-      e.target.value=lists[key].find(x=>x.toLowerCase()===v.toLowerCase());
-      setDirty(true);
-    }else{
-      e.target.selectedIndex=0;
-    }
-  });
-});
+/* ============================================================
+   NEW ACCOUNTING CORE — unified transactions ledger model
+   Sheets: Transactions, Banks & Reconciliation, Loans & Debts, Investments
+============================================================ */
 
-/* ---------- aggregation ---------- */
-const monthKey=d=>d.slice(0,7);
-const thisMonth=()=>new Date().toISOString().slice(0,7);
-function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
-const sumBy=(arr,pred)=>arr.filter(pred).reduce((s,r)=>s+r.amount,0);
-const outstanding=r=>Math.max(0,r.amount-r.repaid);
-const paidForLoan=lender=>loanPays.filter(p=>p.lender.trim().toLowerCase()===lender.trim().toLowerCase()).reduce((s,p)=>s+p.amount,0);
-const loanRemaining=l=>{
-  if(l.status==="Closed")return 0;
-  const paid=paidForLoan(l.lender);
-  const total=(l.emi>0&&l.tenure>0)?l.emi*l.tenure:l.principal;
-  return Math.max(0,total-paid);
-};
+/* ---------- state ---------- */
+let txns=[];      // {id,date,type,cat,desc,amount,bank,method,ref}
+let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
+let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
+let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
 
-/* ---------- overview ---------- */
-function renderOverview(){
-  const mk=thisMonth();
-  const incM=sumBy(income,r=>monthKey(r.date)===mk);
-  const expM=sumBy(expenses,r=>monthKey(r.date)===mk);
-  const net=incM-expM;
-  const invested=investments.reduce((s,r)=>s+r.amount,0);
-  const value=investments.reduce((s,r)=>s+r.current,0);
-  const gain=value-invested,pct=invested?gain/invested*100:0;
-  const given=debts.filter(r=>r.type==="Given"),taken=debts.filter(r=>r.type==="Taken");
-  const lentOut=given.reduce((s,r)=>s+outstanding(r),0);
-  const oweOut=taken.reduce((s,r)=>s+outstanding(r),0);
-
-  $("#kIncome").textContent=fmt(incM);
-  $("#kIncomeSub").textContent=`${fmt(income.reduce((s,r)=>s+r.amount,0))} all time`;
-  $("#kExpense").textContent=fmt(expM);
-  $("#kExpenseSub").textContent=`${fmt(expenses.reduce((s,r)=>s+r.amount,0))} all time`;
-  $("#kSavings").textContent=fmt(net);
-  $("#kSavingsSub").innerHTML=incM?`You kept <span class="${net>=0?'up':'down'}">${(net/incM*100).toFixed(0)}%</span> of this month’s income`:"Add income to see your savings rate";
-  $("#kPortfolio").textContent=fmt(value);
-  $("#kPortfolioSub").innerHTML=`<span class="${gain>=0?'up':'down'}">${gain>=0?"▲":"▼"} ${fmt(Math.abs(gain))} (${pct.toFixed(1)}%)</span> vs invested`;
-  $("#kLent").textContent=fmt(lentOut);
-  $("#kLentSub").textContent=`${given.filter(r=>outstanding(r)>0).length} open · debt given`;
-  $("#kBorrowed").textContent=fmt(oweOut);
-  $("#kBorrowedSub").textContent=`${taken.filter(r=>outstanding(r)>0).length} open · loans taken`;
-  const loanRem=loans.reduce((s,l)=>s+loanRemaining(l),0);
-  const emiTotal=loans.filter(l=>loanRemaining(l)>0).reduce((s,l)=>s+l.emi,0);
-  $("#kLoan").textContent=fmt(loanRem);
-  $("#kLoanSub").textContent=loans.length?`${loans.length} loan${loans.length>1?"s":""}${emiTotal?` · ${fmt(emiTotal)}/mo EMI`:""}`:"No bank loans added";
-
-  const totalBank=banks.reduce((s,b)=>s+bankBalance(b.name),0);
-  $("#kBankBal").textContent=fmt(totalBank);
-  $("#kBankBalSub").textContent=banks.length?`across ${banks.length} account${banks.length>1?"s":""}`:"Add a bank to track balances";
-  const netWorth=totalBank+value+lentOut-oweOut-loanRem;
-  $("#kNetWorth").textContent=fmt(netWorth);
-  $("#kNetWorthSub").innerHTML=`Cash ${fmtShort(totalBank)} · Inv ${fmtShort(value)} · Loans −${fmtShort(loanRem)}`;
-
-  try{drawCharts();}catch(e){console.error("charts failed:",e);}
-  renderTxList();
+/* ---------- id helpers ---------- */
+function nextTxnId(){
+  let max=1000;
+  txns.forEach(t=>{const m=/TXN-(\d+)/.exec(t.id||"");if(m)max=Math.max(max,+m[1]);});
+  return "TXN-"+(max+1);
+}
+function nextId(arr,prefix,start){
+  let max=start-1;
+  arr.forEach(r=>{const m=new RegExp(prefix+"-(\\d+)").exec(r.id||"");if(m)max=Math.max(max,+m[1]);});
+  return prefix+"-"+String(max+1).padStart(2,"0");
 }
 
+/* ---------- derived balances (single source of truth = txns) ---------- */
+function bankCredits(name,asOf){
+  return r2(txns.filter(t=>t.bank===name&&t.type==="Income"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
+    + txns.filter(t=>t.toBank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0));
+}
+function bankDebits(name,asOf){
+  return r2(txns.filter(t=>t.bank===name&&t.type==="Expense"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
+    + txns.filter(t=>t.bank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0));
+}
+function bankBalance(name,asOf){
+  const b=banks.find(x=>x.name===name);
+  const opening=b?b.opening:0;
+  return r2(opening+bankCredits(name,asOf)-bankDebits(name,asOf));
+}
+
+/* ---------- parse the 4-sheet workbook (headers on row 3) ---------- */
+function sheetRows(wb,name){
+  const ws=wb.Sheets[name];
+  if(!ws)return [];
+  // headers are on row 3 (rows 1-2 are title/subtitle banners)
+  const all=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",blankrows:false});
+  // find the header row: the row containing "Txn ID" / "Account ID" / "Record ID" / "Inv ID"
+  let hi=all.findIndex(r=>r.some(c=>/^(Txn ID|Account ID|Record ID|Inv ID)$/i.test(String(c).trim())));
+  if(hi<0)hi=2;
+  const headers=all[hi].map(h=>String(h).trim());
+  const out=[];
+  for(let i=hi+1;i<all.length;i++){
+    const row=all[i];
+    if(!row||row.every(c=>c===""||c==null))continue;
+    const obj={};headers.forEach((h,j)=>{if(h)obj[h]=row[j];});
+    out.push(obj);
+  }
+  return out;
+}
+function gv(o,...keys){
+  for(const k of keys){
+    for(const actual of Object.keys(o)){
+      if(actual.toLowerCase().replace(/[^a-z0-9]/g,"")===k.toLowerCase().replace(/[^a-z0-9]/g,""))return o[actual];
+    }
+  }
+  return "";
+}
+
+function parseWorkbook(buf,name){
+  const wb=XLSX.read(new Uint8Array(buf),{type:"array"});
+  txns=[];banks=[];lends=[];invs=[];
+
+  // Transactions
+  sheetRows(wb,"Transactions").forEach(r=>{
+    const id=String(gv(r,"Txn ID")||"").trim();
+    if(!id&&!gv(r,"Amount (INR)")&&!gv(r,"Description"))return;
+    const type=String(gv(r,"Txn Type")||"Expense").trim()||"Expense";
+    let bank=String(gv(r,"Bank / Account","Bank","Account")||"").trim();
+    let toBank=String(gv(r,"To Account","To Bank")||"").trim();
+    // Transfers are stored in one cell as "From → To"; split them back apart.
+    if(type==="Transfer"&&/[→>]/.test(bank)){
+      const parts=bank.split(/\s*(?:→|->|>)\s*/);
+      bank=(parts[0]||"").trim();
+      toBank=(parts[1]||toBank).trim();
+    }
+    txns.push({
+      id:id||nextTxnId(),
+      date:normDate(gv(r,"Date"))||todayISO(),
+      type,
+      cat:String(gv(r,"Category / Source","Category","Source")||"").trim(),
+      desc:String(gv(r,"Description")||"").trim(),
+      amount:num(gv(r,"Amount (INR)","Amount")),
+      bank,
+      toBank,
+      method:String(gv(r,"Payment Method","Method")||"").trim(),
+      ref:String(gv(r,"Linked Entity Ref","Ref","Reference")||"").trim()
+    });
+  });
+
+  // Banks & Reconciliation
+  sheetRows(wb,"Banks & Reconciliation").forEach(r=>{
+    const name=String(gv(r,"Bank Name")||"").trim();
+    if(!name)return;
+    banks.push({
+      id:String(gv(r,"Account ID")||"").trim()||nextId(banks,"ACC",1),
+      name,
+      acct:String(gv(r,"Account Number")||"").trim(),
+      type:String(gv(r,"Account Type")||"Savings").trim()||"Savings",
+      opening:num(gv(r,"Opening Balance")),
+      recDate:normDate(gv(r,"Reconciled Date")),
+      statement:gv(r,"Statement Balance")===""?null:num(gv(r,"Statement Balance")),
+      notes:String(gv(r,"Notes")||"").trim()
+    });
+  });
+
+  // Loans & Debts
+  sheetRows(wb,"Loans & Debts").forEach(r=>{
+    const person=String(gv(r,"Person / Lender","Person","Lender")||"").trim();
+    if(!person&&!gv(r,"Record ID"))return;
+    const principal=num(gv(r,"Principal / Original","Principal"));
+    const balRaw=gv(r,"Balance Due");
+    lends.push({
+      id:String(gv(r,"Record ID")||"").trim()||nextId(lends,"DEBT",1),
+      type:String(gv(r,"Type")||"Debt Receivable").trim()||"Debt Receivable",
+      person,
+      purpose:String(gv(r,"Category / Purpose","Purpose")||"").trim(),
+      principal,
+      balance:balRaw===""?principal:num(balRaw),
+      issue:normDate(gv(r,"Issue Date","Date")),
+      due:normDate(gv(r,"Due Date","Due")),
+      status:String(gv(r,"Status")||"Open").trim()||"Open",
+      closedDate:normDate(gv(r,"Closed Date")),
+      closeBank:String(gv(r,"Close Bank Account","Close Bank")||"").trim(),
+      txnRef:String(gv(r,"Auto-Posted Txn Ref","Txn Ref")||"").trim()
+    });
+  });
+
+  // Investments
+  sheetRows(wb,"Investments").forEach(r=>{
+    const nm=String(gv(r,"Asset Name","Name")||"").trim();
+    if(!nm&&!gv(r,"Inv ID"))return;
+    const amount=num(gv(r,"Amount Invested","Invested"));
+    const curRaw=gv(r,"Current Value");
+    invs.push({
+      id:String(gv(r,"Inv ID")||"").trim()||nextId(invs,"INV",1),
+      name:nm,
+      assetType:String(gv(r,"Asset Type","Type")||"Other").trim()||"Other",
+      date:normDate(gv(r,"Invested Date","Date"))||todayISO(),
+      amount,
+      current:curRaw===""?amount:num(curRaw),
+      bank:String(gv(r,"Linked Bank","Bank")||"").trim(),
+      status:String(gv(r,"Status")||"Open").trim()||"Open",
+      closedDate:normDate(gv(r,"Closed Date")),
+      closedValue:num(gv(r,"Closed Value")),
+      txnRef:String(gv(r,"Auto-Posted Txn Ref","Txn Ref")||"").trim()
+    });
+  });
+
+  // Settings + Lists (optional sheets, for currency/owner/login and category lists)
+  const setWs=wb.Sheets["Settings"];
+  if(setWs){
+    XLSX.utils.sheet_to_json(setWs,{defval:""}).forEach(r=>{
+      const k=String(r.Key||r.key||"").trim().toLowerCase(),v=r.Value!==undefined?r.Value:r.value;
+      if(k==="currency"&&v)currency=String(v).toUpperCase();
+      if(k==="owner")owner=String(v||"");
+      if(k==="username")username=String(v||"");
+      if(k==="passwordhash")passHash=String(v||"");
+      if(k==="theme"&&v)theme=String(v)==="light"?"light":"dark";
+    });
+  }
+  const listWs=wb.Sheets["Lists"];
+  if(listWs){
+    const rows=XLSX.utils.sheet_to_json(listWs,{header:1,defval:""});
+    if(rows.length){
+      const head=rows[0].map(h=>String(h).trim());
+      const col=(label)=>{const i=head.indexOf(label);const arr=[];if(i<0)return arr;for(let r=1;r<rows.length;r++){const v=String(rows[r][i]||"").trim();if(v)arr.push(v);}return arr;};
+      const map={"Income Categories":"incomeCats","Expense Categories":"expenseCats","Payment Methods":"payMethods","Investment Types":"investTypes","Loan Types":"loanTypes"};
+      Object.entries(map).forEach(([h,key])=>{const a=col(h);if(a.length)lists[key]=a;});
+    }
+  }
+  applyTheme(theme,false);
+}
+
+function loadWorkbook(buf,name){
+  parseWorkbook(buf,name);
+  dirty=false;
+  if(!(username&&passHash)){showSetCreds();return;}
+  showLogin();
+}
+
+/* ---------- build the 4-sheet workbook (with banner rows + row-3 headers) ---------- */
+function bannerSheet(title,subtitle,headers,dataRows){
+  const aoa=[[title],[subtitle],headers,...dataRows];
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  return ws;
+}
+function buildWorkbook(){
+  const wb=XLSX.utils.book_new();
+
+  // Transactions
+  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref"];
+  const txData=txns.slice().sort((a,b)=>(a.id>b.id?1:-1)).map(t=>[
+    t.id,t.date,t.type,t.cat,t.desc,t.amount,
+    t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank,
+    t.method,t.ref
+  ]);
+  const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, and Auto-Posted Closures",txHeaders,txData);
+  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
+
+  // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
+  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status"];
+  const bkData=banks.map(b=>{
+    const cr=bankCredits(b.name),db=bankDebits(b.name),book=r2(b.opening+cr-db);
+    const stmt=b.statement;
+    const disc=stmt==null?"":r2(book-stmt);
+    const status=stmt==null?"Pending":(Math.abs(book-stmt)<0.01?"Reconciled":"Discrepancy");
+    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status];
+  });
+  const wsB=bannerSheet("Bank Accounts & Reconciliation","Automated balance tracking with reconciliation discrepancy checking",bkHeaders,bkData);
+  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
+
+  // Loans & Debts
+  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref"];
+  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||""]);
+  const wsL=bannerSheet("Loans & Debts Management","Track money borrowed/lent. Closing an entry auto-posts a transaction.",ldHeaders,ldData);
+  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
+
+  // Investments
+  const ivHeaders=["Inv ID","Asset Name","Asset Type","Invested Date","Amount Invested","Current Value","Unrealized Gain/Loss","Linked Bank","Status","Closed Date","Closed Value","Auto-Posted Txn Ref"];
+  const ivData=invs.map(r=>[r.id,r.name,r.assetType,r.date,r.amount,r.current,r2(r.current-r.amount),r.bank,r.status,r.closedDate||"",r.status==="Closed"?(r.closedValue||0):"",r.txnRef||""]);
+  const wsI=bannerSheet("Investment Portfolio Tracker","Monitor portfolio valuation and real-time gains/losses",ivHeaders,ivData);
+  wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,wsI,"Investments");
+
+  // Lists
+  const listHead=["Income Categories","Expense Categories","Payment Methods","Investment Types","Loan Types"];
+  const listKeys=["incomeCats","expenseCats","payMethods","investTypes","loanTypes"];
+  const maxLen=Math.max(...listKeys.map(k=>lists[k].length),0);
+  const listRows=[listHead];
+  for(let i=0;i<maxLen;i++)listRows.push(listKeys.map(k=>lists[k][i]||""));
+  const wsList=XLSX.utils.aoa_to_sheet(listRows);
+  XLSX.utils.book_append_sheet(wb,wsList,"Lists");
+
+  // Settings
+  const settings=[["Key","Value"],["Currency",currency],["Owner",owner],["Username",username],["PasswordHash",passHash],["Theme",theme]];
+  const wsS=XLSX.utils.aoa_to_sheet(settings);
+  XLSX.utils.book_append_sheet(wb,wsS,"Settings");
+
+  return wb;
+}
+
+/* ---------- lists / selects ---------- */
+function refreshSelects(){
+  const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
+  const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
+  // transaction category depends on type
+  syncTxnCat();
+  const pay=$("#tPay");if(pay)pay.innerHTML=opts(lists.payMethods);
+  const iv=$("#ivType");if(iv)iv.innerHTML=opts(lists.investTypes);
+  // bank selects
+  ["tBank","tBankTo","ivBank","ldFundBank"].forEach(id=>{const el=$("#"+id);if(el){const cur=el.value;el.innerHTML=bankOpts(cur);}});
+  // filters
+  const fb=$("#filterTxnBank");if(fb){const cur=fb.value;fb.innerHTML='<option value="">All accounts</option>'+banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join("");}
+  const sb=$("#stmtBank");if(sb){const cur=sb.value;sb.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— no banks —</option>';}
+  const rb=$("#recBank");if(rb){const cur=rb.value;rb.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';}
+}
+function syncTxnCat(){
+  const type=$("#tType")?$("#tType").value:"Income";
+  const cat=$("#tCat");
+  if(!cat)return;
+  const cur=cat.value;
+  if(type==="Transfer"){
+    $("#tCatWrap").style.display="none";
+    $("#tPayWrap").style.display="none";
+    $("#tBankToWrap").style.display="";
+    $("#tBankLabel").textContent="From account";
+  }else{
+    $("#tCatWrap").style.display="";
+    $("#tPayWrap").style.display="";
+    $("#tBankToWrap").style.display="none";
+    $("#tBankLabel").textContent="Bank / Account";
+    const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+    $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
+    cat.innerHTML=src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
+  }
+}
+
+/* ---------- render all ---------- */
+function renderAll(){
+  try{refreshSelects();}catch(e){console.error("selects",e);}
+  [renderDash,renderTxn,renderBank,renderLD,renderInv,renderStatement].forEach(fn=>{
+    try{fn();}catch(e){console.error(fn.name+" failed:",e);}
+  });
+}
+
+/* ---------- dashboard ---------- */
+const monthKeyOf=d=>(d||"").slice(0,7);
+const thisMonthKey=()=>new Date().toISOString().slice(0,7);
+function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
 function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function renderDash(){
+  const mk=thisMonthKey();
+  const incM=txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
+  const expM=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
+  const net=incM-expM;
+  const cash=banks.reduce((s,b)=>s+bankBalance(b.name),0);
+  const invested=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.amount,0);
+  const value=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.current,0);
+  const gain=value-invested,pct=invested?gain/invested*100:0;
+  const recv=lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
+  const pay=lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
+  const netWorth=cash+value+recv-pay;
+
+  $("#kCash").textContent=fmt(cash);
+  $("#kCashSub").textContent=banks.length?`across ${banks.length} account${banks.length>1?"s":""}`:"Add a bank in Setups";
+  $("#kIncome").textContent=fmt(incM);
+  $("#kIncomeSub").textContent=`${fmt(txns.filter(t=>t.type==="Income").reduce((s,t)=>s+t.amount,0))} all time`;
+  $("#kExpense").textContent=fmt(expM);
+  $("#kExpenseSub").textContent=`${fmt(txns.filter(t=>t.type==="Expense").reduce((s,t)=>s+t.amount,0))} all time`;
+  $("#kNet").textContent=fmt(net);
+  $("#kNetSub").innerHTML=incM?`Kept <span class="${net>=0?'up':'down'}">${(net/incM*100).toFixed(0)}%</span> of this month’s income`:"Add income to see savings rate";
+  $("#kPortfolio").textContent=fmt(value);
+  $("#kPortfolioSub").innerHTML=`<span class="${gain>=0?'up':'down'}">${gain>=0?"▲":"▼"} ${fmt(Math.abs(gain))} (${pct.toFixed(1)}%)</span> vs invested`;
+  $("#kRecv").textContent=fmt(recv);
+  $("#kRecvSub").textContent=`${lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").length} open receivable${recv!==0?"":""}`;
+  $("#kPay").textContent=fmt(pay);
+  $("#kPaySub").textContent=`${lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").length} open payable`;
+  $("#kNetWorth").textContent=fmt(netWorth);
+  $("#kNetWorthSub").innerHTML=`Cash ${fmtShort(cash)} · Inv ${fmtShort(value)} · Owed ${fmtShort(recv)} − ${fmtShort(pay)}`;
+
+  try{drawCharts();}catch(e){console.error("charts",e);}
+  renderTxList();
+}
 function drawCharts(){
   if(typeof Chart==="undefined"){
     $$(".chart-box").forEach(b=>{if(!b.querySelector(".empty-mini"))b.innerHTML='<div class="empty-mini">Charts couldn’t load — check your connection and refresh.</div>';});
     return;
   }
   const cs=getComputedStyle(document.documentElement);
-  const cMuted=(cs.getPropertyValue("--muted")||"#8B95AE").trim();
-  const cGrid=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.07)").trim();
-  const cBorder=(cs.getPropertyValue("--bg-2")||"#0E1526").trim();
-  Chart.defaults.color=cMuted;
-  Chart.defaults.borderColor=cGrid;
+  Chart.defaults.color=(cs.getPropertyValue("--muted")||"#8B95AE").trim();
+  Chart.defaults.borderColor=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.07)").trim();
   Chart.defaults.font.family="'Inter',sans-serif";
+  const cBorder=(cs.getPropertyValue("--bg-2")||"#0E1526").trim();
   const legendSide=window.innerWidth<700?"bottom":"right";
 
   const months=lastMonths(6);
@@ -1606,312 +1492,154 @@ function drawCharts(){
   killChart("cash");
   charts.cash=new Chart($("#chCash"),{type:"bar",
     data:{labels,datasets:[
-      {label:"Income",data:months.map(m=>sumBy(income,r=>monthKey(r.date)===m)),backgroundColor:"#3DDCA3",borderRadius:6,maxBarThickness:26},
-      {label:"Expenses",data:months.map(m=>sumBy(expenses,r=>monthKey(r.date)===m)),backgroundColor:"#FF6E61",borderRadius:6,maxBarThickness:26}]},
+      {label:"Income",data:months.map(m=>txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===m).reduce((s,t)=>s+t.amount,0)),backgroundColor:"#3DDCA3",borderRadius:6,maxBarThickness:26},
+      {label:"Expenses",data:months.map(m=>txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===m).reduce((s,t)=>s+t.amount,0)),backgroundColor:"#FF6E61",borderRadius:6,maxBarThickness:26}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:"top",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7}},
-        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
+      plugins:{legend:{position:"top",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
       scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true}}}});
 
-  const mk=thisMonth();
-  let scoped=expenses.filter(r=>monthKey(r.date)===mk);
+  const mk=thisMonthKey();
+  let scoped=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk);
   $("#chExpScope").textContent="this month";
-  if(!scoped.length){scoped=expenses;$("#chExpScope").textContent="all time";}
-  const byCat={};scoped.forEach(r=>byCat[r.category]=(byCat[r.category]||0)+r.amount);
+  if(!scoped.length){scoped=txns.filter(t=>t.type==="Expense");$("#chExpScope").textContent="all time";}
+  const byCat={};scoped.forEach(t=>byCat[t.cat||"Other"]=(byCat[t.cat||"Other"]||0)+t.amount);
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   killChart("expCat");
   charts.expCat=new Chart($("#chExpCat"),{type:"doughnut",
     data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
-      plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
 
   killChart("bankBal");
   if($("#chBankBal")){
     const bb=banks.map(b=>({name:b.name,bal:bankBalance(b.name)}));
     charts.bankBal=new Chart($("#chBankBal"),{type:"bar",
-      data:{labels:bb.map(x=>x.name),datasets:[{label:"Balance",data:bb.map(x=>x.bal),
-        backgroundColor:bb.map((x,i)=>x.bal<0?"#FF6E61":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:40}]},
-      options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.parsed.x)}`}}},
-        scales:{x:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true},y:{grid:{display:false}}}}});
+      data:{labels:bb.map(x=>x.name),datasets:[{label:"Balance",data:bb.map(x=>x.bal),backgroundColor:bb.map((x,i)=>x.bal<0?"#FF6E61":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:40}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.parsed.x)}`}}},scales:{x:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true},y:{grid:{display:false}}}}});
   }
   killChart("invGain");
   if($("#chInvGain")){
-    const gainRows=investments.map(r=>({name:r.name,g:r.current-r.amount})).filter(x=>x.g!==0)
-      .sort((a,b)=>Math.abs(b.g)-Math.abs(a.g)).slice(0,8);
+    const g=invs.filter(v=>v.status!=="Closed").map(v=>({name:v.name,g:v.current-v.amount})).filter(x=>x.g!==0).sort((a,b)=>Math.abs(b.g)-Math.abs(a.g)).slice(0,8);
     charts.invGain=new Chart($("#chInvGain"),{type:"bar",
-      data:{labels:gainRows.map(x=>x.name),datasets:[{label:"Gain / loss",data:gainRows.map(x=>x.g),
-        backgroundColor:gainRows.map(x=>x.g>=0?"#3DDCA3":"#FF6E61"),borderRadius:6,maxBarThickness:34}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y>=0?"+":""}${fmt(c.parsed.y)}`}}},
-        scales:{x:{grid:{display:false},ticks:{maxRotation:40,minRotation:0,font:{size:10}}},y:{ticks:{callback:v=>fmtShort(v)}}}}});
+      data:{labels:g.map(x=>x.name),datasets:[{label:"Gain / loss",data:g.map(x=>x.g),backgroundColor:g.map(x=>x.g>=0?"#3DDCA3":"#FF6E61"),borderRadius:6,maxBarThickness:34}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y>=0?"+":""}${fmt(c.parsed.y)}`}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{callback:v=>fmtShort(v)}}}}});
   }
-
-  const byType={};investments.forEach(r=>byType[r.type]=(byType[r.type]||0)+r.current);
+  const byType={};invs.filter(v=>v.status!=="Closed").forEach(v=>byType[v.assetType]=(byType[v.assetType]||0)+v.current);
   const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   killChart("invAlloc");
   charts.invAlloc=new Chart($("#chInvAlloc"),{type:"doughnut",
     data:{labels:types.map(t=>t[0]),datasets:[{data:types.map(t=>t[1]),backgroundColor:types.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
-      plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
 }
-
 function renderTxList(){
-  const rows=[
-    ...income.map(r=>({date:r.date,label:r.source,sub:r.category,amount:r.amount,kind:"in"})),
-    ...expenses.map(r=>({date:r.date,label:r.desc,sub:r.category,amount:r.amount,kind:"out"}))
-  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
-  $("#txList").innerHTML=rows.length?rows.map(r=>`
-    <div class="tx"><div class="ic ${r.kind}">${r.kind==="in"?"↓":"↑"}</div>
-      <div class="who"><b>${esc(r.label)}</b><span>${esc(r.sub)} · ${esc(r.date)}</span></div>
-      <div class="amt ${r.kind}">${r.kind==="in"?"+":"−"}${fmt(r.amount)}</div></div>`).join("")
-    :'<div class="empty-mini">No activity yet — add income or expenses to see it here.</div>';
+  const box=$("#txList");if(!box)return;
+  const recent=txns.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.id>a.id?1:-1)).slice(0,8);
+  if(!recent.length){box.innerHTML='<div class="empty-mini">No transactions yet.</div>';return;}
+  box.innerHTML=recent.map(t=>{
+    const sign=t.type==="Income"?"pos":t.type==="Expense"?"neg":"";
+    const amt=(t.type==="Income"?"+":t.type==="Expense"?"−":"")+fmt(t.amount);
+    return `<div class="tx-item"><div class="tx-main"><strong>${esc(t.desc||t.cat||t.type)}</strong><span>${esc(t.date)} · ${esc(t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank||"—")}</span></div><div class="tx-amt ${sign}">${amt}</div></div>`;
+  }).join("");
 }
 
-/* ---------- income ---------- */
-function renderInc(){
-  const q=$("#searchInc").value.trim().toLowerCase(),fm=$("#filterIncMonth").value;
-  const months=[...new Set(income.map(r=>monthKey(r.date)))].sort().reverse();
-  const sel=$("#filterIncMonth"),cur=sel.value;
-  sel.innerHTML='<option value="">All months</option>'+months.map(m=>{
-    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
-    return `<option value="${m}"${m===cur?" selected":""}>${l}</option>`;}).join("");
-  const rows=income.map((r,i)=>({r,i}))
-    .filter(({r})=>(!q||(r.source+" "+r.notes+" "+r.category).toLowerCase().includes(q))&&(!fm||r.date.startsWith(fm)))
-    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
-  $("#incFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
-  $("#incTotalHead").textContent=fmt(income.reduce((s,r)=>s+r.amount,0))+" all time";
-  $("#tblInc tbody").innerHTML=rows.map(({r,i})=>{
-    if(i===editing.inc)return `<tr data-i="${i}">
-      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Source"><input type="text" class="e-src" value="${esc(r.source)}"></td>
-      <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
-      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
-      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
-      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInc">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
+/* ---------- transactions ---------- */
+function renderTxn(){
+  const q=$("#searchTxn").value.trim().toLowerCase();
+  const ft=$("#filterTxnType").value,fb=$("#filterTxnBank").value,fm=$("#filterTxnMonth").value;
+  const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
+  const mSel=$("#filterTxnMonth"),curM=mSel.value;
+  mSel.innerHTML='<option value="">All months</option>'+months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
+  const rows=txns.map((t,i)=>({t,i}))
+    .filter(({t})=>(!q||(t.desc+" "+t.cat+" "+t.ref+" "+t.id).toLowerCase().includes(q))
+      &&(!ft||t.type===ft)&&(!fb||t.bank===fb||t.toBank===fb)&&(!fm||monthKeyOf(t.date)===fm))
+    .sort((a,b)=>(b.t.date||"").localeCompare(a.t.date||"")||(b.t.id>a.t.id?1:-1));
+  const inc=rows.filter(({t})=>t.type==="Income").reduce((s,{t})=>s+t.amount,0);
+  const exp=rows.filter(({t})=>t.type==="Expense").reduce((s,{t})=>s+t.amount,0);
+  $("#txnFilteredSum").textContent=rows.length?`${rows.length} shown · +${fmt(inc)} / −${fmt(exp)}`:"";
+  $("#txnTotalHead").textContent=`${txns.length} transaction${txns.length===1?"":"s"}`;
+  $("#tblTxn tbody").innerHTML=rows.map(({t,i})=>{
+    const auto=/^Auto-Posted:/.test(t.ref);
+    const sign=t.type==="Income"?"pos":t.type==="Expense"?"neg":"";
+    const amt=(t.type==="Income"?"+":t.type==="Expense"?"−":"")+fmt(t.amount);
+    const typeTag=t.type==="Income"?"in":t.type==="Expense"?"out":"iv";
     return `<tr data-i="${i}">
-      <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Source"><strong>${esc(r.source)}</strong></td>
-      <td data-l="Category"><span class="tag in">${esc(r.category)}</span></td>
-      <td data-l="Amount" class="num"><span class="pos">+${fmt(r.amount)}</span></td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
-      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editInc">Edit</button><button type="button" class="icon-btn danger" data-act="delInc">Delete</button></div></td></tr>`;
+      <td data-l="Txn ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(t.id)}</td>
+      <td data-l="Date">${esc(t.date)}</td>
+      <td data-l="Type"><span class="tag ${typeTag}">${esc(t.type)}</span></td>
+      <td data-l="Category">${esc(t.cat||"—")}</td>
+      <td data-l="Description">${esc(t.desc||"")}${auto?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(t.ref)}</span>`:""}</td>
+      <td data-l="Amount" class="num"><span class="${sign}">${amt}</span></td>
+      <td data-l="Account">${t.type==="Transfer"?esc(t.bank+" → "+t.toBank):bankTag(t.bank)}</td>
+      <td data-l="Method" style="color:var(--muted);font-size:.83rem">${esc(t.method||"")}</td>
+      <td data-l="">${auto?'<span class="tag done" style="font-size:.62rem">auto</span>':`<div class="row-actions"><button type="button" class="icon-btn danger" data-act="delTxn">Delete</button></div>`}</td></tr>`;
   }).join("");
-  $("#emptyInc").style.display=income.length?"none":"block";
-  $("#tblInc").style.display=income.length?"":"none";
+  $("#emptyTxn").style.display=txns.length?"none":"block";
+  $("#tblTxn").style.display=txns.length?"":"none";
 }
 
-/* ---------- expenses ---------- */
-function renderExp(){
-  const q=$("#searchExp").value.trim().toLowerCase(),fc=$("#filterExpCat").value,fm=$("#filterExpMonth").value;
-  const cats=[...new Set(expenses.map(r=>r.category))].sort();
-  const selC=$("#filterExpCat"),curC=selC.value;
-  selC.innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option${c===curC?" selected":""}>${esc(c)}</option>`).join("");
-  const months=[...new Set(expenses.map(r=>monthKey(r.date)))].sort().reverse();
-  const selM=$("#filterExpMonth"),curM=selM.value;
-  selM.innerHTML='<option value="">All months</option>'+months.map(m=>{
-    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
-    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
-  const rows=expenses.map((r,i)=>({r,i}))
-    .filter(({r})=>(!q||(r.desc+" "+r.category+" "+r.pay).toLowerCase().includes(q))&&(!fc||r.category===fc)&&(!fm||r.date.startsWith(fm)))
-    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
-  $("#expFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
-  $("#expTotalHead").textContent=fmt(expenses.reduce((s,r)=>s+r.amount,0))+" all time";
-  $("#tblExp tbody").innerHTML=rows.map(({r,i})=>{
-    if(i===editing.exp)return `<tr data-i="${i}">
-      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Category"><input type="text" class="e-cat" value="${esc(r.category)}"></td>
-      <td data-l="Description"><input type="text" class="e-desc" value="${esc(r.desc)}"></td>
-      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
-      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
-      <td data-l="Paid with"><input type="text" class="e-pay" value="${esc(r.pay)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveExp">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    return `<tr data-i="${i}">
-      <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Category"><span class="tag out">${esc(r.category)}</span></td>
-      <td data-l="Description">${esc(r.desc)}</td>
-      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
-      <td data-l="Paid with" style="color:var(--muted);font-size:.83rem">${esc(r.pay)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editExp">Edit</button><button type="button" class="icon-btn danger" data-act="delExp">Delete</button></div></td></tr>`;
-  }).join("");
-  $("#emptyExp").style.display=expenses.length?"none":"block";
-  $("#tblExp").style.display=expenses.length?"":"none";
-}
-
-/* ---------- investments ---------- */
-function renderInv(){
-  const q=$("#searchInv").value.trim().toLowerCase(),ft=$("#filterInvType").value;
-  const types=[...new Set(investments.map(r=>r.type))].sort();
-  const sel=$("#filterInvType"),cur=sel.value;
-  sel.innerHTML='<option value="">All types</option>'+types.map(t=>`<option${t===cur?" selected":""}>${esc(t)}</option>`).join("");
-  const rows=investments.map((r,i)=>({r,i}))
-    .filter(({r})=>(!q||(r.name+" "+r.notes+" "+r.type).toLowerCase().includes(q))&&(!ft||r.type===ft))
-    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
-  const invested=investments.reduce((s,r)=>s+r.amount,0);
-  const value=investments.reduce((s,r)=>s+r.current,0);
-  $("#invTotalHead").textContent=`${fmt(value)} current · ${fmt(invested)} invested`;
-  $("#tblInv tbody").innerHTML=rows.map(({r,i})=>{
-    if(i===editing.inv)return `<tr data-i="${i}">
-      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Name"><input type="text" class="e-name" value="${esc(r.name)}"></td>
-      <td data-l="Type"><input type="text" class="e-type" value="${esc(r.type)}"></td>
-      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
-      <td data-l="Invested" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
-      <td data-l="Current" class="num"><input type="number" step="0.01" class="e-cur" value="${r.current}"></td>
-      <td data-l="Gain / loss" class="num">—</td>
-      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInv">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    const g=r.current-r.amount,cls=g>0?"pos":g<0?"neg":"";
-    const invClosed=r.status==="Closed";
-    return `<tr data-i="${i}"${invClosed?' style="opacity:.62"':''}>
-      <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Name"><strong>${esc(r.name)}</strong>${invClosed?`<span style="display:block;font-size:.72rem;color:var(--muted)">Closed ${esc(r.closedDate||"")} · ${fmt(r.closedValue||0)} to ${esc(r.bank||"bank")}</span>`:""}</td>
-      <td data-l="Type"><span class="tag iv">${esc(r.type)}</span></td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
-      <td data-l="Invested" class="num">${fmt(r.amount)}</td>
-      <td data-l="Current" class="num">${invClosed?'<span class="tag done">Closed ✓</span>':fmt(r.current)}</td>
-      <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
-      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions">${invClosed?`<button type="button" class="icon-btn" data-act="reopenInv">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeInv" title="Redeem / close">Close</button><button type="button" class="icon-btn" data-act="editInv">Edit</button>`}<button type="button" class="icon-btn danger" data-act="delInv">Delete</button></div></td></tr>`;
-  }).join("");
-  $("#emptyInv").style.display=investments.length?"none":"block";
-  $("#tblInv").style.display=investments.length?"":"none";
-}
-
-/* ---------- debts ---------- */
-function renderDebt(){
-  const q=$("#searchDebt").value.trim().toLowerCase();
-  const ft=$("#filterDebtType").value,fs=$("#filterDebtStatus").value;
-  const rows=debts.map((r,i)=>({r,i}))
-    .filter(({r})=>{
-      const settled=outstanding(r)<=0;
-      return (!q||(r.person+" "+r.notes).toLowerCase().includes(q))
-        &&(!ft||r.type===ft)
-        &&(!fs||(fs==="open"&&!settled)||(fs==="settled"&&settled));
-    })
-    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
-  const lentOut=debts.filter(r=>r.type==="Given").reduce((s,r)=>s+outstanding(r),0);
-  const oweOut=debts.filter(r=>r.type==="Taken").reduce((s,r)=>s+outstanding(r),0);
-  $("#debtTotalHead").textContent=`${fmt(lentOut)} owed to you · ${fmt(oweOut)} you owe`;
-  $("#debtFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+outstanding(r),0))} outstanding`:"";
-  $("#tblDebt tbody").innerHTML=rows.map(({r,i})=>{
-    if(i===editing.debt)return `<tr data-i="${i}">
-      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Person"><input type="text" class="e-person" value="${esc(r.person)}"></td>
-      <td data-l="Type"><select class="e-type"><option value="Given"${r.type==="Given"?" selected":""}>Given</option><option value="Taken"${r.type==="Taken"?" selected":""}>Taken</option></select></td>
-      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
-      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
-      <td data-l="Repaid" class="num"><input type="number" step="0.01" class="e-repaid" value="${r.repaid}"></td>
-      <td data-l="Outstanding" class="num">—</td>
-      <td data-l="Due"><input type="date" class="e-due" value="${esc(r.due)}"></td>
-      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveDebt">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    const out=outstanding(r),settled=out<=0;
-    const overdue=!settled&&r.due&&r.due<todayISO();
-    return `<tr data-i="${i}">
-      <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Person"><strong>${esc(r.person)}</strong></td>
-      <td data-l="Type"><span class="tag ${r.type==="Given"?"given":"taken"}">${r.type==="Given"?"Given · owed to me":"Taken · I owe"}</span></td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
-      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
-      <td data-l="Repaid" class="num">${fmt(r.repaid)}</td>
-      <td data-l="Outstanding" class="num">${settled?'<span class="tag done">Settled ✓</span>':`<span class="${r.type==="Given"?"pos":"neg"}">${fmt(out)}</span>`}</td>
-      <td data-l="Due" style="color:${overdue?"var(--coral)":"var(--muted)"};font-size:.83rem">${esc(r.due)||"—"}${overdue?" ⚠":""}</td>
-      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editDebt">Edit</button><button type="button" class="icon-btn danger" data-act="delDebt">Delete</button></div></td></tr>`;
-  }).join("");
-  $("#emptyDebt").style.display=debts.length?"none":"block";
-  $("#tblDebt").style.display=debts.length?"":"none";
-}
-
-/* ---------- bank loans ---------- */
-
+/* ---------- banks ---------- */
 function renderBank(){
-  const cardBox=document.getElementById("bankCards");
-  const tblBody=document.querySelector("#tblBank tbody");
-  const emptyEl=document.getElementById("emptyBank");
-  const head=document.getElementById("bankTotalHead");
-  if(!cardBox||!tblBody){return;}
-  const qEl=document.getElementById("searchBank");
-  const q=(qEl?qEl.value:"").trim().toLowerCase();
-  if(head)head.textContent=banks.length+" total";
-
-  try{
+  const cardBox=$("#bankCards"),tblBody=document.querySelector("#tblBank tbody");
+  const head=$("#bankTotalHead");
+  if(head)head.textContent=banks.length?`${fmt(banks.reduce((s,b)=>s+bankBalance(b.name),0))} total`:"";
+  if(cardBox){
     cardBox.innerHTML=banks.map((b,i)=>{
       const bal=bankBalance(b.name);
       const last=(b.acct||"").toString().slice(-4);
-      return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}">`+
-        `<div class="label">${esc(b.type||"")}${last?" · ····"+esc(last):""}</div>`+
-        `<div class="bname">${esc(b.name)}</div>`+
-        `<div class="balance">${fmt(bal)}</div></div>`;
+      const book=r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
+      const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
+      const recTag=reconciled?`<div class="rec-chip">✓ Reconciled ${esc(b.recDate||"")}</div>`:"";
+      return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}"><div class="label">${esc(b.type||"")}${last?" · ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div>${recTag}</div>`;
     }).join("");
-
-    const rows=banks.map((b,i)=>({b,i})).filter(({b})=>!q||b.name.toLowerCase().includes(q));
-    tblBody.innerHTML=rows.map(({b,i})=>`<tr data-i="${i}">`+
-      `<td data-l="Bank"><strong>${esc(b.name)}</strong>${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>`+
-      `<td data-l="Type">${esc(b.type||"")}</td>`+
-      `<td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>`+
-      `<td data-l="Opening" class="num">${fmt(b.opening)}</td>`+
-      `<td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>`+
-      `<td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`).join("");
-  }catch(e){
-    console.error("renderBank error:",e);
-    tblBody.innerHTML=`<tr><td colspan="6" style="padding:1rem;color:var(--coral)">Couldn't render banks: ${esc(e.message)}</td></tr>`;
   }
-  if(emptyEl)emptyEl.style.display=banks.length?"none":"block";
+  if(tblBody){
+    const q=($("#searchBank")?$("#searchBank").value:"").trim().toLowerCase();
+    const rows=banks.map((b,i)=>({b,i})).filter(({b})=>!q||b.name.toLowerCase().includes(q));
+    tblBody.innerHTML=rows.map(({b,i})=>{
+      const book=r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
+      const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
+      return `<tr data-i="${i}">`+
+        `<td data-l="Bank"><strong>${esc(b.name)}</strong>${reconciled?` <span class="tag done" style="font-size:.62rem">✓ ${esc(b.recDate||"")}</span>`:""}${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>`+
+        `<td data-l="Type">${esc(b.type||"")}</td>`+
+        `<td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>`+
+        `<td data-l="Opening" class="num">${fmt(b.opening)}</td>`+
+        `<td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>`+
+        `<td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`;
+    }).join("");
+  }
+  if($("#emptyBank"))$("#emptyBank").style.display=banks.length?"none":"block";
 }
 
+/* ---------- bank statement ---------- */
 function bankLedger(name){
-  // collect every movement on this account as {date, detail, type, amt(+in/-out)}
   const rows=[];
-  income.forEach(i=>{if(i.bank===name)rows.push({date:i.date,detail:i.source||i.category||"Income",type:"Income",amt:i.amount});});
-  expenses.forEach(e=>{if(e.bank===name)rows.push({date:e.date,detail:e.desc||e.category||"Expense",type:"Expense",amt:-e.amount});});
-  transfers.forEach(t=>{
-    if(t.from===name)rows.push({date:t.date,detail:"Transfer to "+t.to+(t.ref?" · "+t.ref:""),type:"Transfer",amt:-t.amt});
-    if(t.to===name)rows.push({date:t.date,detail:"Transfer from "+t.from+(t.ref?" · "+t.ref:""),type:"Transfer",amt:t.amt});
+  txns.forEach(t=>{
+    if(t.type==="Income"&&t.bank===name)rows.push({date:t.date,detail:t.desc||t.cat||"Income",type:t.cat||"Income",amt:t.amount});
+    if(t.type==="Expense"&&t.bank===name)rows.push({date:t.date,detail:t.desc||t.cat||"Expense",type:t.cat||"Expense",amt:-t.amount});
+    if(t.type==="Transfer"){
+      if(t.bank===name)rows.push({date:t.date,detail:"Transfer to "+t.toBank+(t.desc?" · "+t.desc:""),type:"Transfer",amt:-t.amount});
+      if(t.toBank===name)rows.push({date:t.date,detail:"Transfer from "+t.bank+(t.desc?" · "+t.desc:""),type:"Transfer",amt:t.amount});
+    }
   });
-  investments.forEach(v=>{
-    if(v.bank===name)rows.push({date:v.date,detail:"Invested in "+v.name,type:"Investment",amt:-v.amount});
-    if(v.status==="Closed"&&v.bank===name&&v.closedDate)rows.push({date:v.closedDate,detail:"Redeemed "+v.name,type:"Redemption",amt:(v.closedValue||0)});
-  });
-  debts.forEach(d=>{if(d.bank===name){
-    const net=d.amount-d.repaid;
-    if(d.type==="Given")rows.push({date:d.date,detail:"Lent to "+d.person,type:"Debt",amt:-net});
-    else rows.push({date:d.date,detail:"Borrowed from "+d.person,type:"Debt",amt:net});
-  }});
-  loanPays.forEach(p=>{if(p.bank===name)rows.push({date:p.date,detail:p.lender+" · "+p.kind,type:"Loan payment",amt:-p.amount});});
-  loans.forEach(l=>{if(l.status==="Closed"&&l.closeBank===name&&l.closedDate)rows.push({date:l.closedDate,detail:"Closed loan "+l.lender,type:"Loan closure",amt:-(l.closeAmount||0)});});
   rows.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   return rows;
 }
 function renderStatement(){
   const sel=$("#stmtBank");if(!sel)return;
-  const cur=sel.value;
-  sel.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— no banks —</option>';
   const name=sel.value;
   const bank=banks.find(b=>b.name===name);
   const opening=bank?bank.opening:0;
   const all=name?bankLedger(name):[];
-  // month options
-  const months=[...new Set(all.map(r=>monthKey(r.date)))].sort().reverse();
+  const months=[...new Set(all.map(r=>monthKeyOf(r.date)))].filter(Boolean).sort().reverse();
   const mSel=$("#stmtMonth"),curM=mSel.value;
-  mSel.innerHTML='<option value="">All months</option>'+months.map(m=>{
-    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
-    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
+  mSel.innerHTML='<option value="">All months</option>'+months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
   const fm=mSel.value;
-  // running balance across ALL rows; show filtered slice but balance reflects true running total
   let bal=opening;
   const withBal=all.map(r=>{bal=r2(bal+r.amt);return {...r,bal};});
   const shown=fm?withBal.filter(r=>r.date&&r.date.startsWith(fm)):withBal;
   const body=$("#tblStmt tbody");
   if(!name){body.innerHTML="";$("#emptyStmt").style.display="block";$("#stmtHead").textContent="";$("#stmtClosing").textContent="";return;}
-  const openingRowShown=!fm;
-  body.innerHTML=(openingRowShown?`<tr style="opacity:.75"><td data-l="Date">${esc(bank?bank.name:"")}</td><td data-l="Details"><em>Opening balance</em></td><td data-l="Type">—</td><td data-l="Debit" class="num"></td><td data-l="Credit" class="num"></td><td data-l="Balance" class="num"><strong>${fmt(opening)}</strong></td></tr>`:"")
+  const openingRow=!fm;
+  body.innerHTML=(openingRow?`<tr style="opacity:.75"><td data-l="Date">${esc(name)}</td><td data-l="Details"><em>Opening balance</em></td><td data-l="Type">—</td><td class="num"></td><td class="num"></td><td data-l="Balance" class="num"><strong>${fmt(opening)}</strong></td></tr>`:"")
     +shown.map(r=>`<tr>
       <td data-l="Date">${esc(r.date)}</td>
       <td data-l="Details">${esc(r.detail)}</td>
@@ -1919,233 +1647,289 @@ function renderStatement(){
       <td data-l="Debit" class="num">${r.amt<0?`<span class="neg">${fmt(-r.amt)}</span>`:""}</td>
       <td data-l="Credit" class="num">${r.amt>0?`<span class="pos">${fmt(r.amt)}</span>`:""}</td>
       <td data-l="Balance" class="num"><strong>${fmt(r.bal)}</strong></td></tr>`).join("");
-  $("#emptyStmt").style.display=(shown.length||openingRowShown)?"none":"block";
-  $("#tblStmt").style.display=(shown.length||openingRowShown)?"":"none";
+  $("#emptyStmt").style.display=(shown.length||openingRow)?"none":"block";
+  $("#tblStmt").style.display=(shown.length||openingRow)?"":"none";
   const closing=withBal.length?withBal[withBal.length-1].bal:opening;
-  $("#stmtHead").textContent=name?`${all.length} transaction${all.length===1?"":"s"}`:"";
+  $("#stmtHead").textContent=`${all.length} transaction${all.length===1?"":"s"}`;
   const debits=shown.filter(r=>r.amt<0).reduce((s,r)=>s-r.amt,0);
   const credits=shown.filter(r=>r.amt>0).reduce((s,r)=>s+r.amt,0);
   $("#stmtClosing").textContent=`Debits ${fmt(debits)} · Credits ${fmt(credits)} · Closing ${fmt(closing)}`;
 }
-function renderTransfer(){
-  const q=$("#searchTransfer").value.trim().toLowerCase();
-  const from=$("#fromTransfer").value, to=$("#toTransfer").value;
-  const rows=transfers.map((t,idx)=>({t,idx})).filter(({t})=>
-    (!q||(t.from+" "+t.to+" "+t.ref).toLowerCase().includes(q))&&
-    (!from||t.date>=from)&&(!to||t.date<=to)
-  ).sort((a,b)=>b.t.date.localeCompare(a.t.date));
-  
-  $("#tblTransfer tbody").innerHTML=rows.map(({t,idx})=>`<tr>
-    <td data-l="Date">${esc(t.date)}</td>
-    <td data-l="From"><strong>${esc(t.from)}</strong></td>
-    <td data-l="To"><strong>${esc(t.to)}</strong></td>
-    <td data-l="Amount" class="num">${fmt(t.amt)}</td>
-    <td data-l="Reference">${esc(t.ref)}</td>
-    <td data-l=""><div class="row-actions"><button type="button" class="icon-btn danger" data-tract="del" data-i="${idx}">Delete</button></div></td></tr>`).join("");
-  $("#emptyTransfer").style.display=rows.length?"none":"block";
-}
 
-function renderLoan(){
-  // loan register table
-  $("#loanTotalHead").textContent=loans.length?`${fmt(loans.reduce((s,l)=>s+loanRemaining(l),0))} remaining across ${loans.length} loan${loans.length>1?"s":""}`:"";
-  $("#tblLoan tbody").innerHTML=loans.map((r,i)=>{
-    if(i===editing.loan)return `<tr data-i="${i}">
-      <td data-l="Start"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Lender"><input type="text" class="e-lender" value="${esc(r.lender)}"></td>
-      <td data-l="Type"><input type="text" class="e-type" value="${esc(r.type)}"></td>
-      <td data-l="Principal" class="num"><input type="number" step="0.01" class="e-principal" value="${r.principal}"></td>
-      <td data-l="Rate" class="num"><input type="number" step="0.01" class="e-rate" value="${r.rate}"></td>
-      <td data-l="EMI" class="num"><input type="number" step="0.01" class="e-emi" value="${r.emi}"></td>
-      <td data-l="Paid so far" class="num">—</td>
-      <td data-l="Remaining" class="num"><input type="number" step="1" class="e-tenure" value="${r.tenure}" title="Tenure months"></td>
-      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLoan">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    const paid=paidForLoan(r.lender),rem=loanRemaining(r),closed=r.status==="Closed"||rem<=0;
-    const manualClosed=r.status==="Closed";
-    return `<tr data-i="${i}"${manualClosed?' style="opacity:.62"':''}>
-      <td data-l="Start">${esc(r.date)}</td>
-      <td data-l="Lender"><strong>${esc(r.lender)}</strong>${manualClosed?`<span style="display:block;font-size:.72rem;color:var(--muted)">Closed ${esc(r.closedDate||"")}${r.closeAmount?` · ${fmt(r.closeAmount)} from ${esc(r.closeBank||"bank")}`:""}</span>`:r.tenure?`<span style="display:block;font-size:.72rem;color:var(--muted)">${r.tenure} months</span>`:""}</td>
-      <td data-l="Type"><span class="tag iv" style="background:rgba(94,224,230,.14);color:#5EE0E6">${esc(r.type)}</span></td>
+/* ---------- loans & debts ---------- */
+function ldLabel(type){return type==="Debt Receivable"?"Receivable · owed to me":type==="Debt Payable"?"Payable · I owe":"Bank loan · I owe";}
+function renderLD(){
+  const q=$("#searchLD").value.trim().toLowerCase();
+  const ft=$("#filterLDType").value,fs=$("#filterLDStatus").value;
+  const rows=lends.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.person+" "+r.purpose).toLowerCase().includes(q))&&(!ft||r.type===ft)&&(!fs||r.status===fs))
+    .sort((a,b)=>(b.r.issue||"").localeCompare(a.r.issue||""));
+  const recv=lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
+  const pay=lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
+  $("#ldTotalHead").textContent=`${fmt(recv)} owed to you · ${fmt(pay)} you owe`;
+  $("#ldFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
+  $("#tblLD tbody").innerHTML=rows.map(({r,i})=>{
+    const closed=r.status==="Closed";
+    const recvType=r.type==="Debt Receivable";
+    return `<tr data-i="${i}"${closed?' style="opacity:.62"':''}>
+      <td data-l="Record" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(r.id)}</td>
+      <td data-l="Type"><span class="tag ${recvType?"given":"taken"}">${esc(ldLabel(r.type))}</span></td>
+      <td data-l="Person"><strong>${esc(r.person)}</strong>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
+      <td data-l="Purpose" style="color:var(--muted);font-size:.83rem">${esc(r.purpose||"—")}</td>
       <td data-l="Principal" class="num">${fmt(r.principal)}</td>
-      <td data-l="Rate" class="num">${r.rate?r.rate.toFixed(2)+"%":"—"}</td>
-      <td data-l="EMI" class="num">${r.emi?fmt(r.emi):"—"}</td>
-      <td data-l="Paid so far" class="num"><span class="pos">${fmt(paid)}</span></td>
-      <td data-l="Remaining" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<span class="neg">${fmt(rem)}</span>`}</td>
-      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions">${manualClosed?`<button type="button" class="icon-btn" data-act="reopenLoan">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeLoan" title="Foreclose / close">Close</button><button type="button" class="icon-btn" data-act="editLoan">Edit</button>`}<button type="button" class="icon-btn danger" data-act="delLoan">Delete</button></div></td></tr>`;
+      <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<span class="${recvType?"pos":"neg"}">${fmt(r.balance)}</span>`}</td>
+      <td data-l="Due" style="color:var(--muted);font-size:.83rem">${esc(r.due||"—")}</td>
+      <td data-l="Status">${closed?`<span style="font-size:.75rem;color:var(--muted)">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
+      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Delete</button>`}</div></td></tr>`;
   }).join("");
-  $("#emptyLoan").style.display=loans.length?"none":"block";
-  $("#tblLoan").style.display=loans.length?"":"none";
-
-  // lender select for the repayment form
-  const sel=$("#lpLender"),cur=sel.value;
-  sel.innerHTML=loans.length?loans.map(l=>`<option${l.lender===cur?" selected":""}>${esc(l.lender)}</option>`).join(""):'<option value="">Add a loan first</option>';
-
-  // repayments table
-  const q=$("#searchLpay").value.trim().toLowerCase(),fm=$("#filterLpayMonth").value;
-  const months=[...new Set(loanPays.map(r=>monthKey(r.date)))].sort().reverse();
-  const selM=$("#filterLpayMonth"),curM=selM.value;
-  selM.innerHTML='<option value="">All months</option>'+months.map(m=>{
-    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
-    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
-  const rows=loanPays.map((r,i)=>({r,i}))
-    .filter(({r})=>(!q||(r.lender+" "+r.notes+" "+r.kind).toLowerCase().includes(q))&&(!fm||r.date.startsWith(fm)))
-    .sort((a,b)=>b.r.date.localeCompare(a.r.date));
-  $("#lpayFilteredSum").textContent=rows.length?`Showing ${rows.length} · ${fmt(rows.reduce((s,{r})=>s+r.amount,0))}`:"";
-  $("#lpayTotalHead").textContent=loanPays.length?`${fmt(loanPays.reduce((s,r)=>s+r.amount,0))} paid all time`:"";
-  $("#tblLpay tbody").innerHTML=rows.map(({r,i})=>{
-    if(i===editing.lpay)return `<tr data-i="${i}">
-      <td data-l="Date"><input type="date" class="e-date" value="${esc(r.date)}"></td>
-      <td data-l="Loan"><input type="text" class="e-lender" value="${esc(r.lender)}"></td>
-      <td data-l="Type"><input type="text" class="e-kind" value="${esc(r.kind)}"></td>
-      <td data-l="Amount" class="num"><input type="number" step="0.01" class="e-amt" value="${r.amount}"></td>
-      <td data-l="Bank">${bankCell("e-bank",r.bank)}</td>
-      <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLpay">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    return `<tr data-i="${i}">
-      <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Loan"><strong>${esc(r.lender)}</strong></td>
-      <td data-l="Type"><span class="tag ${r.kind==="Prepayment"?"in":"done"}">${esc(r.kind)}</span></td>
-      <td data-l="Amount" class="num">${fmt(r.amount)}</td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
-      <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editLpay">Edit</button><button type="button" class="icon-btn danger" data-act="delLpay">Delete</button></div></td></tr>`;
-  }).join("");
-  $("#emptyLpay").style.display=loanPays.length?"none":"block";
-  $("#tblLpay").style.display=loanPays.length?"":"none";
+  $("#emptyLD").style.display=lends.length?"none":"block";
+  $("#tblLD").style.display=lends.length?"":"none";
 }
 
-function renderAll(){
-  try{refreshBankSelects();}catch(e){console.error("bankSelects",e);}
-  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt,renderBank,renderTransfer,renderStatement].forEach(fn=>{
-    try{fn();}catch(e){console.error(fn.name+" failed:",e);}
-  });
+/* ---------- investments ---------- */
+function renderInv(){
+  const q=$("#searchInv").value.trim().toLowerCase();
+  const fs=$("#filterInvStatus").value;
+  const rows=invs.map((r,i)=>({r,i}))
+    .filter(({r})=>(!q||(r.name+" "+r.assetType).toLowerCase().includes(q))&&(!fs||r.status===fs))
+    .sort((a,b)=>(b.r.date||"").localeCompare(a.r.date||""));
+  const invested=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.amount,0);
+  const value=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.current,0);
+  $("#invTotalHead").textContent=invs.length?`${fmt(value)} value · ${fmt(value-invested)} gain`:"";
+  $("#invFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
+  $("#tblInv tbody").innerHTML=rows.map(({r,i})=>{
+    const g=r.current-r.amount,cls=g>0?"pos":g<0?"neg":"";
+    const closed=r.status==="Closed";
+    return `<tr data-i="${i}"${closed?' style="opacity:.62"':''}>
+      <td data-l="Inv ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(r.id)}</td>
+      <td data-l="Asset"><strong>${esc(r.name)}</strong>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
+      <td data-l="Type"><span class="tag iv">${esc(r.assetType)}</span></td>
+      <td data-l="Bank">${bankTag(r.bank)}</td>
+      <td data-l="Invested" class="num">${fmt(r.amount)}</td>
+      <td data-l="Current" class="num">${closed?'<span class="tag done">Closed ✓</span>':fmt(r.current)}</td>
+      <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
+      <td data-l="Status">${closed?`<span style="font-size:.75rem;color:var(--muted)">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
+      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenInv">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeInv" title="Redeem / close">Close</button><button type="button" class="icon-btn danger" data-act="delInv">Delete</button>`}</div></td></tr>`;
+  }).join("");
+  $("#emptyInv").style.display=invs.length?"none":"block";
+  $("#tblInv").style.display=invs.length?"":"none";
 }
 
 /* ---------- forms ---------- */
-$("#formInc").addEventListener("submit",e=>{
+$("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
+$("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
-  income.push({date:$("#inDate").value||todayISO(),source:$("#inSrc").value.trim(),category:$("#inCat").value,amount:num($("#inAmt").value),bank:$("#inBank").value||(banks[0]?banks[0].name:""),notes:$("#inNotes").value.trim()});
-  e.target.reset();$("#inDate").value=todayISO();setDirty(true);renderAll();
+  const type=$("#tType").value;
+  const amount=num($("#tAmt").value);
+  if(amount<=0){toast("Enter an amount");return;}
+  if(type==="Transfer"){
+    const from=$("#tBank").value,to=$("#tBankTo").value;
+    if(from===to){toast("From and To accounts must differ");return;}
+    txns.push({id:nextTxnId(),date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:""});
+  }else{
+    txns.push({id:nextTxnId(),date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:""});
+  }
+  e.target.reset();$("#tDate").value=todayISO();syncTxnCat();setDirty(true);renderAll();
+  toast(type+" added");
 });
-$("#formExp").addEventListener("submit",e=>{
+$("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   e.preventDefault();
-  expenses.push({date:$("#exDate").value||todayISO(),category:$("#exCat").value,desc:$("#exDesc").value.trim(),amount:num($("#exAmt").value),bank:$("#exBank").value||(banks[0]?banks[0].name:""),pay:$("#exPay").value});
-  e.target.reset();$("#exDate").value=todayISO();setDirty(true);renderAll();
+  const type=$("#ldType").value;
+  const principal=num($("#ldPrincipal").value);
+  if(principal<=0){toast("Enter the principal amount");return;}
+  const prefix=type==="Bank Loan Payable"?"LOAN":"DEBT";
+  const id=nextId(lends,prefix,1);
+  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,balance:principal,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",closedDate:"",closeBank:"",txnRef:""};
+  lends.push(rec);
+  // Optionally auto-post the cash movement when a debt is funded from a bank
+  const fund=$("#ldFundBank").value;
+  if(fund&&type!=="Bank Loan Payable"){
+    if(type==="Debt Receivable"){ // I gave money out → expense-like debit from bank
+      txns.push({id:nextTxnId(),date:rec.issue,type:"Expense",cat:"Debt Given",desc:"Lent to "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")"});
+    }else{ // Debt Payable: I borrowed → income-like credit into bank
+      txns.push({id:nextTxnId(),date:rec.issue,type:"Income",cat:"Debt Taken",desc:"Borrowed from "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")"});
+    }
+  }
+  e.target.reset();$("#ldIssue").value=todayISO();setDirty(true);renderAll();
+  toast("Record added");
 });
-$("#formInv").addEventListener("submit",e=>{
+$("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
   const amount=num($("#ivAmt").value);
-  investments.push({date:$("#ivDate").value||todayISO(),name:$("#ivName").value.trim(),type:$("#ivType").value,amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank:$("#ivBank").value||(banks[0]?banks[0].name:""),notes:$("#ivNotes").value.trim()});
+  if(amount<=0){toast("Enter the amount invested");return;}
+  const id=nextId(invs,"INV",1);
+  const bank=$("#ivBank").value;
+  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
+  // auto-post: money leaves the funding bank
+  if(bank)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id});
   e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
-});
-$("#formDebt").addEventListener("submit",e=>{
-  e.preventDefault();
-  debts.push({date:$("#dbDate").value||todayISO(),person:$("#dbPerson").value.trim(),type:$("#dbType").value,amount:num($("#dbAmt").value),repaid:num($("#dbRepaid").value),due:$("#dbDue").value||"",bank:$("#dbBank").value||(banks[0]?banks[0].name:""),notes:$("#dbNotes").value.trim()});
-  e.target.reset();$("#dbDate").value=todayISO();setDirty(true);renderAll();
-});
-$("#formLoan").addEventListener("submit",e=>{
-  e.preventDefault();
-  loans.push({date:$("#lnDate").value||todayISO(),lender:$("#lnLender").value.trim(),type:$("#lnType").value,
-    principal:num($("#lnPrincipal").value),rate:num($("#lnRate").value),emi:num($("#lnEmi").value),
-    tenure:Math.round(num($("#lnTenure").value)),notes:$("#lnNotes").value.trim()});
-  e.target.reset();$("#lnDate").value=todayISO();setDirty(true);renderAll();
-});
-$("#formLpay").addEventListener("submit",e=>{
-  e.preventDefault();
-  if(!$("#lpLender").value){toast("Add a loan first");return;}
-  loanPays.push({date:$("#lpDate").value||todayISO(),lender:$("#lpLender").value,kind:$("#lpKind").value,
-    amount:num($("#lpAmt").value),bank:$("#lpBank").value||(banks[0]?banks[0].name:""),notes:$("#lpNotes").value.trim()});
-  e.target.reset();$("#lpDate").value=todayISO();setDirty(true);renderAll();
+  toast("Investment added");
 });
 
-["searchInc","filterIncMonth"].forEach(id=>$("#"+id).addEventListener("input",renderInc));
-["searchExp","filterExpCat","filterExpMonth"].forEach(id=>$("#"+id).addEventListener("input",renderExp));
-["searchInv","filterInvType"].forEach(id=>$("#"+id).addEventListener("input",renderInv));
-["searchDebt","filterDebtType","filterDebtStatus"].forEach(id=>$("#"+id).addEventListener("input",renderDebt));
-["searchLpay","filterLpayMonth"].forEach(id=>$("#"+id).addEventListener("input",renderLoan));
-
-/* ---------- row actions ---------- */
+/* ---------- row actions (delete txn, close/reopen) ---------- */
 document.addEventListener("click",e=>{
-  const btn=e.target.closest("[data-act]");if(!btn)return;
-  const tr=btn.closest("tr");const i=tr?+tr.dataset.i:-1;
+  const btn=e.target.closest("[data-act]");
+  if(!btn)return;
+  const tr=btn.closest("tr");if(!tr)return;
+  const i=+tr.dataset.i;
   const done=()=>{setDirty(true);renderAll();};
-  const edit=(k,v)=>{editing={inc:-1,exp:-1,inv:-1,debt:-1,loan:-1,lpay:-1};if(k)editing[k]=v;renderAll();};
   switch(btn.dataset.act){
-    case "cancel":edit(null);break;
-    case "editInc":edit("inc",i);break;
-    case "editExp":edit("exp",i);break;
-    case "editInv":edit("inv",i);break;
+    case "delTxn":if(confirm("Delete this transaction?")){txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
-    case "reopenInv":if(confirm(`Reopen "${investments[i].name}"? The redemption credit to your bank will be removed.`)){investments[i].status="Open";investments[i].closedDate="";investments[i].closedValue=0;done();}break;
-    case "closeLoan":openCloseModal("loan",i);break;
-    case "reopenLoan":if(confirm(`Reopen the loan "${loans[i].lender}"? The closing debit will be removed.`)){loans[i].status="Open";loans[i].closedDate="";loans[i].closeAmount=0;loans[i].closeBank="";done();}break;
-    case "editDebt":edit("debt",i);break;
-    case "editLoan":edit("loan",i);break;
-    case "editLpay":edit("lpay",i);break;
-    case "delInc":if(confirm(`Delete "${income[i].source}"? This is removed on your next save.`)){income.splice(i,1);done();}break;
-    case "delExp":if(confirm(`Delete "${expenses[i].desc}"? This is removed on your next save.`)){expenses.splice(i,1);done();}break;
-    case "delInv":if(confirm(`Delete "${investments[i].name}"? This is removed on your next save.`)){investments.splice(i,1);done();}break;
-    case "delDebt":if(confirm(`Delete the record for "${debts[i].person}"? This is removed on your next save.`)){debts.splice(i,1);done();}break;
-    case "delLoan":if(confirm(`Delete the loan "${loans[i].lender}"? Its repayment history stays until you delete those rows too.`)){loans.splice(i,1);done();}break;
-    case "delLpay":if(confirm(`Delete this repayment of ${fmt(loanPays[i].amount)}? This is removed on your next save.`)){loanPays.splice(i,1);done();}break;
-    case "saveInc":{const r=income[i];
-      r.date=tr.querySelector(".e-date").value||r.date;r.source=tr.querySelector(".e-src").value.trim();
-      r.category=tr.querySelector(".e-cat").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
-      r.notes=tr.querySelector(".e-notes").value.trim();
-      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
-      editing.inc=-1;done();break;}
-    case "saveExp":{const r=expenses[i];
-      r.date=tr.querySelector(".e-date").value||r.date;r.category=tr.querySelector(".e-cat").value.trim()||"Other";
-      r.desc=tr.querySelector(".e-desc").value.trim();r.amount=num(tr.querySelector(".e-amt").value);
-      r.pay=tr.querySelector(".e-pay").value.trim();
-      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
-      editing.exp=-1;done();break;}
-    case "saveInv":{const r=investments[i];
-      r.date=tr.querySelector(".e-date").value||r.date;r.name=tr.querySelector(".e-name").value.trim();
-      r.type=tr.querySelector(".e-type").value.trim()||"Other";r.amount=num(tr.querySelector(".e-amt").value);
-      r.current=num(tr.querySelector(".e-cur").value);r.notes=tr.querySelector(".e-notes").value.trim();
-      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
-      editing.inv=-1;done();break;}
-    case "saveDebt":{const r=debts[i];
-      r.date=tr.querySelector(".e-date").value||r.date;r.person=tr.querySelector(".e-person").value.trim();
-      r.type=tr.querySelector(".e-type").value;r.amount=num(tr.querySelector(".e-amt").value);
-      r.repaid=num(tr.querySelector(".e-repaid").value);r.due=tr.querySelector(".e-due").value||"";
-      r.notes=tr.querySelector(".e-notes").value.trim();
-      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
-      editing.debt=-1;done();break;}
-    case "saveLoan":{const r=loans[i];
-      r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
-      r.type=tr.querySelector(".e-type").value.trim()||"Housing";r.principal=num(tr.querySelector(".e-principal").value);
-      r.rate=num(tr.querySelector(".e-rate").value);r.emi=num(tr.querySelector(".e-emi").value);
-      r.tenure=Math.round(num(tr.querySelector(".e-tenure").value));r.notes=tr.querySelector(".e-notes").value.trim();
-      editing.loan=-1;done();break;}
-    case "saveLpay":{const r=loanPays[i];
-      {const bs=tr.querySelector(".e-bank");if(bs)r.bank=bs.value;}
-      r.date=tr.querySelector(".e-date").value||r.date;r.lender=tr.querySelector(".e-lender").value.trim();
-      r.kind=tr.querySelector(".e-kind").value.trim()||"EMI";r.amount=num(tr.querySelector(".e-amt").value);
-      r.notes=tr.querySelector(".e-notes").value.trim();editing.lpay=-1;done();break;}
+    case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
+    case "closeLD":openCloseModal("ld",i);break;
+    case "reopenLD":{const r=lends[i];if(confirm(`Reopen the record for "${r.person}"? The settlement transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closeBank="";r.txnRef="";r.balance=r.principal;done();}break;}
+    case "delLD":if(confirm(`Delete the record for "${lends[i].person}"?`)){lends.splice(i,1);done();}break;
+    case "delInv":if(confirm(`Delete "${invs[i].name}"?`)){invs.splice(i,1);done();}break;
   }
 });
 
-/* ---------- shortcuts & guards ---------- */
-window.addEventListener("keydown",e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"&&$("#app").style.display==="block"){e.preventDefault();saveFile();}
+/* ---------- close modal (auto-posts a transaction) ---------- */
+let closeCtx={kind:null,idx:-1};
+function openCloseModal(kind,idx){
+  closeCtx={kind,idx};
+  $("#closeError").style.display="none";
+  const bankSel=$("#closeBank");
+  bankSel.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
+  $("#closeDate").value=todayISO();
+  if(kind==="inv"){
+    const r=invs[idx];
+    $("#closeTitle").textContent="Close / redeem investment";
+    $("#closeSub").textContent=`Redeeming “${r.name}”. Proceeds are credited to the bank as an Income transaction, and the line is marked Closed.`;
+    $("#closeAmtLabel").textContent="Redemption value received";
+    $("#closeBankLabel").textContent="Credit proceeds to bank";
+    $("#closeAmt").value=r.current||r.amount||"";
+    if(r.bank&&banks.some(b=>b.name===r.bank))bankSel.value=r.bank;
+    const gain=(r.current||0)-(r.amount||0);
+    $("#closeHint").innerHTML=`Invested ${fmt(r.amount)} · current ${fmt(r.current)} · <span class="${gain>=0?'pos':'neg'}">${gain>=0?'gain':'loss'} ${fmt(Math.abs(gain))}</span>.`;
+  }else{
+    const r=lends[idx];
+    const recv=r.type==="Debt Receivable";
+    $("#closeTitle").textContent=recv?"Close — settle receivable":"Close — settle what you owe";
+    $("#closeSub").textContent=recv
+      ?`Settling “${r.person}”. The amount received is credited to the bank as Income, and the record is marked Closed.`
+      :`Settling “${r.person}”. The amount paid is debited from the bank as an Expense, and the record is marked Closed.`;
+    $("#closeAmtLabel").textContent=recv?"Amount received":"Amount paid";
+    $("#closeBankLabel").textContent=recv?"Credit to bank":"Pay from bank";
+    $("#closeAmt").value=r.balance||"";
+    $("#closeHint").innerHTML=`Balance due: ${fmt(r.balance)}. ${recv?"Money comes in":"Money goes out"}.`;
+  }
+  $("#closeOverlay").style.display="flex";
+}
+$("#btnCloseCancel")&&$("#btnCloseCancel").addEventListener("click",()=>{$("#closeOverlay").style.display="none";});
+$("#closeOverlay")&&$("#closeOverlay").addEventListener("click",e=>{if(e.target.id==="closeOverlay")$("#closeOverlay").style.display="none";});
+$("#btnCloseConfirm")&&$("#btnCloseConfirm").addEventListener("click",()=>{
+  const err=$("#closeError");err.style.display="none";
+  const amt=num($("#closeAmt").value),date=$("#closeDate").value,bank=$("#closeBank").value;
+  if(!bank){err.textContent="Add a bank account first (Setups).";err.style.display="block";return;}
+  if(!date){err.textContent="Pick the date.";err.style.display="block";return;}
+  const txnId=nextTxnId();
+  if(closeCtx.kind==="inv"){
+    const r=invs[closeCtx.idx];
+    txns.push({id:txnId,date,type:"Income",cat:"Investment Redemption",desc:"Redeemed "+r.name,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.name+")"});
+    r.status="Closed";r.closedDate=date;r.closedValue=amt;r.current=amt;r.bank=bank;r.txnRef=txnId;
+  }else{
+    const r=lends[closeCtx.idx];
+    const recv=r.type==="Debt Receivable";
+    txns.push({id:txnId,date,type:recv?"Income":"Expense",cat:recv?"Debt Settlement":"Debt Repayment",desc:(recv?"Repayment received from ":"Repaid ")+r.person,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.person+")"});
+    r.status="Closed";r.closedDate=date;r.closeBank=bank;r.balance=0;r.txnRef=txnId;
+  }
+  $("#closeOverlay").style.display="none";
+  setDirty(true);renderAll();
+  toast("Closed — transaction "+txnId+" auto-posted");
 });
-window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
-/* ---------- defaults ---------- */
-$("#inDate").value=todayISO();
-$("#exDate").value=todayISO();
-$("#ivDate").value=todayISO();
-$("#dbDate").value=todayISO();
-$("#lnDate").value=todayISO();
-$("#lpDate").value=todayISO();
+/* ---------- bank statement verification (Banks tab) ---------- */
+$("#btnReconcile")&&$("#btnReconcile").addEventListener("click",()=>{
+  const name=$("#recBank").value, asOf=$("#recDate").value, stmt=num($("#recBal").value);
+  const out=$("#recOutput");
+  if(!name){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Add a bank in Setups first.</div>';return;}
+  if(!asOf){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Pick the statement date.</div>';return;}
+  const bank=banks.find(b=>b.name===name);
+  const ledger=bankBalance(name,asOf);
+  const diff=r2(stmt-ledger),abs=Math.abs(diff);
+  const opening=bank?bank.opening:0;
+  const nTx=txns.filter(t=>(t.bank===name||t.toBank===name)&&t.date<=asOf).length;
+  let badge,cls;
+  if(abs<0.01){badge='<div class="rec-badge ok">✓ Matched — ledger agrees with the statement</div>';cls="ok";}
+  else if(abs<=Math.max(1,Math.abs(stmt)*0.005)){badge=`<div class="rec-badge near">≈ Almost — off by ${fmt(abs)}</div>`;cls="near";}
+  else{badge=`<div class="rec-badge off">✕ Difference of ${fmt(abs)} — needs review</div>`;cls="off";}
+  const dir=diff>0?"Statement is higher — income/deposits may be missing.":diff<0?"Ledger is higher — an expense may be missing or duplicated.":"";
+  const canRec=abs<=Math.max(1,Math.abs(stmt)*0.005);
+  out.innerHTML=`<div class="rec-result ${cls}">
+    <div class="rec-row"><span>Opening balance</span><span>${fmt(opening)}</span></div>
+    <div class="rec-row"><span>Ledger balance · as of ${esc(asOf)}</span><span>${fmt(ledger)}</span></div>
+    <div class="rec-row"><span>Statement balance</span><span>${fmt(stmt)}</span></div>
+    <div class="rec-row rec-diff"><span>Difference</span><span class="${diff===0?'':diff>0?'pos':'neg'}">${diff>0?'+':''}${fmt(diff)}</span></div>
+    ${badge}
+    <div class="rec-hint">${nTx} transaction${nTx===1?'':'s'} on this account up to that date.${dir?' '+dir:''}</div>
+    ${canRec?`<button type="button" class="btn-accent" id="btnMarkReconciled" style="margin-top:.9rem">✓ Mark ${esc(name)} as reconciled</button>`:""}
+  </div>`;
+  const mr=$("#btnMarkReconciled");
+  if(mr)mr.addEventListener("click",()=>{
+    bank.statement=stmt;bank.recDate=asOf;
+    setDirty(true);renderBank();renderStatement();
+    out.innerHTML=`<div class="rec-result ok"><div class="rec-badge ok">✓ ${esc(name)} reconciled as of ${esc(asOf)} at ${fmt(stmt)}</div></div>`;
+    toast(name+" marked reconciled");
+  });
+});
 
-applyTheme(theme,false);
-refreshSelects();
+/* ---------- bank add / edit / delete (in Setups) ---------- */
+let bankEditState=null;
+$("#formBank")&&$("#formBank").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("#bName").value.trim();
+  if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("Bank name already exists");return;}
+  const nb={id:nextId(banks,"ACC",1),name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),recDate:null,statement:null,notes:$("#bNotes").value.trim()};
+  if(bankEditState){nb.id=bankEditState.id;if(bankEditState.opening===nb.opening){nb.statement=bankEditState.statement;nb.recDate=bankEditState.recDate;}bankEditState=null;}
+  banks.push(nb);
+  e.target.reset();$("#bOpen").value="0";
+  setDirty(true);renderAll();toast("Bank saved");
+});
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-bact]");
+  if(!btn)return;
+  const i=+btn.closest("tr").dataset.i, b=banks[i];
+  if(btn.dataset.bact==="edit"){
+    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
+    bankEditState={id:b.id,statement:b.statement,recDate:b.recDate,opening:b.opening};
+    banks.splice(i,1);setDirty(true);renderAll();
+    setSettingsTab&&setSettingsTab("secBanks");
+    toast("Loaded into the form — edit and press “+ Add bank” to save it back");
+  }else if(btn.dataset.bact==="del"){
+    const used=txns.some(t=>t.bank===b.name||t.toBank===b.name)||invs.some(v=>v.bank===b.name)||lends.some(l=>l.closeBank===b.name);
+    if(used){toast("This bank has transactions — remove those first");return;}
+    if(confirm(`Delete "${b.name}"?`)){banks.splice(i,1);setDirty(true);renderAll();}
+  }
+});
 
-/* ---------- startup: live session resumes; otherwise saved setup goes to login ---------- */
+/* ---------- search / filter listeners ---------- */
+["searchTxn","filterTxnType","filterTxnBank","filterTxnMonth"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderTxn);});
+["searchLD","filterLDType","filterLDStatus"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderLD);});
+["searchInv","filterInvStatus"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderInv);});
+$("#searchBank")&&$("#searchBank").addEventListener("input",renderBank);
+$("#stmtBank")&&$("#stmtBank").addEventListener("change",renderStatement);
+$("#stmtMonth")&&$("#stmtMonth").addEventListener("change",renderStatement);
+$("#ldType")&&$("#ldType").addEventListener("change",()=>{
+  const t=$("#ldType").value;
+  $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":"Person";
+  $("#ldFundWrap").style.display=t==="Bank Loan Payable"?"none":"";
+});
+
+/* ---------- tab nav ---------- */
+$$(".pill").forEach(b=>b.addEventListener("click",()=>{
+  $$(".pill").forEach(p=>p.classList.remove("active"));
+  b.classList.add("active");
+  const tab=b.dataset.tab;
+  $$(".panel").forEach(p=>p.classList.remove("active"));
+  const map={home:"panel-home",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv"};
+  const panel=$("#"+map[tab]);if(panel)panel.classList.add("active");
+  if(tab==="bank"){renderBank();renderStatement();refreshSelects();if($("#recDate")&&!$("#recDate").value)$("#recDate").value=todayISO();}
+  if(tab==="home")renderDash();
+  window.scrollTo(0,0);
+}));
+
+
 (async function init(){
   if(!(crypto&&crypto.subtle))return;
 
@@ -2188,53 +1972,6 @@ refreshSelects();
   showView("vLogin");
   setTimeout(()=>(p.username?$("#lPin"):$("#lUser")).focus(),60);
 })();
-
-/* ---- BANKS & TRANSFERS ---- */
-$("#formBank").addEventListener("submit",e=>{
-  e.preventDefault();
-  const name=$("#bName").value.trim();
-  if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("Bank name already exists");return;}
-  banks.push({name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),notes:$("#bNotes").value.trim()});
-  e.target.reset();$("#bOpen").value="0";
-  refreshBankSelects();setDirty(true);renderAll();
-  toast("Bank added");
-});
-document.addEventListener("click",e=>{
-  const btn=e.target.closest("[data-bact]");
-  if(!btn)return;
-  const i=+btn.closest("tr").dataset.i, b=banks[i];
-  if(btn.dataset.bact==="edit"){
-    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;
-    $("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
-    banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();
-    toast("Loaded into the form above — edit and press “+ Add bank” to save it back");
-  }else if(btn.dataset.bact==="del"){
-    const used=income.some(x=>x.bank===b.name)||expenses.some(x=>x.bank===b.name)||transfers.some(t=>t.from===b.name||t.to===b.name);
-    if(used){toast("This bank has transactions or transfers — remove those first");return;}
-    if(confirm(`Delete "${b.name}"?`)){banks.splice(i,1);refreshBankSelects();setDirty(true);renderBank();}
-  }
-});
-$("#btnAddTransfer").addEventListener("click",()=>{
-  const from=$("#tFrom").value.trim(), to=$("#tTo").value.trim(), date=$("#tDate").value, amt=num($("#tAmt").value);
-  if(!from||!to||!date||amt<=0){toast("Fill all transfer fields");return;}
-  if(from===to){toast("From and To must be different");return;}
-  transfers.push({date,from,to,amt,ref:$("#tRef").value.trim()});
-  $("#tDate").value=todayISO();$("#tAmt").value="";$("#tRef").value="";
-  setDirty(true);renderAll();toast("Transfer recorded");
-});
-document.addEventListener("click",e=>{
-  const btn=e.target.closest("[data-tract]");
-  if(!btn)return;
-  const i=+btn.dataset.i;
-  if(confirm("Delete this transfer?")){transfers.splice(i,1);setDirty(true);renderAll();}
-});
-$("#searchBank").addEventListener("input",renderBank);
-$("#stmtBank").addEventListener("change",renderStatement);
-$("#stmtMonth").addEventListener("change",renderStatement);
-$("#searchTransfer").addEventListener("input",renderTransfer);
-$("#fromTransfer").addEventListener("input",renderTransfer);
-$("#toTransfer").addEventListener("input",renderTransfer);
-
 </script>
 </body>
 </html>

@@ -1931,6 +1931,13 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   window.scrollTo(0,0);
 }));
 
+/* ---------- top-bar buttons ---------- */
+$("#btnSave")&&$("#btnSave").addEventListener("click",saveFile);
+$("#btnTheme")&&$("#btnTheme").addEventListener("click",()=>{applyTheme(theme==="dark"?"light":"dark");setDirty(true);});
+window.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"&&$("#app").style.display==="block"){e.preventDefault();saveFile();}
+});
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
 
 (async function init(){
   if(!(crypto&&crypto.subtle))return;

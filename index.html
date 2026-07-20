@@ -131,7 +131,8 @@
 
   /* ================= OVERVIEW ================= */
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-bottom:.9rem}
-  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.05rem 1.15rem;position:relative;overflow:hidden}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:1.05rem 1.15rem;position:relative;overflow:hidden;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .kpi:hover{transform:translateY(-2px);border-color:var(--line-strong);box-shadow:0 8px 24px rgba(0,0,0,.18)}
   .kpi::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--kc,var(--blue))}
   .kpi.income{--kc:var(--mint)} .kpi.expense{--kc:var(--coral)}
   .kpi.savings{--kc:var(--blue)} .kpi.portfolio{--kc:var(--violet)}
@@ -141,13 +142,36 @@
   .kpi .label{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .kpi .value{font-family:var(--mono);font-size:1.45rem;font-weight:600;margin-top:.35rem;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
   .kpi .sub{font-size:.76rem;color:var(--muted);margin-top:.25rem}
-  .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
-  .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
+  .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:.7rem;margin-bottom:1rem}
+  .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.9rem .95rem;position:relative;overflow:hidden;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .bank-card:hover{transform:translateY(-2px);border-color:var(--line-strong);box-shadow:0 8px 22px rgba(0,0,0,.16)}
   .bank-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--bc,var(--gold))}
   .bank-card .label{font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.15rem}
-  .bank-card .acct{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.35rem}
-  .bank-card .balance{font-family:var(--mono);font-size:1.1rem;font-weight:700}
+  .bank-card .acct{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:.5rem}
+  .bank-card .balance{font-family:var(--mono);font-size:1.2rem;font-weight:700;letter-spacing:-.01em}
+  .bank-card .bname{font-size:.9rem;font-weight:700;margin-bottom:.35rem}
+  .bank-card.neg .balance{color:var(--coral)}
   .bank-select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.5rem .65rem}
+  /* settings tabs */
+  .set-tabs{display:flex;gap:.35rem;margin-bottom:1.1rem;background:var(--wash);border:1px solid var(--line);border-radius:12px;padding:.3rem;overflow-x:auto;scrollbar-width:none}
+  .set-tabs::-webkit-scrollbar{display:none}
+  .set-tab{flex:1;min-width:max-content;border:none;background:none;color:var(--muted);border-radius:9px;padding:.55rem .8rem;font-size:.84rem;font-weight:600;white-space:nowrap;transition:all .15s}
+  .set-tab:hover{color:var(--text)}
+  .set-tab.active{background:var(--grad);color:#08111C}
+  .set-sec{display:none;animation:fade .2s ease}
+  .set-sec.active{display:block}
+  /* reconciliation */
+  .rec-result{border-radius:14px;padding:1rem 1.15rem;margin-top:1rem;border:1px solid var(--line);background:var(--wash);position:relative;overflow:hidden}
+  .rec-result::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--rc,var(--muted))}
+  .rec-result.ok{--rc:var(--mint)} .rec-result.near{--rc:var(--amber)} .rec-result.off{--rc:var(--coral)}
+  .rec-row{display:flex;justify-content:space-between;align-items:baseline;padding:.4rem 0;font-size:.9rem}
+  .rec-row span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600}
+  .rec-diff{border-top:1px solid var(--line-strong);margin-top:.5rem;padding-top:.7rem;font-size:1.02rem;font-weight:700}
+  .rec-badge{display:inline-flex;align-items:center;gap:.4rem;border-radius:999px;padding:.35rem .85rem;font-size:.83rem;font-weight:700;margin-top:.9rem}
+  .rec-badge.ok{background:var(--mint-dim);color:var(--mint)}
+  .rec-badge.off{background:var(--coral-dim);color:var(--coral)}
+  .rec-badge.near{background:var(--amber-dim);color:var(--amber)}
+  .rec-hint{font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:.7rem}
   .kpi .sub .up{color:var(--mint)} .kpi .sub .down{color:var(--coral)}
 
   .charts{display:grid;grid-template-columns:1.6fr 1fr;gap:.8rem;margin-bottom:.8rem}
@@ -451,7 +475,7 @@
 
   <!-- ============ BANKS & TRANSFERS ============ -->
   <section class="panel" id="panel-bank">
-    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span></div>
+    <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span><span style="margin-left:auto"></span><button class="top-btn" id="btnVerifyBanks" type="button" style="min-height:38px">✓ Verify against statement</button></div>
     <div class="bank-cards" id="bankCards"></div>
     <div class="section-head"><h2>Add / edit bank</h2></div>
     <form class="add-card" id="formBank">
@@ -583,33 +607,69 @@
 <div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
   <div class="auth-card" style="max-width:480px;max-height:90vh;overflow:auto">
     <h2 style="font-size:1.25rem;margin-bottom:.5rem">Settings</h2>
-    <p class="sub">Update your name and sign-in details. Changes are stored on your next Save.</p>
+    <p class="sub" id="settingsSub">Everything about your ledger, in one place.</p>
     <div class="auth-error" id="settingsError"></div>
-    <div class="f"><label for="stName">Your name</label><input type="text" id="stName" autocomplete="off"></div>
-    <div class="f"><label for="stUser">Login ID</label><input type="text" id="stUser" autocomplete="username"></div>
-    <div class="f" style="border-top:1px solid var(--line);padding-top:1rem;margin-top:1.1rem"><label for="stListPick">Categories &amp; lists</label>
-      <select id="stListPick">
-        <option value="incomeCats">Income categories</option>
-        <option value="expenseCats">Expense categories</option>
-        <option value="payMethods">Payment methods</option>
-        <option value="investTypes">Investment types</option>
-        <option value="loanTypes">Loan types</option>
-      </select>
+
+    <div class="set-tabs">
+      <button class="set-tab active" data-sec="secReconcile" type="button">Verify balance</button>
+      <button class="set-tab" data-sec="secProfile" type="button">Profile</button>
+      <button class="set-tab" data-sec="secLists" type="button">Lists</button>
+      <button class="set-tab" data-sec="secSecurity" type="button">Security</button>
+      <button class="set-tab" data-sec="secDevice" type="button">Devices</button>
     </div>
-    <div class="f"><label for="stListValues">Values <i>(one per line)</i></label>
-      <textarea id="stListValues" rows="6" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-size:.9rem;color:var(--text);resize:vertical;font-family:inherit"></textarea>
-      <div class="hint">These are stored in your ledger’s master list, so you can also edit them straight in the workbook. Renaming a value here doesn’t change entries already saved with the old name.</div>
+
+    <!-- ===== Reconcile / verify ===== -->
+    <div class="set-sec active" id="secReconcile">
+      <p class="sub" style="margin-bottom:1rem">Check your ledger against your real bank statement. Enter the closing balance from your statement and its date — Bilr computes what your ledger says for that account up to that date, and shows the difference.</p>
+      <div class="f"><label for="recBank">Bank account</label><select id="recBank" class="bank-select" style="width:100%"></select></div>
+      <div class="f"><label for="recDate">Statement date <i>(balance as of)</i></label><input type="date" id="recDate"></div>
+      <div class="f"><label for="recBal">Statement closing balance</label><input type="number" step="0.01" id="recBal" placeholder="0.00"></div>
+      <button class="btn primary" id="btnReconcile" type="button">Verify balance</button>
+      <div id="recOutput"></div>
     </div>
-    <div class="f"><button class="btn" id="btnListApply" type="button">Apply list changes</button></div>
-    <div class="f" style="border-top:1px solid var(--line);padding-top:1rem;margin-top:1.1rem"><label for="stCur">Current password <i>(only to change password)</i></label><input type="password" id="stCur" autocomplete="current-password"></div>
-    <div class="f"><label for="stNew">New password</label><input type="password" id="stNew" autocomplete="new-password"></div>
-    <div class="f"><label for="stNew2">Confirm new password</label><input type="password" id="stNew2" autocomplete="new-password"></div>
-    <div class="stack">
+
+    <!-- ===== Profile ===== -->
+    <div class="set-sec" id="secProfile">
+      <div class="f"><label for="stName">Your name</label><input type="text" id="stName" autocomplete="off"></div>
+      <div class="f"><label for="stUser">Login ID</label><input type="text" id="stUser" autocomplete="username"></div>
+    </div>
+
+    <!-- ===== Lists ===== -->
+    <div class="set-sec" id="secLists">
+      <div class="f"><label for="stListPick">Categories &amp; lists</label>
+        <select id="stListPick">
+          <option value="incomeCats">Income categories</option>
+          <option value="expenseCats">Expense categories</option>
+          <option value="payMethods">Payment methods</option>
+          <option value="investTypes">Investment types</option>
+          <option value="loanTypes">Loan types</option>
+        </select>
+      </div>
+      <div class="f"><label for="stListValues">Values <i>(one per line)</i></label>
+        <textarea id="stListValues" rows="6" style="width:100%;background:var(--wash-strong);border:1px solid var(--line);border-radius:11px;padding:.7rem .8rem;font-size:.9rem;color:var(--text);resize:vertical;font-family:inherit"></textarea>
+        <div class="hint">These are stored in your ledger’s master list, so you can also edit them straight in the workbook. Renaming a value here doesn’t change entries already saved with the old name.</div>
+      </div>
+      <div class="f"><button class="btn" id="btnListApply" type="button">Apply list changes</button></div>
+    </div>
+
+    <!-- ===== Security ===== -->
+    <div class="set-sec" id="secSecurity">
+      <div class="f"><label for="stCur">Current password <i>(only to change password)</i></label><input type="password" id="stCur" autocomplete="current-password"></div>
+      <div class="f"><label for="stNew">New password</label><input type="password" id="stNew" autocomplete="new-password"></div>
+      <div class="f"><label for="stNew2">Confirm new password</label><input type="password" id="stNew2" autocomplete="new-password"></div>
+    </div>
+
+    <!-- ===== Devices ===== -->
+    <div class="set-sec" id="secDevice">
+      <p class="sub">Install Bilr on another device by generating a one-time setup code, then pasting it into that device’s index.html.</p>
+      <div class="f"><button class="btn" id="btnEmbed" type="button">Get device setup code</button></div>
+      <p class="auth-note" style="text-align:left">If you change your password, get a fresh device setup code afterwards and re-install it in index.html — the old embedded code only opens with the old password.</p>
+    </div>
+
+    <div class="stack" style="margin-top:1.3rem">
       <button class="btn primary" id="btnSettingsSave">Update settings</button>
-      <button class="btn" id="btnEmbed">Get device setup code</button>
       <button class="btn ghost" id="btnCloseSettings">Close</button>
     </div>
-    <p class="auth-note">If you change your password, get a fresh device setup code afterwards and re-install it in index.html — the old embedded code only opens with the old password.</p>
   </div>
 </div>
 
@@ -681,18 +741,19 @@ const bankOptions=sel=>{
 };
 const bankCell=(cls,val)=>`<select class="${cls}">${bankOptions(val)}</select>`;
 const bankTag=name=>name?`<span class="tag" style="background:var(--wash-strong);color:var(--muted)">${esc(name)}</span>`:'<span style="color:var(--muted)">—</span>';
-const bankBalance=name=>{
+const bankBalance=(name,asOf)=>{
+  const le=d=>!asOf||(d&&d<=asOf);
   let bal=banks.find(b=>b.name===name)?.opening||0;
-  income.forEach(i=>{if(i.bank===name)bal+=i.amount;});
-  expenses.forEach(e=>{if(e.bank===name)bal-=e.amount;});
-  transfers.forEach(t=>{if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;});
-  investments.forEach(v=>{if(v.bank===name)bal-=v.amount;});
-  debts.forEach(d=>{if(d.bank===name){
+  income.forEach(i=>{if(i.bank===name&&le(i.date))bal+=i.amount;});
+  expenses.forEach(e=>{if(e.bank===name&&le(e.date))bal-=e.amount;});
+  transfers.forEach(t=>{if(le(t.date)){if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;}});
+  investments.forEach(v=>{if(v.bank===name&&le(v.date))bal-=v.amount;});
+  debts.forEach(d=>{if(d.bank===name&&le(d.date)){
     // money given out leaves the bank; repaid comes back. Taken adds cash, repaying it leaves.
     if(d.type==="Given")bal-=(d.amount-d.repaid);
     else bal+=(d.amount-d.repaid);
   }});
-  loanPays.forEach(p=>{if(p.bank===name)bal-=p.amount;});
+  loanPays.forEach(p=>{if(p.bank===name&&le(p.date))bal-=p.amount;});
   return r2(bal);
 };
 const refreshBankSelects=()=>{
@@ -1243,7 +1304,57 @@ $("#btnSettings").addEventListener("click",()=>{
   $("#stName").value=owner;$("#stUser").value=username;
   $("#stCur").value="";$("#stNew").value="";$("#stNew2").value="";
   $("#stListValues").value=lists[$("#stListPick").value].join("\n");
+  // reconcile setup
+  const rb=$("#recBank");
+  rb.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
+  if(!$("#recDate").value)$("#recDate").value=todayISO();
+  $("#recOutput").innerHTML="";
+  // default to first tab
+  setSettingsTab("secReconcile");
   $("#settingsOverlay").style.display="flex";
+});
+
+/* settings tabs */
+function setSettingsTab(id){
+  $$(".set-tab").forEach(t=>t.classList.toggle("active",t.dataset.sec===id));
+  $$(".set-sec").forEach(s=>s.classList.toggle("active",s.id===id));
+}
+$$(".set-tab").forEach(t=>t.addEventListener("click",()=>setSettingsTab(t.dataset.sec)));
+$("#btnVerifyBanks")&&$("#btnVerifyBanks").addEventListener("click",()=>{$("#btnSettings").click();setSettingsTab("secReconcile");});
+
+/* bank statement verification */
+$("#btnReconcile").addEventListener("click",()=>{
+  const name=$("#recBank").value, asOf=$("#recDate").value, stmt=num($("#recBal").value);
+  const out=$("#recOutput");
+  if(!name){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Add a bank account first (Banks tab), then come back to verify.</div>';return;}
+  if(!asOf){out.innerHTML='<div class="rec-hint" style="color:var(--coral)">Pick the statement date.</div>';return;}
+  const bank=banks.find(b=>b.name===name);
+  const ledger=bankBalance(name,asOf);
+  const diff=r2(stmt-ledger);
+  const abs=Math.abs(diff);
+  const opening=bank?bank.opening:0;
+  // count transactions considered
+  const within=d=>d&&d<=asOf;
+  const nTx=income.filter(i=>i.bank===name&&within(i.date)).length
+    +expenses.filter(e=>e.bank===name&&within(e.date)).length
+    +investments.filter(v=>v.bank===name&&within(v.date)).length
+    +debts.filter(d=>d.bank===name&&within(d.date)).length
+    +loanPays.filter(p=>p.bank===name&&within(p.date)).length
+    +transfers.filter(t=>(t.from===name||t.to===name)&&within(t.date)).length;
+  let badge,statusCls;
+  if(abs<0.01){badge='<div class="rec-badge ok">✓ Matched — your ledger agrees with the statement</div>';statusCls="ok";}
+  else if(abs<=Math.max(1,Math.abs(stmt)*0.005)){badge=`<div class="rec-badge near">≈ Almost matched — off by ${fmt(abs)}</div>`;statusCls="near";}
+  else{badge=`<div class="rec-badge off">✕ Difference of ${fmt(abs)} — needs review</div>`;statusCls="off";}
+  const dir=diff>0?"Your statement is higher — you may have income/deposits not yet entered.":diff<0?"Your ledger is higher — you may have expenses/withdrawals not yet entered, or a duplicate entry.":"";
+  out.innerHTML=`
+    <div class="rec-result ${statusCls}">
+      <div class="rec-row"><span>Opening balance</span><span>${fmt(opening)}</span></div>
+      <div class="rec-row"><span>Ledger balance · as of ${esc(asOf)}</span><span>${fmt(ledger)}</span></div>
+      <div class="rec-row"><span>Statement balance</span><span>${fmt(stmt)}</span></div>
+      <div class="rec-row rec-diff"><span>Difference</span><span class="${diff===0?'':diff>0?'pos':'neg'}">${diff>0?'+':''}${fmt(diff)}</span></div>
+      ${badge}
+      <div class="rec-hint">${nTx} transaction${nTx===1?'':'s'} on this account up to that date.${dir?' '+dir:''}</div>
+    </div>`;
 });
 $("#stListPick").addEventListener("change",()=>{$("#stListValues").value=lists[$("#stListPick").value].join("\n");});
 $("#btnListApply").addEventListener("click",()=>{
@@ -1647,9 +1758,10 @@ function renderBank(){
     cardBox.innerHTML=banks.map((b,i)=>{
       const bal=bankBalance(b.name);
       const last=(b.acct||"").toString().slice(-4);
-      return `<div class="bank-card" data-i="${i}"><div class="label">${esc(b.type||"")}</div>`+
-        `<div class="acct">${last?"····"+esc(last):"&nbsp;"}</div>`+
-        `<div class="label">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div></div>`;
+      return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}">`+
+        `<div class="label">${esc(b.type||"")}${last?" · ····"+esc(last):""}</div>`+
+        `<div class="bname">${esc(b.name)}</div>`+
+        `<div class="balance">${fmt(bal)}</div></div>`;
     }).join("");
 
     const rows=banks.map((b,i)=>({b,i})).filter(({b})=>!q||b.name.toLowerCase().includes(q));

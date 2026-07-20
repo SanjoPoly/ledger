@@ -194,6 +194,19 @@
   .tx .who span{font-size:.73rem;color:var(--muted)}
   .tx .amt{margin-left:auto;font-family:var(--mono);font-size:.88rem;font-variant-numeric:tabular-nums;white-space:nowrap}
   .tx .amt.in{color:var(--mint)} .tx .amt.out{color:var(--coral)}
+  .stmt-head,.stmt-row{display:grid;grid-template-columns:44px 1fr 92px 92px;gap:.6rem;align-items:center}
+  .stmt-head{padding:.35rem 0 .5rem;border-bottom:1px solid var(--line-strong);margin-bottom:.15rem}
+  .stmt-head>div{font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .stmt-head .stmt-amt,.stmt-row .stmt-amt{text-align:right}
+  .stmt-row{padding:.5rem 0;border-bottom:1px solid var(--line)}
+  .stmt-row:last-child{border-bottom:none}
+  .stmt-date{font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+  .stmt-detail{min-width:0}
+  .stmt-detail strong{font-size:.85rem;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stmt-detail span{font-size:.72rem;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stmt-amt{font-family:var(--mono);font-size:.82rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .stmt-amt .pos{color:var(--mint)} .stmt-amt .neg{color:var(--coral)} .stmt-amt .muted-amt{color:var(--muted)}
+  @media(max-width:640px){.stmt-head,.stmt-row{grid-template-columns:40px 1fr 80px 80px;gap:.4rem}}
   .empty-mini{color:var(--muted);font-size:.85rem;padding:1.4rem 0;text-align:center}
 
   /* ================= SECTIONS ================= */
@@ -204,6 +217,10 @@
   .add-card .f{margin:0}
   .add-card button{background:var(--grad);color:#08111C;border:none;border-radius:11px;padding:.78rem 1rem;font-weight:700;font-size:.9rem;min-height:46px}
   .add-card button:hover{filter:brightness(1.07)}
+  .add-card button.btn-cancel-edit{background:var(--wash);color:var(--muted);border:1px solid var(--line-strong);font-weight:600;margin-top:.5rem}
+  .add-card button.btn-cancel-edit:hover{filter:none;color:var(--text);background:var(--wash-hover)}
+  form.editing{outline:2px solid var(--amber);outline-offset:3px;border-radius:var(--r-lg);position:relative}
+  form.editing::before{content:"Editing transaction";position:absolute;top:-.7rem;left:1rem;background:var(--amber);color:#08111C;font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.12rem .55rem;border-radius:999px}
   .toolbar{display:flex;gap:.55rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap}
   .toolbar input[type="search"],.toolbar select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem;min-height:42px}
   .toolbar input[type="search"]{flex:1;min-width:160px;max-width:320px}
@@ -411,6 +428,10 @@
       <div class="chart-card"><h3>Bank balances <small>current, per account</small></h3><div class="chart-box"><canvas id="chBankBal"></canvas></div></div>
       <div class="chart-card"><h3>Investment gain / loss <small>by holding</small></h3><div class="chart-box"><canvas id="chInvGain"></canvas></div></div>
     </div>
+    <div class="charts">
+      <div class="chart-card"><h3>This month · money in vs out <small id="cashDonutScope"></small></h3><div class="chart-box"><canvas id="chCashDonut"></canvas></div></div>
+      <div class="chart-card"><h3>Loans &amp; debts <small>outstanding balance ratio</small></h3><div class="chart-box"><canvas id="chLoanRatio"></canvas></div></div>
+    </div>
     <div class="charts-row2">
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
@@ -429,7 +450,7 @@
       <div class="f" id="tBankWrap"><label for="tBank" id="tBankLabel">Bank / Account</label><select id="tBank"></select></div>
       <div class="f" id="tBankToWrap" style="display:none"><label for="tBankTo">To account</label><select id="tBankTo"></select></div>
       <div class="f" id="tPayWrap"><label for="tPay">Payment method</label><select id="tPay"></select></div>
-      <div class="f"><button type="submit">+ Add transaction</button></div>
+      <div class="f"><button type="submit">+ Add transaction</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
       <input type="search" id="searchTxn" placeholder="Search description / category / ref…">
@@ -1149,6 +1170,7 @@ $("#btnDownloadCfg").addEventListener("click",async()=>{
 
 /* ---------- state ---------- */
 let txns=[];      // {id,date,type,cat,desc,amount,bank,method,ref}
+let editingTxn=null;  // Txn ID currently being edited in the posting form
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
@@ -1507,9 +1529,10 @@ function drawCharts(){
   const byCat={};scoped.forEach(t=>byCat[t.cat||"Other"]=(byCat[t.cat||"Other"]||0)+t.amount);
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   killChart("expCat");
+  const catTotal=cats.reduce((s,c)=>s+c[1],0)||1;
   charts.expCat=new Chart($("#chExpCat"),{type:"doughnut",
     data:{labels:cats.map(c=>c[0]),datasets:[{data:cats.map(c=>c[1]),backgroundColor:cats.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11},generateLabels:ch=>{const d=ch.data;return d.labels.map((l,i)=>{const v=d.datasets[0].data[i];return {text:`${l}  ${(v/catTotal*100).toFixed(0)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:d.datasets[0].backgroundColor[i],pointStyle:"circle",index:i};});}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)} (${(c.parsed/catTotal*100).toFixed(1)}%)`}}}}});
 
   killChart("bankBal");
   if($("#chBankBal")){
@@ -1527,20 +1550,88 @@ function drawCharts(){
   }
   const byType={};invs.filter(v=>v.status!=="Closed").forEach(v=>byType[v.assetType]=(byType[v.assetType]||0)+v.current);
   const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+  const typeTotal=types.reduce((s,t)=>s+t[1],0)||1;
   killChart("invAlloc");
   charts.invAlloc=new Chart($("#chInvAlloc"),{type:"doughnut",
     data:{labels:types.map(t=>t[0]),datasets:[{data:types.map(t=>t[1]),backgroundColor:types.map((_,i)=>PALETTE[(i+2)%PALETTE.length]),borderWidth:2,borderColor:cBorder}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)}`}}}}});
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",plugins:{legend:{position:legendSide,labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7,font:{size:11},generateLabels:ch=>{const d=ch.data;return d.labels.map((l,i)=>{const v=d.datasets[0].data[i];return {text:`${l}  ${(v/typeTotal*100).toFixed(0)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:d.datasets[0].backgroundColor[i],pointStyle:"circle",index:i};});}}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)} (${(c.parsed/typeTotal*100).toFixed(1)}%)`}}}}});
+
+  drawCashDonut();
+  drawLoanRatio();
 }
+
+function drawCashDonut(){
+  if(typeof Chart==="undefined"||!$("#chCashDonut"))return;
+  const cs=getComputedStyle(document.documentElement);
+  const cBorder=(cs.getPropertyValue("--bg-2")||"#0E1526").trim();
+  const mk=thisMonthKey();
+  const inc=txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
+  const exp=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
+  const scope=$("#cashDonutScope");
+  if(scope)scope.textContent=new Date(mk+"-01").toLocaleString(undefined,{month:"long",year:"numeric"});
+  const total=inc+exp;
+  killChart("cashDonut");
+  const cvC=$("#chCashDonut");
+  cvC.style.display=total<=0?"none":"";
+  let msgC=cvC.parentElement.querySelector(".empty-mini");
+  if(total<=0){
+    if(!msgC){msgC=document.createElement("div");msgC.className="empty-mini";cvC.parentElement.appendChild(msgC);}
+    msgC.textContent="No income or expenses recorded this month yet.";msgC.style.display="";
+    return;
+  }
+  if(msgC)msgC.style.display="none";
+  charts.cashDonut=new Chart(cvC,{type:"doughnut",
+    data:{labels:["Money in","Money out"],datasets:[{data:[inc,exp],backgroundColor:["#3DDCA3","#FF6E61"],borderWidth:2,borderColor:cBorder}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"64%",
+      plugins:{legend:{position:window.innerWidth<700?"bottom":"right",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:8,font:{size:12},generateLabels:ch=>{const d=ch.data;return d.labels.map((l,i)=>{const v=d.datasets[0].data[i];return {text:`${l}  ${fmtShort(v)} · ${(v/total*100).toFixed(0)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:d.datasets[0].backgroundColor[i],pointStyle:"circle",index:i};});}}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)} (${(c.parsed/total*100).toFixed(1)}%)`}}}}});
+}
+
+function drawLoanRatio(){
+  if(typeof Chart==="undefined"||!$("#chLoanRatio"))return;
+  const open=lends.filter(l=>l.status!=="Closed");
+  killChart("loanRatio");
+  const cvL=$("#chLoanRatio");
+  let msgL=cvL.parentElement.querySelector(".empty-mini");
+  const recv0=open.filter(l=>l.type==="Debt Receivable").reduce((s,l)=>s+l.balance,0);
+  const hasData=open.length&&open.some(l=>l.balance>0);
+  cvL.style.display=hasData?"":"none";
+  if(!hasData){
+    if(!msgL){msgL=document.createElement("div");msgL.className="empty-mini";cvL.parentElement.appendChild(msgL);}
+    msgL.textContent="No open loans or debts.";msgL.style.display="";
+    return;
+  }
+  if(msgL)msgL.style.display="none";
+  const recv=open.filter(l=>l.type==="Debt Receivable").reduce((s,l)=>s+l.balance,0);
+  const payP=open.filter(l=>l.type==="Debt Payable").reduce((s,l)=>s+l.balance,0);
+  const bankL=open.filter(l=>l.type==="Bank Loan Payable").reduce((s,l)=>s+l.balance,0);
+  const parts=[["Receivable (owed to you)",recv,"#3DDCA3"],["Payable to people",payP,"#FFC466"],["Bank loans",bankL,"#FF6E61"]].filter(p=>p[1]>0);
+  const total=parts.reduce((s,p)=>s+p[1],0)||1;
+  charts.loanRatio=new Chart($("#chLoanRatio"),{type:"doughnut",
+    data:{labels:parts.map(p=>p[0]),datasets:[{data:parts.map(p=>p[1]),backgroundColor:parts.map(p=>p[2]),borderWidth:2,borderColor:(getComputedStyle(document.documentElement).getPropertyValue("--bg-2")||"#0E1526").trim()}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"62%",
+      plugins:{legend:{position:window.innerWidth<700?"bottom":"right",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:8,font:{size:11},generateLabels:ch=>{const d=ch.data;return d.labels.map((l,i)=>{const v=d.datasets[0].data[i];return {text:`${l}  ${(v/total*100).toFixed(0)}%`,fillStyle:d.datasets[0].backgroundColor[i],strokeStyle:d.datasets[0].backgroundColor[i],pointStyle:"circle",index:i};});}}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.parsed)} (${(c.parsed/total*100).toFixed(1)}%)`}}}}});
+}
+
 function renderTxList(){
   const box=$("#txList");if(!box)return;
   const recent=txns.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.id>a.id?1:-1)).slice(0,8);
   if(!recent.length){box.innerHTML='<div class="empty-mini">No transactions yet.</div>';return;}
-  box.innerHTML=recent.map(t=>{
-    const sign=t.type==="Income"?"pos":t.type==="Expense"?"neg":"";
-    const amt=(t.type==="Income"?"+":t.type==="Expense"?"−":"")+fmt(t.amount);
-    return `<div class="tx-item"><div class="tx-main"><strong>${esc(t.desc||t.cat||t.type)}</strong><span>${esc(t.date)} · ${esc(t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank||"—")}</span></div><div class="tx-amt ${sign}">${amt}</div></div>`;
+  const rows=recent.map(t=>{
+    const isIn=t.type==="Income", isOut=t.type==="Expense";
+    const debit=isOut?fmt(t.amount):(t.type==="Transfer"?fmt(t.amount):"");
+    const credit=isIn?fmt(t.amount):"";
+    const acct=t.type==="Transfer"?(esc(t.bank)+" → "+esc(t.toBank)):esc(t.bank||"—");
+    const title=esc(t.desc||t.cat||t.type);
+    return `<div class="stmt-row">
+      <div class="stmt-date">${esc((t.date||"").slice(5))}</div>
+      <div class="stmt-detail"><strong>${title}</strong><span>${esc(t.cat||t.type)} · ${acct}</span></div>
+      <div class="stmt-amt"><span class="${isOut?"neg":"muted-amt"}">${debit||""}</span></div>
+      <div class="stmt-amt"><span class="pos">${credit||""}</span></div>
+    </div>`;
   }).join("");
+  box.innerHTML=`<div class="stmt-head"><div class="stmt-date">Date</div><div class="stmt-detail">Details</div><div class="stmt-amt">Debit</div><div class="stmt-amt">Credit</div></div>${rows}`;
 }
 
 /* ---------- transactions ---------- */
@@ -1572,7 +1663,7 @@ function renderTxn(){
       <td data-l="Amount" class="num"><span class="${sign}">${amt}</span></td>
       <td data-l="Account">${t.type==="Transfer"?esc(t.bank+" → "+t.toBank):bankTag(t.bank)}</td>
       <td data-l="Method" style="color:var(--muted);font-size:.83rem">${esc(t.method||"")}</td>
-      <td data-l="">${auto?'<span class="tag done" style="font-size:.62rem">auto</span>':`<div class="row-actions"><button type="button" class="icon-btn danger" data-act="delTxn">Delete</button></div>`}</td></tr>`;
+      <td data-l="">${auto?'<span class="tag done" style="font-size:.62rem">auto</span>':`<div class="row-actions"><button type="button" class="icon-btn" data-act="editTxn">Edit</button><button type="button" class="icon-btn danger" data-act="delTxn">Delete</button></div>`}</td></tr>`;
   }).join("");
   $("#emptyTxn").style.display=txns.length?"none":"block";
   $("#tblTxn").style.display=txns.length?"":"none";
@@ -1724,16 +1815,57 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   const type=$("#tType").value;
   const amount=num($("#tAmt").value);
   if(amount<=0){toast("Enter an amount");return;}
+  let rec;
   if(type==="Transfer"){
     const from=$("#tBank").value,to=$("#tBankTo").value;
     if(from===to){toast("From and To accounts must differ");return;}
-    txns.push({id:nextTxnId(),date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:""});
+    rec={date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:""};
   }else{
-    txns.push({id:nextTxnId(),date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:""});
+    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:""};
   }
-  e.target.reset();$("#tDate").value=todayISO();syncTxnCat();setDirty(true);renderAll();
-  toast(type+" added");
+  if(editingTxn){
+    const t=txns.find(x=>x.id===editingTxn);
+    if(t){t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.desc=rec.desc;t.amount=rec.amount;t.bank=rec.bank;t.toBank=rec.toBank;t.method=rec.method;}
+    cancelEditTxn();
+    setDirty(true);renderAll();toast("Transaction updated");
+  }else{
+    rec.id=nextTxnId();txns.push(rec);
+    e.target.reset();$("#tDate").value=todayISO();syncTxnCat();setDirty(true);renderAll();
+    toast(type+" added");
+  }
 });
+function loadTxnIntoForm(t){
+  editingTxn=t.id;
+  $("#tType").value=t.type;syncTxnCat();
+  $("#tDate").value=t.date||todayISO();
+  $("#tDesc").value=t.desc||"";
+  $("#tAmt").value=t.amount||"";
+  if(t.type==="Transfer"){
+    if($("#tBank"))$("#tBank").value=t.bank||"";
+    if($("#tBankTo"))$("#tBankTo").value=t.toBank||"";
+  }else{
+    if($("#tCat"))$("#tCat").value=t.cat||"";
+    if($("#tBank"))$("#tBank").value=t.bank||"";
+    if($("#tPay"))$("#tPay").value=t.method||"";
+  }
+  // switch the submit button into "update" mode + reveal cancel
+  const submitBtn=$("#formTxn button[type=submit]");
+  if(submitBtn)submitBtn.textContent="✓ Update transaction";
+  if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="";
+  const form=$("#formTxn");if(form)form.classList.add("editing");
+  const panel=$("#panel-txn");if(panel){$$(".pill").forEach(p=>p.classList.remove("active"));const pill=document.querySelector('.pill[data-tab="txn"]');if(pill)pill.classList.add("active");$$(".panel").forEach(p=>p.classList.remove("active"));panel.classList.add("active");}
+  window.scrollTo(0,0);
+  toast("Editing "+t.id+" — change the fields and press Update");
+}
+function cancelEditTxn(){
+  editingTxn=null;
+  const form=$("#formTxn");if(form){form.reset();form.classList.remove("editing");}
+  $("#tDate").value=todayISO();syncTxnCat();
+  const submitBtn=$("#formTxn button[type=submit]");
+  if(submitBtn)submitBtn.textContent="+ Add transaction";
+  if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="none";
+}
+$("#btnCancelTxn")&&$("#btnCancelTxn").addEventListener("click",cancelEditTxn);
 $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   e.preventDefault();
   const type=$("#ldType").value;
@@ -1776,7 +1908,8 @@ document.addEventListener("click",e=>{
   const i=+tr.dataset.i;
   const done=()=>{setDirty(true);renderAll();};
   switch(btn.dataset.act){
-    case "delTxn":if(confirm("Delete this transaction?")){txns.splice(i,1);done();}break;
+    case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
+    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;

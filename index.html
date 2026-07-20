@@ -376,9 +376,6 @@
 <main id="app">
   <div class="topbar">
     <div class="logo"><div class="logo-mark">L</div><div><b>Ledgr</b><span id="ownerLabel">Personal finance</span></div></div>
-    <select id="currency" class="top-btn" style="padding:.5rem .6rem" title="Currency">
-      <option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option>
-    </select>
     <button class="top-btn" id="btnTheme" title="Switch light / dark">🌙</button>
     <button class="top-btn" id="btnSettings" title="Profile & login settings">Settings</button>
     <button class="top-btn" id="btnLock">Sign out</button>
@@ -506,6 +503,17 @@
       <table id="tblTransfer"><thead><tr><th>Date</th><th>From</th><th>To</th><th style="text-align:right">Amount</th><th>Reference</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyTransfer" style="display:none">No transfers.</div>
     </div>
+
+    <div class="section-head" style="margin-top:1.5rem"><h2>Bank statement</h2><span class="total" id="stmtHead"></span></div>
+    <div class="toolbar">
+      <select id="stmtBank" class="bank-select"></select>
+      <select id="stmtMonth"><option value="">All months</option></select>
+      <span class="sum" id="stmtClosing"></span>
+    </div>
+    <div class="table-card">
+      <table id="tblStmt"><thead><tr><th>Date</th><th>Details</th><th>Type</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyStmt" style="display:none">No transactions for this account in the selected period.</div>
+    </div>
   </section>
 
       <!-- ============ INVESTMENTS ============ -->
@@ -632,6 +640,10 @@
     <div class="set-sec" id="secProfile">
       <div class="f"><label for="stName">Your name</label><input type="text" id="stName" autocomplete="off"></div>
       <div class="f"><label for="stUser">Login ID</label><input type="text" id="stUser" autocomplete="username"></div>
+      <div class="f"><label for="stCurrency">Currency</label>
+        <select id="stCurrency"><option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option></select>
+        <div class="hint">Applies across the whole app and is stored in your ledger.</div>
+      </div>
     </div>
 
     <!-- ===== Lists ===== -->
@@ -693,6 +705,23 @@
   </div>
 </div>
 
+<!-- ======================= CLOSE POSITION MODAL ======================= -->
+<div id="closeOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:440px;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.25rem;margin-bottom:.5rem" id="closeTitle">Close position</h2>
+    <p class="sub" id="closeSub">Marks this as closed and posts the settlement to a bank account.</p>
+    <div class="auth-error" id="closeError"></div>
+    <div class="f"><label id="closeAmtLabel" for="closeAmt">Amount</label><input type="number" step="0.01" id="closeAmt" placeholder="0.00"></div>
+    <div class="f"><label for="closeDate">Date</label><input type="date" id="closeDate"></div>
+    <div class="f"><label for="closeBank" id="closeBankLabel">Bank account</label><select id="closeBank" class="bank-select" style="width:100%"></select></div>
+    <div class="rec-hint" id="closeHint" style="margin-bottom:1rem"></div>
+    <div class="stack">
+      <button class="btn primary" id="btnCloseConfirm">Confirm &amp; close</button>
+      <button class="btn ghost" id="btnCloseCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" role="status"></div>
 
 <script>
@@ -748,12 +777,14 @@ const bankBalance=(name,asOf)=>{
   expenses.forEach(e=>{if(e.bank===name&&le(e.date))bal-=e.amount;});
   transfers.forEach(t=>{if(le(t.date)){if(t.from===name)bal-=t.amt; if(t.to===name)bal+=t.amt;}});
   investments.forEach(v=>{if(v.bank===name&&le(v.date))bal-=v.amount;});
+  investments.forEach(v=>{if(v.status==="Closed"&&v.bank===name&&le(v.closedDate))bal+=(v.closedValue||0);});
   debts.forEach(d=>{if(d.bank===name&&le(d.date)){
     // money given out leaves the bank; repaid comes back. Taken adds cash, repaying it leaves.
     if(d.type==="Given")bal-=(d.amount-d.repaid);
     else bal+=(d.amount-d.repaid);
   }});
   loanPays.forEach(p=>{if(p.bank===name&&le(p.date))bal-=p.amount;});
+  loans.forEach(l=>{if(l.status==="Closed"&&l.closeBank===name&&le(l.closedDate))bal-=(l.closeAmount||0);});
   return r2(bal);
 };
 const refreshBankSelects=()=>{
@@ -966,7 +997,9 @@ function parseWorkbook(buf,name){
     const amount=num(g(r,"amount invested")||g(r,"amount"));
     investments.push({date:normDate(g(r,"date"))||todayISO(),name:String(g(r,"name")||"").trim(),
       type:String(g(r,"type")||"Other").trim()||"Other",amount,current:num(g(r,"current value"))||amount,
-      bank:String(g(r,"bank")||"").trim(),notes:String(g(r,"notes")||"")});
+      bank:String(g(r,"bank")||"").trim(),
+      status:String(g(r,"status")||"").trim()||"Open",closedDate:normDate(g(r,"closed date")),closedValue:num(g(r,"closed value")),
+      notes:String(g(r,"notes")||"")});
   });
   investments=investments.filter(r=>r.name||r.amount);
 
@@ -987,6 +1020,8 @@ function parseWorkbook(buf,name){
       lender:String(g(r,"lender")||"").trim(),type:String(g(r,"type")||"Housing").trim()||"Housing",
       principal:num(g(r,"principal")),rate:num(g(r,"interest rate")||g(r,"rate")),
       emi:num(g(r,"emi")),tenure:Math.round(num(g(r,"tenure months")||g(r,"tenure"))),
+      status:String(g(r,"status")||"").trim()||"Open",closedDate:normDate(g(r,"closed date")),
+      closeBank:String(g(r,"close bank")||"").trim(),closeAmount:num(g(r,"close amount")),
       notes:String(g(r,"notes")||"")});
   });
   loans=loans.filter(r=>r.lender||r.principal);
@@ -1022,9 +1057,6 @@ function parseWorkbook(buf,name){
   refreshSelects();
 
   fileName=name;
-  const sel=$("#currency");
-  if(![...sel.options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;sel.appendChild(o);}
-  sel.value=currency;
   
   setDirty(false);
 }
@@ -1041,12 +1073,12 @@ function buildWorkbook(){
     {header:["Date","Source","Category","Amount","Bank","Notes"]});
   const wsExp=XLSX.utils.json_to_sheet(expenses.map(r=>({"Date":r.date,"Category":r.category,"Description":r.desc,"Amount":r.amount,"Bank":r.bank||"","Payment Method":r.pay})),
     {header:["Date","Category","Description","Amount","Bank","Payment Method"]});
-  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Bank":r.bank||"","Notes":r.notes})),
-    {header:["Date","Name","Type","Amount Invested","Current Value","Bank","Notes"]});
+  const wsInv=XLSX.utils.json_to_sheet(investments.map(r=>({"Date":r.date,"Name":r.name,"Type":r.type,"Amount Invested":r.amount,"Current Value":r.current,"Bank":r.bank||"","Status":r.status||"Open","Closed Date":r.closedDate||"","Closed Value":r.closedValue||"","Notes":r.notes})),
+    {header:["Date","Name","Type","Amount Invested","Current Value","Bank","Status","Closed Date","Closed Value","Notes"]});
   const wsDebt=XLSX.utils.json_to_sheet(debts.map(r=>({"Date":r.date,"Person":r.person,"Type":r.type,"Amount":r.amount,"Repaid":r.repaid,"Due Date":r.due,"Bank":r.bank||"","Notes":r.notes})),
     {header:["Date","Person","Type","Amount","Repaid","Due Date","Bank","Notes"]});
-  const wsLoan=XLSX.utils.json_to_sheet(loans.map(r=>({"Date":r.date,"Lender":r.lender,"Type":r.type,"Principal":r.principal,"Interest Rate":r.rate,"EMI":r.emi,"Tenure Months":r.tenure,"Notes":r.notes})),
-    {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Notes"]});
+  const wsLoan=XLSX.utils.json_to_sheet(loans.map(r=>({"Date":r.date,"Lender":r.lender,"Type":r.type,"Principal":r.principal,"Interest Rate":r.rate,"EMI":r.emi,"Tenure Months":r.tenure,"Status":r.status||"Open","Closed Date":r.closedDate||"","Close Bank":r.closeBank||"","Close Amount":r.closeAmount||"","Notes":r.notes})),
+    {header:["Date","Lender","Type","Principal","Interest Rate","EMI","Tenure Months","Status","Closed Date","Close Bank","Close Amount","Notes"]});
   const wsLpay=XLSX.utils.json_to_sheet(loanPays.map(r=>({"Date":r.date,"Lender":r.lender,"Kind":r.kind,"Amount":r.amount,"Bank":r.bank||"","Notes":r.notes})),
     {header:["Date","Lender","Kind","Amount","Bank","Notes"]});
   const settings=[{Key:"Currency",Value:currency},{Key:"Owner",Value:owner},{Key:"Username",Value:username},{Key:"PasswordHash",Value:passHash},{Key:"Theme",Value:theme}];
@@ -1225,7 +1257,7 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   if(pin.length<4){err.textContent="Password must be at least 4 characters.";err.style.display="block";return;}
   if(pin!==pin2){err.textContent="Passwords don’t match.";err.style.display="block";return;}
   owner=$("#cName").value.trim();username=user;
-  currency=$("#cCurrency").value;$("#currency").value=currency;
+  currency=$("#cCurrency").value;
   passHash=await hashPin(pin);sessionPass=pin;
   income=[];expenses=[];investments=[];debts=[];loans=[];loanPays=[];
   if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
@@ -1304,6 +1336,8 @@ $("#btnSettings").addEventListener("click",()=>{
   $("#stName").value=owner;$("#stUser").value=username;
   $("#stCur").value="";$("#stNew").value="";$("#stNew2").value="";
   $("#stListValues").value=lists[$("#stListPick").value].join("\n");
+  $("#stCurrency").value=currency;
+  if(![...$("#stCurrency").options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;$("#stCurrency").appendChild(o);$("#stCurrency").value=currency;}
   // reconcile setup
   const rb=$("#recBank");
   rb.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
@@ -1321,6 +1355,57 @@ function setSettingsTab(id){
 }
 $$(".set-tab").forEach(t=>t.addEventListener("click",()=>setSettingsTab(t.dataset.sec)));
 $("#btnVerifyBanks")&&$("#btnVerifyBanks").addEventListener("click",()=>{$("#btnSettings").click();setSettingsTab("secReconcile");});
+
+/* ---------- close position (investment / loan) ---------- */
+let closeCtx={kind:null,idx:-1};
+function openCloseModal(kind,idx){
+  closeCtx={kind,idx};
+  const err=$("#closeError");err.style.display="none";
+  const bankSel=$("#closeBank");
+  bankSel.innerHTML=banks.length?banks.map(b=>`<option>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank first —</option>';
+  $("#closeDate").value=todayISO();
+  if(kind==="inv"){
+    const r=investments[idx];
+    $("#closeTitle").textContent="Close / redeem investment";
+    $("#closeSub").textContent=`Redeeming “${r.name}”. The proceeds are credited to the bank you pick, and the line is marked Closed.`;
+    $("#closeAmtLabel").textContent="Redemption value received";
+    $("#closeBankLabel").textContent="Credit proceeds to bank";
+    $("#closeAmt").value=r.current||r.amount||"";
+    if(r.bank&&banks.some(b=>b.name===r.bank))bankSel.value=r.bank;
+    const gain=(r.current||0)-(r.amount||0);
+    $("#closeHint").innerHTML=`Invested ${fmt(r.amount)} · current ${fmt(r.current)} · <span class="${gain>=0?'pos':'neg'}">${gain>=0?'gain':'loss'} ${fmt(Math.abs(gain))}</span>. Adjust the value if your actual payout differs.`;
+  }else{
+    const r=loans[idx];
+    const rem=loanRemaining(r);
+    $("#closeTitle").textContent="Close / foreclose loan";
+    $("#closeSub").textContent=`Closing “${r.lender}”. The payoff amount is debited from the bank you pick, and the loan is marked Closed.`;
+    $("#closeAmtLabel").textContent="Final payoff amount";
+    $("#closeBankLabel").textContent="Pay off from bank";
+    $("#closeAmt").value=rem||"";
+    if(r.bank&&banks.some(b=>b.name===r.bank))bankSel.value=r.bank;
+    $("#closeHint").innerHTML=`Outstanding by schedule: ${fmt(rem)}. Enter the actual settlement amount (may be lower after negotiation).`;
+  }
+  $("#closeOverlay").style.display="flex";
+}
+$("#btnCloseCancel").addEventListener("click",()=>{$("#closeOverlay").style.display="none";});
+$("#closeOverlay").addEventListener("click",e=>{if(e.target.id==="closeOverlay")$("#closeOverlay").style.display="none";});
+$("#btnCloseConfirm").addEventListener("click",()=>{
+  const err=$("#closeError");err.style.display="none";
+  const amt=num($("#closeAmt").value),date=$("#closeDate").value,bank=$("#closeBank").value;
+  if(!bank){err.textContent="Add a bank account first (Banks tab).";err.style.display="block";return;}
+  if(!date){err.textContent="Pick the date.";err.style.display="block";return;}
+  if(amt<0){err.textContent="Amount can’t be negative.";err.style.display="block";return;}
+  if(closeCtx.kind==="inv"){
+    const r=investments[closeCtx.idx];
+    r.status="Closed";r.closedDate=date;r.closedValue=amt;r.bank=bank;r.current=amt;
+  }else{
+    const r=loans[closeCtx.idx];
+    r.status="Closed";r.closedDate=date;r.closeAmount=amt;r.closeBank=bank;
+  }
+  $("#closeOverlay").style.display="none";
+  setDirty(true);renderAll();
+  toast("Marked closed — settlement posted to "+bank);
+});
 
 /* bank statement verification */
 $("#btnReconcile").addEventListener("click",()=>{
@@ -1382,6 +1467,7 @@ $("#btnSettingsSave").addEventListener("click",async()=>{
     passHash=await hashPin(nw);sessionPass=nw;passwordChanged=true;
   }
   owner=name;username=user;
+  if($("#stCurrency").value)currency=$("#stCurrency").value;
   $("#ownerLabel").textContent=owner?owner+"’s ledger":"Personal finance";
   if(storageMode==="github"&&gh.token&&sessionPass)await saveProfile(sessionPass);
   setDirty(true);
@@ -1424,9 +1510,8 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   $$(".panel").forEach(p=>p.classList.remove("active"));
   $("#panel-"+b.dataset.tab).classList.add("active");
   if(b.dataset.tab==="home")renderOverview();
-  if(b.dataset.tab==="bank"){refreshBankSelects();renderBank();renderTransfer();}
+  if(b.dataset.tab==="bank"){refreshBankSelects();renderBank();renderTransfer();renderStatement();}
 }));
-$("#currency").addEventListener("change",e=>{currency=e.target.value;setDirty(true);renderAll();});
 $("#btnSave").addEventListener("click",saveFile);
 $("#btnTheme").addEventListener("click",()=>{applyTheme(theme==="dark"?"light":"dark");setDirty(true);});
 
@@ -1454,6 +1539,7 @@ const sumBy=(arr,pred)=>arr.filter(pred).reduce((s,r)=>s+r.amount,0);
 const outstanding=r=>Math.max(0,r.amount-r.repaid);
 const paidForLoan=lender=>loanPays.filter(p=>p.lender.trim().toLowerCase()===lender.trim().toLowerCase()).reduce((s,p)=>s+p.amount,0);
 const loanRemaining=l=>{
+  if(l.status==="Closed")return 0;
   const paid=paidForLoan(l.lender);
   const total=(l.emi>0&&l.tenure>0)?l.emi*l.tenure:l.principal;
   return Math.max(0,total-paid);
@@ -1681,16 +1767,17 @@ function renderInv(){
       <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveInv">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
     const g=r.current-r.amount,cls=g>0?"pos":g<0?"neg":"";
-    return `<tr data-i="${i}">
+    const invClosed=r.status==="Closed";
+    return `<tr data-i="${i}"${invClosed?' style="opacity:.62"':''}>
       <td data-l="Date">${esc(r.date)}</td>
-      <td data-l="Name"><strong>${esc(r.name)}</strong></td>
+      <td data-l="Name"><strong>${esc(r.name)}</strong>${invClosed?`<span style="display:block;font-size:.72rem;color:var(--muted)">Closed ${esc(r.closedDate||"")} · ${fmt(r.closedValue||0)} to ${esc(r.bank||"bank")}</span>`:""}</td>
       <td data-l="Type"><span class="tag iv">${esc(r.type)}</span></td>
       <td data-l="Bank">${bankTag(r.bank)}</td>
       <td data-l="Invested" class="num">${fmt(r.amount)}</td>
-      <td data-l="Current" class="num">${fmt(r.current)}</td>
+      <td data-l="Current" class="num">${invClosed?'<span class="tag done">Closed ✓</span>':fmt(r.current)}</td>
       <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
       <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editInv">Edit</button><button type="button" class="icon-btn danger" data-act="delInv">Delete</button></div></td></tr>`;
+      <td data-l=""><div class="row-actions">${invClosed?`<button type="button" class="icon-btn" data-act="reopenInv">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeInv" title="Redeem / close">Close</button><button type="button" class="icon-btn" data-act="editInv">Edit</button>`}<button type="button" class="icon-btn danger" data-act="delInv">Delete</button></div></td></tr>`;
   }).join("");
   $("#emptyInv").style.display=investments.length?"none":"block";
   $("#tblInv").style.display=investments.length?"":"none";
@@ -1779,6 +1866,67 @@ function renderBank(){
   if(emptyEl)emptyEl.style.display=banks.length?"none":"block";
 }
 
+function bankLedger(name){
+  // collect every movement on this account as {date, detail, type, amt(+in/-out)}
+  const rows=[];
+  income.forEach(i=>{if(i.bank===name)rows.push({date:i.date,detail:i.source||i.category||"Income",type:"Income",amt:i.amount});});
+  expenses.forEach(e=>{if(e.bank===name)rows.push({date:e.date,detail:e.desc||e.category||"Expense",type:"Expense",amt:-e.amount});});
+  transfers.forEach(t=>{
+    if(t.from===name)rows.push({date:t.date,detail:"Transfer to "+t.to+(t.ref?" · "+t.ref:""),type:"Transfer",amt:-t.amt});
+    if(t.to===name)rows.push({date:t.date,detail:"Transfer from "+t.from+(t.ref?" · "+t.ref:""),type:"Transfer",amt:t.amt});
+  });
+  investments.forEach(v=>{
+    if(v.bank===name)rows.push({date:v.date,detail:"Invested in "+v.name,type:"Investment",amt:-v.amount});
+    if(v.status==="Closed"&&v.bank===name&&v.closedDate)rows.push({date:v.closedDate,detail:"Redeemed "+v.name,type:"Redemption",amt:(v.closedValue||0)});
+  });
+  debts.forEach(d=>{if(d.bank===name){
+    const net=d.amount-d.repaid;
+    if(d.type==="Given")rows.push({date:d.date,detail:"Lent to "+d.person,type:"Debt",amt:-net});
+    else rows.push({date:d.date,detail:"Borrowed from "+d.person,type:"Debt",amt:net});
+  }});
+  loanPays.forEach(p=>{if(p.bank===name)rows.push({date:p.date,detail:p.lender+" · "+p.kind,type:"Loan payment",amt:-p.amount});});
+  loans.forEach(l=>{if(l.status==="Closed"&&l.closeBank===name&&l.closedDate)rows.push({date:l.closedDate,detail:"Closed loan "+l.lender,type:"Loan closure",amt:-(l.closeAmount||0)});});
+  rows.sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  return rows;
+}
+function renderStatement(){
+  const sel=$("#stmtBank");if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— no banks —</option>';
+  const name=sel.value;
+  const bank=banks.find(b=>b.name===name);
+  const opening=bank?bank.opening:0;
+  const all=name?bankLedger(name):[];
+  // month options
+  const months=[...new Set(all.map(r=>monthKey(r.date)))].sort().reverse();
+  const mSel=$("#stmtMonth"),curM=mSel.value;
+  mSel.innerHTML='<option value="">All months</option>'+months.map(m=>{
+    const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});
+    return `<option value="${m}"${m===curM?" selected":""}>${l}</option>`;}).join("");
+  const fm=mSel.value;
+  // running balance across ALL rows; show filtered slice but balance reflects true running total
+  let bal=opening;
+  const withBal=all.map(r=>{bal=r2(bal+r.amt);return {...r,bal};});
+  const shown=fm?withBal.filter(r=>r.date&&r.date.startsWith(fm)):withBal;
+  const body=$("#tblStmt tbody");
+  if(!name){body.innerHTML="";$("#emptyStmt").style.display="block";$("#stmtHead").textContent="";$("#stmtClosing").textContent="";return;}
+  const openingRowShown=!fm;
+  body.innerHTML=(openingRowShown?`<tr style="opacity:.75"><td data-l="Date">${esc(bank?bank.name:"")}</td><td data-l="Details"><em>Opening balance</em></td><td data-l="Type">—</td><td data-l="Debit" class="num"></td><td data-l="Credit" class="num"></td><td data-l="Balance" class="num"><strong>${fmt(opening)}</strong></td></tr>`:"")
+    +shown.map(r=>`<tr>
+      <td data-l="Date">${esc(r.date)}</td>
+      <td data-l="Details">${esc(r.detail)}</td>
+      <td data-l="Type"><span class="tag" style="background:var(--wash-strong);color:var(--muted)">${esc(r.type)}</span></td>
+      <td data-l="Debit" class="num">${r.amt<0?`<span class="neg">${fmt(-r.amt)}</span>`:""}</td>
+      <td data-l="Credit" class="num">${r.amt>0?`<span class="pos">${fmt(r.amt)}</span>`:""}</td>
+      <td data-l="Balance" class="num"><strong>${fmt(r.bal)}</strong></td></tr>`).join("");
+  $("#emptyStmt").style.display=(shown.length||openingRowShown)?"none":"block";
+  $("#tblStmt").style.display=(shown.length||openingRowShown)?"":"none";
+  const closing=withBal.length?withBal[withBal.length-1].bal:opening;
+  $("#stmtHead").textContent=name?`${all.length} transaction${all.length===1?"":"s"}`:"";
+  const debits=shown.filter(r=>r.amt<0).reduce((s,r)=>s-r.amt,0);
+  const credits=shown.filter(r=>r.amt>0).reduce((s,r)=>s+r.amt,0);
+  $("#stmtClosing").textContent=`Debits ${fmt(debits)} · Credits ${fmt(credits)} · Closing ${fmt(closing)}`;
+}
 function renderTransfer(){
   const q=$("#searchTransfer").value.trim().toLowerCase();
   const from=$("#fromTransfer").value, to=$("#toTransfer").value;
@@ -1812,10 +1960,11 @@ function renderLoan(){
       <td data-l="Remaining" class="num"><input type="number" step="1" class="e-tenure" value="${r.tenure}" title="Tenure months"></td>
       <td data-l="Notes"><input type="text" class="e-notes" value="${esc(r.notes)}"></td>
       <td data-l=""><div class="row-actions"><button type="button" class="icon-btn confirm" data-act="saveLoan">Save</button><button type="button" class="icon-btn" data-act="cancel">Cancel</button></div></td></tr>`;
-    const paid=paidForLoan(r.lender),rem=loanRemaining(r),closed=rem<=0;
-    return `<tr data-i="${i}">
+    const paid=paidForLoan(r.lender),rem=loanRemaining(r),closed=r.status==="Closed"||rem<=0;
+    const manualClosed=r.status==="Closed";
+    return `<tr data-i="${i}"${manualClosed?' style="opacity:.62"':''}>
       <td data-l="Start">${esc(r.date)}</td>
-      <td data-l="Lender"><strong>${esc(r.lender)}</strong>${r.tenure?`<span style="display:block;font-size:.72rem;color:var(--muted)">${r.tenure} months</span>`:""}</td>
+      <td data-l="Lender"><strong>${esc(r.lender)}</strong>${manualClosed?`<span style="display:block;font-size:.72rem;color:var(--muted)">Closed ${esc(r.closedDate||"")}${r.closeAmount?` · ${fmt(r.closeAmount)} from ${esc(r.closeBank||"bank")}`:""}</span>`:r.tenure?`<span style="display:block;font-size:.72rem;color:var(--muted)">${r.tenure} months</span>`:""}</td>
       <td data-l="Type"><span class="tag iv" style="background:rgba(94,224,230,.14);color:#5EE0E6">${esc(r.type)}</span></td>
       <td data-l="Principal" class="num">${fmt(r.principal)}</td>
       <td data-l="Rate" class="num">${r.rate?r.rate.toFixed(2)+"%":"—"}</td>
@@ -1823,7 +1972,7 @@ function renderLoan(){
       <td data-l="Paid so far" class="num"><span class="pos">${fmt(paid)}</span></td>
       <td data-l="Remaining" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<span class="neg">${fmt(rem)}</span>`}</td>
       <td data-l="Notes" style="color:var(--muted);font-size:.83rem">${esc(r.notes)}</td>
-      <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editLoan">Edit</button><button type="button" class="icon-btn danger" data-act="delLoan">Delete</button></div></td></tr>`;
+      <td data-l=""><div class="row-actions">${manualClosed?`<button type="button" class="icon-btn" data-act="reopenLoan">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeLoan" title="Foreclose / close">Close</button><button type="button" class="icon-btn" data-act="editLoan">Edit</button>`}<button type="button" class="icon-btn danger" data-act="delLoan">Delete</button></div></td></tr>`;
   }).join("");
   $("#emptyLoan").style.display=loans.length?"none":"block";
   $("#tblLoan").style.display=loans.length?"":"none";
@@ -1868,7 +2017,7 @@ function renderLoan(){
 
 function renderAll(){
   try{refreshBankSelects();}catch(e){console.error("bankSelects",e);}
-  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt,renderBank,renderTransfer].forEach(fn=>{
+  [renderOverview,renderInc,renderExp,renderInv,renderLoan,renderDebt,renderBank,renderTransfer,renderStatement].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -1927,6 +2076,10 @@ document.addEventListener("click",e=>{
     case "editInc":edit("inc",i);break;
     case "editExp":edit("exp",i);break;
     case "editInv":edit("inv",i);break;
+    case "closeInv":openCloseModal("inv",i);break;
+    case "reopenInv":if(confirm(`Reopen "${investments[i].name}"? The redemption credit to your bank will be removed.`)){investments[i].status="Open";investments[i].closedDate="";investments[i].closedValue=0;done();}break;
+    case "closeLoan":openCloseModal("loan",i);break;
+    case "reopenLoan":if(confirm(`Reopen the loan "${loans[i].lender}"? The closing debit will be removed.`)){loans[i].status="Open";loans[i].closedDate="";loans[i].closeAmount=0;loans[i].closeBank="";done();}break;
     case "editDebt":edit("debt",i);break;
     case "editLoan":edit("loan",i);break;
     case "editLpay":edit("lpay",i);break;
@@ -2076,6 +2229,8 @@ document.addEventListener("click",e=>{
   if(confirm("Delete this transfer?")){transfers.splice(i,1);setDirty(true);renderAll();}
 });
 $("#searchBank").addEventListener("input",renderBank);
+$("#stmtBank").addEventListener("change",renderStatement);
+$("#stmtMonth").addEventListener("change",renderStatement);
 $("#searchTransfer").addEventListener("input",renderTransfer);
 $("#fromTransfer").addEventListener("input",renderTransfer);
 $("#toTransfer").addEventListener("input",renderTransfer);

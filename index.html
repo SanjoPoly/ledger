@@ -304,7 +304,13 @@
   #tblImp input[type="date"],#tblImp select,#tblImp .imp-desc{width:100%}
   .imp-actions{display:flex;gap:.6rem;margin-top:.9rem;align-items:center;flex-wrap:wrap}
   .imp-actions .btn-accent{min-height:46px}
-  @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}}
+  tr.imp-editor td{background:var(--wash);padding:.85rem .9rem}
+  .imp-ed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.65rem;align-items:end}
+  .imp-ed-grid label{display:flex;flex-direction:column;gap:.3rem;font-size:.65rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .imp-ed-grid input,.imp-ed-grid select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:9px;padding:.55rem .6rem;font-size:.86rem;color:var(--text)}
+  .imp-ed-actions{display:flex;gap:.5rem;align-items:end}
+  .imp-ed-actions .btn-accent{min-height:42px;padding:.5rem 1rem}
+  @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}.imp-ed-grid{grid-template-columns:1fr 1fr}}
 
   /* fixed geometry so columns stop fighting each other */
   #tblLD{min-width:1150px;table-layout:fixed}
@@ -2350,8 +2356,9 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
    Upload a PDF / TXT statement → parse transactions → review,
    fix types & categories → post to the ledger.
 ============================================================ */
-let importRows=[];      // {date,desc,amount,type,cat,include,dup,auto,note}
+let importRows=[];      // {date,desc,amount,type,cat,method,include,dup,auto}
 let importBank="", importFile="";
+let importExisting=new Set();   // amounts already on the selected bank's ledger
 
 /* pdf.js is loaded only when a PDF is actually chosen */
 let pdfjsReady=null;
@@ -2367,9 +2374,29 @@ function loadPdfJs(){
   });
   return pdfjsReady;
 }
+async function openPdfDocument(buf){
+  /* password-protected statements: pdf.js rejects with PasswordException;
+     code 1 = needs a password, code 2 = the one given was wrong.
+     The buffer is transferred to the worker on every attempt, so clone it each try. */
+  let password;
+  for(let attempt=0;attempt<4;attempt++){
+    try{
+      return await window.pdfjsLib.getDocument({data:buf.slice(0),password}).promise;
+    }catch(err){
+      if(err&&err.name==="PasswordException"){
+        const msg=err.code===2
+          ?"That password didn't open the PDF. Try again:"
+          :"This PDF is password-protected.\nEnter its password (often your account or customer ID — check the bank's email):";
+        password=prompt(msg);
+        if(password===null)throw new Error("Password entry cancelled — the statement wasn't read.");
+      }else throw err;
+    }
+  }
+  throw new Error("Too many incorrect password attempts — the statement wasn't read.");
+}
 async function pdfToLines(buf){
   await loadPdfJs();
-  const doc=await window.pdfjsLib.getDocument({data:buf}).promise;
+  const doc=await openPdfDocument(buf);
   const lines=[];
   for(let p=1;p<=doc.numPages;p++){
     const page=await doc.getPage(p);
@@ -2401,14 +2428,15 @@ function impParseDate(s){
 }
 function impDetectNature(desc){
   const d=desc.toLowerCase();
-  if(/\bint(erest)?\b|int\.pd|sb int|savings interest/.test(d))return {type:"Income",cat:"Interest",auto:true};
+  if(/\bint(erest)?\b|int\.pd|sb ?int|savings interest/.test(d))return {type:"Income",cat:"Interest",auto:true};
   if(/\bdiv(idend)?\b|dividend/.test(d))return {type:"Income",cat:"Dividends / Profit",auto:true};
   if(/salary|payroll|sal cr/.test(d))return {type:"Income",cat:"Salary",auto:true};
   return null;
 }
 function parseStatementText(lines){
   const SKIP=/opening balance|closing balance|balance b\/f|balance c\/f|brought forward|carried forward|statement (of|for)|page \d+|^date\b.*(particular|narration|description|details)|total\b|^\s*$/i;
-  const AMT=/-?(?:\d{1,3}(?:,\d{2,3})+|\d+)\.\d{2}\b/g;
+  const DEC=/-?(?:\d{1,3}(?:,\d{2,3})+|\d+)\.\d{2}\b/;                    // decimal amount — marks a complete row
+  const TOK=/(?<![A-Za-z@.\d])-?(?:\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?!\d)/g;  // any standalone number
   const DATE_HEAD=/^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{1,2}[ \-][A-Za-z]{3,9}[ \-]\d{2,4})/;
   const rows=[];let pending=null;
   const flush=()=>{if(pending){rows.push(pending);pending=null;}};
@@ -2418,47 +2446,57 @@ function parseStatementText(lines){
     const date=impParseDate(line);
     if(date){
       flush();
-      const dm=DATE_HEAD.exec(line);                       // strip exactly the matched date, nothing more
+      const dm=DATE_HEAD.exec(line);
       pending={date,text:(dm?line.slice(dm[0].length):line).trim(),extra:0};
     }else if(pending&&pending.extra<3){
       pending.text+=" "+line;pending.extra++;
     }
-    if(pending){
-      AMT.lastIndex=0;
-      if(AMT.test(pending.text))flush();
-    }
+    if(pending&&DEC.test(pending.text))flush();   // decimal amount present → the money columns arrived
   }
   flush();
-  /* second pass: pull numbers out of each row's text */
+  /* second pass: read the money columns from each row */
   const out=[];
   rows.forEach(r=>{
-    AMT.lastIndex=0;
-    const matches=r.text.match(AMT)||[];
-    if(!matches.length)return;
-    const nums=matches.map(a=>parseFloat(a.replace(/,/g,"")));
-    const balance=matches.length>=2?nums[nums.length-1]:null;
-    let amount=matches.length>=2?nums[nums.length-2]:nums[0];
-    let dir=null;                              // "cr" | "dr" | null
-    if(amount<0){dir="dr";amount=Math.abs(amount);}
-    /* markers: after the amounts ("1,500.00 Dr") or as narration suffixes ("NEFT CR", "ACH CR") */
-    const tail=r.text.slice(r.text.indexOf(matches[0]));
-    if(/\b(cr|credit)\b/i.test(tail)&&!/credit card/i.test(tail))dir=dir||"cr";
-    if(/\b(dr|debit)\b/i.test(tail)&&!/debit card/i.test(tail))dir=dir||"dr";
+    const toks=[...r.text.matchAll(TOK)];
+    if(!toks.length)return;
+    const nums=toks.map(t=>parseFloat(t[0].replace(/,/g,"")));
+    const n=toks.length;
+    let amount=null,balance=null,dir=null,cut=null;
+    /* Withdrawal | Deposit | Balance — the last three numbers, balance carrying decimals */
+    if(n>=3&&/\./.test(toks[n-1][0])){
+      const wd=Math.abs(nums[n-3]), dep=Math.abs(nums[n-2]);
+      if(!(wd>0&&dep>0)){                       // exactly one side should have money
+        balance=nums[n-1];
+        amount=wd>0?wd:dep;
+        dir=wd>0?"dr":"cr";
+        cut=toks[n-3].index;
+      }
+    }
+    if(amount==null){                            // Amount [Balance] layouts
+      if(n>=2){amount=Math.abs(nums[n-2]);balance=nums[n-1];cut=toks[n-2].index;}
+      else{amount=Math.abs(nums[0]);cut=toks[0].index;}
+      if(nums[n>=2?n-2:0]<0)dir="dr";
+    }
+    /* markers only when the columns didn't already decide */
     if(!dir){
-      if(/\b(?:neft|ach|imps|rtgs|upi|sal|salary|int)[ \.\-]?cr\b/i.test(r.text))dir="cr";
+      const tail=r.text.slice(cut);
+      if(/\b(cr|credit)\b/i.test(tail)&&!/credit card/i.test(tail))dir="cr";
+      else if(/\b(dr|debit)\b/i.test(tail)&&!/debit card/i.test(tail))dir="dr";
+      else if(/\b(?:neft|ach|imps|rtgs|upi|sal|salary|int)[ \.\-]?cr\b/i.test(r.text))dir="cr";
       else if(/\b(?:neft|ach|imps|rtgs|upi)[ \.\-]?dr\b/i.test(r.text))dir="dr";
     }
-    /* narration: drop the amounts, lone ref numbers, value dates, and marker words */
-    let desc=r.text;
-    matches.forEach(a=>{desc=desc.replace(a,"");});
-    desc=desc.replace(/\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g,"")
-             .replace(/\b\d{6,}\b/g,"")
-             .replace(/\b(cr|dr|credit|debit)\b/gi,"")
-             .replace(/[|\u00b7]+/g," ").replace(/[\/\-]{2,}/g," ").replace(/\s+/g," ").trim().slice(0,80);
+    /* narration = everything before the money columns, cleaned up */
+    let desc=r.text.slice(0,cut);
+    desc=desc.replace(/\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g,"")   // value dates
+             .replace(/\b[A-Z]{1,2}\d{6,}\b/g,"")                                // tran ids like S7436172
+             .replace(/\b\d{6,}\b/g,"")                                          // long reference numbers
+             .replace(/\b(cr|dr|credit|debit|tfr|opnbal)\b/gi,"")
+             .replace(/\b0+\b/g,"")
+             .replace(/[|\u00b7]+/g," ").replace(/[\/\-]{2,}/g," ").replace(/\s+/g," ").replace(/^[\/\- ]+|[\/\- ]+$/g,"").trim().slice(0,80);
     if(amount>0)out.push({date:r.date,desc:desc||"(no narration)",amount:r2(amount),balance,dir});
   });
-  /* third pass: use running-balance deltas to fix direction (statement may run either way) */
-  const score=arr=>{let s=0,prev=null;arr.forEach(t=>{if(t.balance!=null&&prev!=null){const d=r2(t.balance-prev);if(Math.abs(d-t.amount)<0.02||Math.abs(d+t.amount)<0.02)s++;}if(t.balance!=null)prev=t.balance;});return s;};
+  /* third pass: running-balance deltas confirm or fix direction (statement may run either way) */
+  const score=arr=>{let sc=0,prev=null;arr.forEach(t=>{if(t.balance!=null&&prev!=null){const d=r2(t.balance-prev);if(Math.abs(d-t.amount)<0.02||Math.abs(d+t.amount)<0.02)sc++;}if(t.balance!=null)prev=t.balance;});return sc;};
   const fwd=score(out), rev=score(out.slice().reverse());
   const ordered=rev>fwd?out.slice().reverse():out;
   let prev=null;
@@ -2478,23 +2516,73 @@ function impCatOptions(type,sel){
   const src=type==="Income"?lists.incomeCats:lists.expenseCats;
   return src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
 }
+let impEditIdx=-1;
+function impMethodOptions(sel){
+  const base=lists.payMethods.slice();
+  if(sel&&!base.includes(sel))base.unshift(sel);
+  if(!base.includes("Bank Import"))base.push("Bank Import");
+  return base.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
+}
 function renderImport(){
   const body=$("#tblImp tbody");if(!body)return;
-  body.innerHTML=importRows.map((t,i)=>`<tr data-imp="${i}" class="${t.dup?"dup-row":""}">
+  body.innerHTML=importRows.map((t,i)=>{
+    const isIn=t.type==="Income";
+    const row=`<tr data-imp="${i}" class="${t.dup?"dup-row":""}">
     <td data-l="Include" class="chk"><input type="checkbox" class="imp-chk"${t.include?" checked":""}></td>
     <td data-l="Date"><input type="date" class="imp-date" value="${esc(t.date)}"></td>
     <td data-l="Description" class="imp-desc-cell"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
-    <td data-l="Amount" class="num">${fmt(t.amount)}</td>
-    <td data-l="Type"><select class="imp-type"><option${t.type==="Income"?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></td>
+    <td data-l="Amount" class="num"><span class="${isIn?"pos":"neg"}">${isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
+    <td data-l="Type"><select class="imp-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></td>
     <td data-l="Category"><select class="imp-cat">${impCatOptions(t.type,t.cat)}</select></td>
-    <td data-l="Note">${t.dup?'<span class="dup-chip">⚠ duplicate?</span>':""}${t.auto?'<span class="auto-chip">✦ auto</span>':""}</td>
-  </tr>`).join("");
+    <td data-l="Note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button> ${t.dup?'<span class="dup-chip">\u26a0 duplicate?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
+  </tr>`;
+    /* expanded editor: the same fields as the transaction entry screen */
+    const ed=impEditIdx===i?`<tr class="imp-editor"><td colspan="7"><div class="imp-ed-grid">
+      <label>Date<input type="date" class="imp-e-date" value="${esc(t.date)}"></label>
+      <label>Type<select class="imp-e-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></label>
+      <label>${isIn?"Source":"Category"}<select class="imp-e-cat">${impCatOptions(t.type,t.cat)}</select></label>
+      <label>Description<input type="text" class="imp-e-desc" value="${esc(t.desc)}"></label>
+      <label>Amount<input type="number" class="imp-e-amt" min="0" step="0.01" value="${t.amount}"></label>
+      <label>Payment method<select class="imp-e-method">${impMethodOptions(t.method||"Bank Import")}</select></label>
+      <div class="imp-ed-actions"><button type="button" class="btn-accent imp-apply">Apply</button><button type="button" class="icon-btn imp-cancel">Close</button></div>
+    </div></td></tr>`:"";
+    return row+ed;
+  }).join("");
   const inc=importRows.filter(t=>t.include);
-  $("#impSummary").textContent=`${importRows.length} found · ${inc.length} selected · ${importRows.filter(t=>t.dup).length} possible duplicate${importRows.filter(t=>t.dup).length===1?"":"s"}`;
+  const dups=importRows.filter(t=>t.dup).length;
+  $("#impSummary").textContent=`${importRows.length} found \u00b7 ${inc.length} selected \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`;
   $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
   $("#btnImpPost").disabled=!inc.length;
 }
+/* row editor open/close/apply */
+$("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
+  if(e.target.classList.contains("imp-edit")){
+    const tr=e.target.closest("tr[data-imp]");if(!tr)return;
+    const i=+tr.dataset.imp;
+    impEditIdx=impEditIdx===i?-1:i;
+    renderImport();return;
+  }
+  if(e.target.classList.contains("imp-cancel")){impEditIdx=-1;renderImport();return;}
+  if(e.target.classList.contains("imp-apply")){
+    const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
+    const t=importRows[impEditIdx];if(!t)return;
+    t.date=ed.querySelector(".imp-e-date").value||t.date;
+    t.type=ed.querySelector(".imp-e-type").value;
+    t.cat=ed.querySelector(".imp-e-cat").value;
+    t.desc=ed.querySelector(".imp-e-desc").value.trim()||t.desc;
+    const amt=num(ed.querySelector(".imp-e-amt").value);
+    if(amt>0)t.amount=r2(amt);
+    t.method=ed.querySelector(".imp-e-method").value;
+    t.dup=importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
+    impEditIdx=-1;renderImport();
+  }
+});
 $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
+  if(e.target.classList.contains("imp-e-type")){
+    const ed=e.target.closest("tr.imp-editor");
+    if(ed)ed.querySelector(".imp-e-cat").innerHTML=impCatOptions(e.target.value,null);
+    return;
+  }
   const tr=e.target.closest("tr[data-imp]");if(!tr)return;
   const t=importRows[+tr.dataset.imp];if(!t)return;
   if(e.target.classList.contains("imp-chk"))t.include=e.target.checked;
@@ -2503,7 +2591,8 @@ $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
   if(e.target.classList.contains("imp-type")){t.type=e.target.value;t.cat=(t.type==="Income"?lists.incomeCats:lists.expenseCats)[0]||"Other";renderImport();return;}
   if(e.target.classList.contains("imp-cat"))t.cat=e.target.value;
   const inc=importRows.filter(x=>x.include);
-  $("#impSummary").textContent=`${importRows.length} found · ${inc.length} selected · ${importRows.filter(x=>x.dup).length} possible duplicates`;
+  const dups=importRows.filter(x=>x.dup).length;
+  $("#impSummary").textContent=`${importRows.length} found \u00b7 ${inc.length} selected \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`;
   $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
   $("#btnImpPost").disabled=!inc.length;
 });
@@ -2533,14 +2622,14 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
       return;
     }
     /* duplicate check: same amount already on this bank's ledger */
-    const existing=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
-    importBank=bank;importFile=file.name;
+    importExisting=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
+    importBank=bank;importFile=file.name;impEditIdx=-1;
     importRows=parsed.map(t=>{
       const nature=impDetectNature(t.desc);
       const type=nature?nature.type:(t.dir==="cr"?"Income":"Expense");
       const cat=nature?nature.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
-      const dup=existing.has(r2(t.amount));
-      return {date:t.date,desc:t.desc,amount:t.amount,type,cat,auto:!!nature,dup,include:!dup};
+      const dup=importExisting.has(r2(t.amount));
+      return {date:t.date,desc:t.desc,amount:t.amount,type,cat,method:"Bank Import",auto:!!nature,dup,include:!dup};
     });
     status.innerHTML=`Read <b>${importRows.length}</b> transactions from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `+
       `Income/expense was worked out from the running balance where possible — check each row before posting.`;
@@ -2560,7 +2649,7 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
   const dups=inc.filter(t=>t.dup).length;
   if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Post anyway?`))return;
   inc.forEach(t=>{
-    txns.push({id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:"Bank Import",ref:"Import: "+importFile,loanRef:""});
+    txns.push({id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
   });
   toast(`${inc.length} transaction${inc.length===1?"":"s"} posted to ${importBank}`);
   importRows=[];importBank="";importFile="";
@@ -2569,7 +2658,7 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
   setDirty(true);renderAll();
 });
 $("#btnImpClear")&&$("#btnImpClear").addEventListener("click",()=>{
-  importRows=[];importBank="";importFile="";
+  importRows=[];importBank="";importFile="";impEditIdx=-1;importExisting=new Set();
   $("#impReview").style.display="none";$("#impStatus").style.display="none";$("#impEmpty").style.display="none";
   if($("#impFile"))$("#impFile").value="";
 });

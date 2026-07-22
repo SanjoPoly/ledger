@@ -313,29 +313,29 @@
   @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}.imp-ed-grid{grid-template-columns:1fr 1fr}}
 
   /* fixed geometry so columns stop fighting each other */
-  #tblLD{min-width:1150px;table-layout:fixed}
-  #tblLD th:nth-child(1),#tblLD td:nth-child(1){width:104px}
-  #tblLD th:nth-child(2),#tblLD td:nth-child(2){width:auto;min-width:150px}
-  #tblLD th:nth-child(3),#tblLD td:nth-child(3){width:128px}
-  #tblLD th:nth-child(4),#tblLD td:nth-child(4){width:122px}
-  #tblLD th:nth-child(5),#tblLD td:nth-child(5){width:138px}
-  #tblLD th:nth-child(6),#tblLD td:nth-child(6){width:128px}
-  #tblLD th:nth-child(7),#tblLD td:nth-child(7){width:138px}
-  #tblLD th:nth-child(8),#tblLD td:nth-child(8){width:82px}
-  #tblLD th:nth-child(9),#tblLD td:nth-child(9){width:152px}
+  .tbl-ld{min-width:1150px;table-layout:fixed}
+  .tbl-ld th:nth-child(1),.tbl-ld td:nth-child(1){width:104px}
+  .tbl-ld th:nth-child(2),.tbl-ld td:nth-child(2){width:auto;min-width:150px}
+  .tbl-ld th:nth-child(3),.tbl-ld td:nth-child(3){width:128px}
+  .tbl-ld th:nth-child(4),.tbl-ld td:nth-child(4){width:122px}
+  .tbl-ld th:nth-child(5),.tbl-ld td:nth-child(5){width:138px}
+  .tbl-ld th:nth-child(6),.tbl-ld td:nth-child(6){width:128px}
+  .tbl-ld th:nth-child(7),.tbl-ld td:nth-child(7){width:138px}
+  .tbl-ld th:nth-child(8),.tbl-ld td:nth-child(8){width:82px}
+  .tbl-ld th:nth-child(9),.tbl-ld td:nth-child(9){width:152px}
   /* keep the action buttons reachable while the table scrolls sideways */
   @media(min-width:641px){
-    #tblLD td.acts,#tblLD th.acts{position:sticky;right:0;background:var(--card);box-shadow:-10px 0 10px -10px rgba(0,0,0,.35)}
-    #tblLD tbody tr:hover td.acts{background:var(--row-hover)}
+    .tbl-ld td.acts,.tbl-ld th.acts{position:sticky;right:0;background:var(--card);box-shadow:-10px 0 10px -10px rgba(0,0,0,.35)}
+    .tbl-ld tbody tr:hover td.acts{background:var(--row-hover)}
   }
   /* drop the least essential columns before the layout gets cramped */
   @media(max-width:1180px) and (min-width:641px){
-    #tblLD{min-width:1030px}
-    #tblLD th:nth-child(6),#tblLD td:nth-child(6){display:none}
+    .tbl-ld{min-width:1030px}
+    .tbl-ld th:nth-child(6),.tbl-ld td:nth-child(6){display:none}
   }
   @media(max-width:1000px) and (min-width:641px){
-    #tblLD{min-width:900px}
-    #tblLD th:nth-child(3),#tblLD td:nth-child(3){display:none}
+    .tbl-ld{min-width:900px}
+    .tbl-ld th:nth-child(3),.tbl-ld td:nth-child(3){display:none}
   }
   .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
   .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
@@ -374,9 +374,9 @@
     .row-actions{justify-content:flex-end}
     .toolbar .sum{margin-left:0;width:100%}
     /* undo the desktop grid so the mobile cards lay out freely */
-    #tblLD{min-width:0;table-layout:auto}
-    #tblLD th,#tblLD td{width:auto!important}
-    #tblLD td.acts{position:static;box-shadow:none;background:none}
+    .tbl-ld{min-width:0;table-layout:auto}
+    .tbl-ld th,.tbl-ld td{width:auto!important}
+    .tbl-ld td.acts{position:static;box-shadow:none;background:none}
     tbody td{height:auto}
     .ld-who,.ld-id{max-width:none;flex-wrap:wrap;align-items:center}
     .ld-name{flex:1;min-width:0;text-align:right;white-space:normal}
@@ -500,6 +500,7 @@
 
   <nav class="pills">
     <button class="pill active" data-tab="home">Dashboard</button>
+    <button class="pill" data-tab="add"><span class="dot"></span>Add</button>
     <button class="pill" data-tab="txn"><span class="dot"></span>Transactions</button>
     <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
     <button class="pill" data-tab="ld"><span class="dot"></span>Loans &amp; Debts</button>
@@ -538,9 +539,9 @@
     </div>
   </section>
 
-  <!-- ============ TRANSACTIONS ============ -->
-  <section class="panel" id="panel-txn">
-    <div class="section-head"><h2>Transactions</h2><span class="total" id="txnTotalHead"></span></div>
+  <!-- ============ ADD / POST ============ -->
+  <section class="panel" id="panel-add">
+    <div class="section-head"><h2>Post a transaction</h2><span class="total" id="addHead"></span></div>
     <form class="add-card" id="formTxn">
       <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
       <div class="f"><label for="tType">Type</label><select id="tType"><option>Income</option><option>Expense</option><option>Transfer</option></select></div>
@@ -553,6 +554,13 @@
       <div class="f" id="tPayWrap"><label for="tPay">Payment method</label><select id="tPay"></select></div>
       <div class="f"><button type="submit">+ Add transaction</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
+    <div class="section-head" style="margin-top:1.4rem"><h2 style="font-size:1rem">Last 5 postings</h2></div>
+    <div class="table-card" style="padding:.4rem 1rem"><div class="tx-list" id="addRecent"></div></div>
+  </section>
+
+  <!-- ============ TRANSACTIONS ============ -->
+  <section class="panel" id="panel-txn">
+    <div class="section-head"><h2>Transactions</h2><span class="total" id="txnTotalHead"></span></div>
     <div class="toolbar">
       <input type="search" id="searchTxn" placeholder="Search description / category / ref…">
       <select id="filterTxnType"><option value="">All types</option><option>Income</option><option>Expense</option><option>Transfer</option></select>
@@ -615,13 +623,18 @@
     </form>
     <div class="toolbar">
       <input type="search" id="searchLD" placeholder="Search person / purpose…">
-      <select id="filterLDType"><option value="">All types</option><option value="Debt Receivable">Receivable</option><option value="Debt Payable">Payable (person)</option><option value="Bank Loan Payable">Bank loan</option></select>
-      <select id="filterLDStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
+            <select id="filterLDStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
       <span class="sum" id="ldFilteredSum"></span>
     </div>
+    <div class="section-head" style="margin-top:.4rem"><h2 style="font-size:1rem">Loans given \u00b7 owed to you</h2><span class="total" id="ldGivenHead"></span></div>
     <div class="table-card">
-      <table id="tblLD"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyLD" style="display:none">No loans or debts yet.</div>
+      <table id="tblLDGiven" class="tbl-ld"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyLDG" style="display:none">No money lent out right now.</div>
+    </div>
+    <div class="section-head" style="margin-top:1.3rem"><h2 style="font-size:1rem">Loans taken \u00b7 you owe</h2><span class="total" id="ldTakenHead"></span></div>
+    <div class="table-card">
+      <table id="tblLDTaken" class="tbl-ld"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyLDT" style="display:none">No borrowings or bank loans right now.</div>
     </div>
   </section>
 
@@ -634,7 +647,8 @@
       <div class="f"><label for="ivDate">Invested date</label><input type="date" id="ivDate" required></div>
       <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
-      <div class="f"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
+      <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
+      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing investment \u2014 opening balance only, no bank posting</label></div>
       <div class="f"><button type="submit">+ Add investment</button></div>
     </form>
     <div class="toolbar">
@@ -1606,7 +1620,7 @@ function syncTxnLoan(){
 /* ---------- render all ---------- */
 function renderAll(){
   try{refreshSelects();}catch(e){console.error("selects",e);}
-  [renderDash,renderTxn,renderBank,renderLD,renderInv,renderStatement].forEach(fn=>{
+  [renderDash,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderStatement].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -1785,6 +1799,22 @@ function renderTxList(){
   box.innerHTML=`<div class="stmt-head"><div class="stmt-date">Date</div><div class="stmt-detail">Details</div><div class="stmt-amt">Debit</div><div class="stmt-amt">Credit</div></div>${rows}`;
 }
 
+function renderAddRecent(){
+  const box=$("#addRecent");if(!box)return;
+  const recent=txns.slice(-5).reverse();   // last five in posting order, newest first
+  if(!recent.length){box.innerHTML='<div class="empty-mini">Nothing posted yet — your first transaction will show here.</div>';return;}
+  box.innerHTML=recent.map(t=>{
+    const isIn=t.type==="Income", isOut=t.type==="Expense";
+    const amt=(isIn?"+":isOut?"\u2212":"")+fmt(t.amount);
+    const acct=t.type==="Transfer"?(esc(t.bank)+" \u2192 "+esc(t.toBank)):esc(t.bank||"\u2014");
+    return `<div class="stmt-row" style="grid-template-columns:70px 1fr 110px">
+      <div class="stmt-date">${esc((t.date||"").slice(5))}</div>
+      <div class="stmt-detail"><strong>${esc(t.desc||t.cat||t.type)}</strong><span>${esc(t.cat||t.type)} \u00b7 ${acct}</span></div>
+      <div class="stmt-amt"><span class="${isIn?"pos":isOut?"neg":"muted-amt"}">${amt}</span></div>
+    </div>`;
+  }).join("");
+}
+
 /* ---------- transactions ---------- */
 function renderTxn(){
   const q=$("#searchTxn").value.trim().toLowerCase();
@@ -1925,37 +1955,45 @@ function ldPaid(id){return r2(txns.filter(t=>t.loanRef===id).reduce((s,t)=>s+t.a
 /* open records the transaction form can post a payment against */
 function ldPayable(){return lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");}
 function ldReceivable(){return lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable");}
+function ldRowHtml(r,i){
+  const closed=r.status==="Closed";
+  const recvType=r.type==="Debt Receivable";
+  const net=ldNetPayable(r), emi=ldEmi(r), paid=r2(net-r.balance);
+  const pct=net>0?Math.max(0,Math.min(100,paid/net*100)):0;
+  const interest=ldInterest(r);
+  const sub=[r.purpose,r.due?"due "+r.due:""].filter(Boolean).join(" \u00b7 ");
+  return `<tr data-i="${i}"${closed?' class="is-closed"':''}>
+    <td data-l="Record" class="ld-id"><span class="mono-id">${esc(r.id)}</span><span class="tag ${recvType?"given":"taken"}" title="${esc(ldLabel(r.type))}">${esc(ldShort(r.type))}</span></td>
+    <td data-l="Person / Lender" class="ld-who"><strong class="ld-name" title="${esc(r.person)}">${esc(r.person)}</strong>${sub?`<span class="ld-sub" title="${esc(sub)}">${esc(sub)}</span>`:""}${closed&&r.txnRef?`<span class="ld-sub">\ud83d\udd17 ${esc(r.txnRef)}</span>`:""}</td>
+    <td data-l="Principal" class="num">${fmt(r.principal)}</td>
+    <td data-l="EMI / rate" class="num">${r.rate>0?(emi>0?`${fmt(emi)}<span class="cell-sub">${esc(r.rate)}% \u00b7 ${r.term} mo</span>`:`${esc(r.rate)}%<span class="cell-sub">no term set</span>`):'<span class="dash">\u2014</span>'}</td>
+    <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span class="cell-sub coral">+${fmt(interest)} int</span>`:""}</td>
+    <td data-l="Paid" class="num">${paid>0?fmt(paid):'<span class="dash">\u2014</span>'}${net>0&&!closed&&paid>0?`<span class="ld-bar" title="${pct.toFixed(1)}% repaid"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
+    <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed \u2713</span>':`<strong class="${recvType?"pos":"neg"}">${fmt(r.balance)}</strong>`}</td>
+    <td data-l="Status">${closed?`<span class="cell-sub">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
+    <td data-l="" class="acts"><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editLD">Edit</button><button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Del</button>`}</div></td></tr>`;
+}
 function renderLD(){
   const q=$("#searchLD").value.trim().toLowerCase();
-  const ft=$("#filterLDType").value,fs=$("#filterLDStatus").value;
+  const fs=$("#filterLDStatus").value;
   const rows=lends.map((r,i)=>({r,i}))
-    .filter(({r})=>(!q||(r.person+" "+r.purpose).toLowerCase().includes(q))&&(!ft||r.type===ft)&&(!fs||r.status===fs))
+    .filter(({r})=>(!q||(r.person+" "+r.purpose).toLowerCase().includes(q))&&(!fs||r.status===fs))
     .sort((a,b)=>(b.r.issue||"").localeCompare(a.r.issue||""));
-  const recv=lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
-  const pay=lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
-  const interestOpen=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable").reduce((s,l)=>s+ldInterest(l),0);
-  $("#ldTotalHead").innerHTML=`${fmt(recv)} owed to you · ${fmt(pay)} you owe`+(interestOpen>0?` <span style="color:var(--muted)">(incl. ${fmt(interestOpen)} interest)</span>`:"");
+  const given=rows.filter(({r})=>r.type==="Debt Receivable");
+  const taken=rows.filter(({r})=>r.type!=="Debt Receivable");
+  const recv=lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").reduce((sm,l)=>sm+l.balance,0);
+  const pay=lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").reduce((sm,l)=>sm+l.balance,0);
+  const interestOpen=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable").reduce((sm,l)=>sm+ldInterest(l),0);
+  $("#ldTotalHead").innerHTML=`${fmt(recv)} owed to you \u00b7 ${fmt(pay)} you owe`+(interestOpen>0?` <span style="color:var(--muted)">(incl. ${fmt(interestOpen)} interest)</span>`:"");
+  $("#ldGivenHead").textContent=given.length?`${given.length} record${given.length===1?"":"s"} \u00b7 ${fmt(recv)} outstanding`:"";
+  $("#ldTakenHead").textContent=taken.length?`${taken.length} record${taken.length===1?"":"s"} \u00b7 ${fmt(pay)} outstanding`:"";
   $("#ldFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
-  $("#tblLD tbody").innerHTML=rows.map(({r,i})=>{
-    const closed=r.status==="Closed";
-    const recvType=r.type==="Debt Receivable";
-    const net=ldNetPayable(r), emi=ldEmi(r), paid=r2(net-r.balance);
-    const pct=net>0?Math.max(0,Math.min(100,paid/net*100)):0;
-    const interest=ldInterest(r);
-    const sub=[r.purpose,r.due?"due "+r.due:""].filter(Boolean).join(" · ");
-    return `<tr data-i="${i}"${closed?' class="is-closed"':''}>
-      <td data-l="Record" class="ld-id"><span class="mono-id">${esc(r.id)}</span><span class="tag ${recvType?"given":"taken"}" title="${esc(ldLabel(r.type))}">${esc(ldShort(r.type))}</span></td>
-      <td data-l="Person / Lender" class="ld-who"><strong class="ld-name" title="${esc(r.person)}">${esc(r.person)}</strong>${sub?`<span class="ld-sub" title="${esc(sub)}">${esc(sub)}</span>`:""}${closed&&r.txnRef?`<span class="ld-sub">🔗 ${esc(r.txnRef)}</span>`:""}</td>
-      <td data-l="Principal" class="num">${fmt(r.principal)}</td>
-      <td data-l="EMI / rate" class="num">${r.rate>0?(emi>0?`${fmt(emi)}<span class="cell-sub">${esc(r.rate)}% · ${r.term} mo</span>`:`${esc(r.rate)}%<span class="cell-sub">no term set</span>`):'<span class="dash">—</span>'}</td>
-      <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span class="cell-sub coral">+${fmt(interest)} int</span>`:""}</td>
-      <td data-l="Paid" class="num">${paid>0?fmt(paid):'<span class="dash">—</span>'}${net>0&&!closed&&paid>0?`<span class="ld-bar" title="${pct.toFixed(1)}% repaid"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
-      <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<strong class="${recvType?"pos":"neg"}">${fmt(r.balance)}</strong>`}</td>
-      <td data-l="Status">${closed?`<span class="cell-sub">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-      <td data-l="" class="acts"><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editLD">Edit</button><button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Del</button>`}</div></td></tr>`;
-  }).join("");
-  $("#emptyLD").style.display=lends.length?"none":"block";
-  $("#tblLD").style.display=lends.length?"":"none";
+  $("#tblLDGiven tbody").innerHTML=given.map(({r,i})=>ldRowHtml(r,i)).join("");
+  $("#tblLDTaken tbody").innerHTML=taken.map(({r,i})=>ldRowHtml(r,i)).join("");
+  $("#emptyLDG").style.display=given.length?"none":"block";
+  $("#tblLDGiven").style.display=given.length?"":"none";
+  $("#emptyLDT").style.display=taken.length?"none":"block";
+  $("#tblLDTaken").style.display=taken.length?"":"none";
 }
 
 /* ---------- investments ---------- */
@@ -2073,7 +2111,7 @@ function loadTxnIntoForm(t){
   if(submitBtn)submitBtn.textContent="✓ Update transaction";
   if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="";
   const form=$("#formTxn");if(form)form.classList.add("editing");
-  const panel=$("#panel-txn");if(panel){$$(".pill").forEach(p=>p.classList.remove("active"));const pill=document.querySelector('.pill[data-tab="txn"]');if(pill)pill.classList.add("active");$$(".panel").forEach(p=>p.classList.remove("active"));panel.classList.add("active");}
+  const panel=$("#panel-add");if(panel){$$(".pill").forEach(p=>p.classList.remove("active"));const pill=document.querySelector('.pill[data-tab="add"]');if(pill)pill.classList.add("active");$$(".panel").forEach(p=>p.classList.remove("active"));panel.classList.add("active");}
   window.scrollTo(0,0);
   toast("Editing "+t.id+" — change the fields and press Update");
 }
@@ -2166,15 +2204,19 @@ function cancelEditLD(){
   updateLdPreview();
 }
 $("#btnCancelLD")&&$("#btnCancelLD").addEventListener("click",cancelEditLD);
+$("#ivExisting")&&$("#ivExisting").addEventListener("change",()=>{
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display=$("#ivExisting").checked?"none":"";
+});
 $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
   const amount=num($("#ivAmt").value);
   if(amount<=0){toast("Enter the amount invested");return;}
   const id=nextId(invs,"INV",1);
-  const bank=$("#ivBank").value;
+  const existing=$("#ivExisting")&&$("#ivExisting").checked;
+  const bank=existing?"":$("#ivBank").value;
   invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
-  // auto-post: money leaves the funding bank
-  if(bank)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
+  // auto-post the cash leaving the bank \u2014 skipped for pre-existing holdings brought in as opening balances
+  if(bank&&!existing)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
   e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
   toast("Investment added");
 });
@@ -2326,7 +2368,7 @@ document.addEventListener("click",e=>{
 
 /* ---------- search / filter listeners ---------- */
 ["searchTxn","filterTxnType","filterTxnBank","filterTxnMonth"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderTxn);});
-["searchLD","filterLDType","filterLDStatus"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderLD);});
+["searchLD","filterLDStatus"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderLD);});
 ["searchInv","filterInvStatus"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderInv);});
 $("#searchBank")&&$("#searchBank").addEventListener("input",renderBank);
 $("#stmtBank")&&$("#stmtBank").addEventListener("change",renderStatement);
@@ -2343,7 +2385,7 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   b.classList.add("active");
   const tab=b.dataset.tab;
   $$(".panel").forEach(p=>p.classList.remove("active"));
-  const map={home:"panel-home",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",imp:"panel-imp"};
+  const map={home:"panel-home",add:"panel-add",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",imp:"panel-imp"};
   const panel=$("#"+map[tab]);if(panel)panel.classList.add("active");
   if(tab==="bank"){renderBank();renderStatement();refreshSelects();if($("#recDate")&&!$("#recDate").value)$("#recDate").value=todayISO();}
   if(tab==="imp")refreshSelects();
@@ -2516,6 +2558,49 @@ function impCatOptions(type,sel){
   const src=type==="Income"?lists.incomeCats:lists.expenseCats;
   return src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
 }
+/* ---------- statement tagging: link a line to loans/debts/investments ----------
+   Tag values encode action:target —
+     payld:ID   payment against an open loan/debt (reduces its balance, auto-closes at zero)
+     intld:ID   interest received on money you lent (income linked to the record, balance unchanged)
+     newld:recv this line IS money you lent out (creates a receivable)
+     newld:pay  this line IS money you borrowed (creates a payable)
+     newinv     this line IS a new investment (creates the record)
+     topinv:ID  top-up of an existing investment (raises its invested amount)
+     divinv:ID  dividend from an investment (income linked to it)                     */
+function impTagOptions(t){
+  const sel=t.tag||"";
+  const o=(v,l)=>`<option value="${v}"${v===sel?" selected":""}>${l}</option>`;
+  let h=o("","\u2014 none \u2014");
+  const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable");
+  const pays=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");
+  const openInvs=invs.filter(v=>v.status!=="Closed");
+  if(t.type==="Expense"){
+    if(pays.length)h+='<optgroup label="Pay towards loan / debt">'+pays.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>";
+    h+='<optgroup label="New records">'+o("newld:recv","\u2795 Money I lent out (new loan given)")+o("newinv","\u2795 New investment")+"</optgroup>";
+    if(openInvs.length)h+='<optgroup label="Top-up investment">'+openInvs.map(v=>o("topinv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)}`)).join("")+"</optgroup>";
+  }else{
+    if(recvs.length)h+='<optgroup label="Received against loan given">'+recvs.map(l=>o("payld:"+l.id,`Part payment \u2014 ${esc(l.person)} \u00b7 ${fmt(l.balance)} due`)).join("")+"</optgroup>";
+    if(recvs.length)h+='<optgroup label="Interest on loan given">'+recvs.map(l=>o("intld:"+l.id,`Interest \u2014 ${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>";
+    if(openInvs.length)h+='<optgroup label="Dividend from investment">'+openInvs.map(v=>o("divinv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)}`)).join("")+"</optgroup>";
+    h+='<optgroup label="New records">'+o("newld:pay","\u2795 Money I borrowed (new debt)")+"</optgroup>";
+  }
+  return h;
+}
+function impTagLabel(tag){
+  if(!tag)return "";
+  const [act,id]=tag.split(":");
+  const who=x=>{const r=lends.find(l=>l.id===x)||invs.find(v=>v.id===x);return r?(r.person||r.name):x;};
+  switch(act){
+    case "payld":return "\ud83d\udd17 pay "+who(id);
+    case "intld":return "\ud83d\udd17 interest \u00b7 "+who(id);
+    case "newld":return id==="recv"?"\u2795 loan given":"\u2795 borrowed";
+    case "newinv":return "\u2795 investment";
+    case "topinv":return "\ud83d\udd17 top-up "+who(id);
+    case "divinv":return "\ud83d\udd17 dividend \u00b7 "+who(id);
+  }
+  return "";
+}
+
 let impEditIdx=-1;
 function impMethodOptions(sel){
   const base=lists.payMethods.slice();
@@ -2534,7 +2619,7 @@ function renderImport(){
     <td data-l="Amount" class="num"><span class="${isIn?"pos":"neg"}">${isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
     <td data-l="Type"><select class="imp-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></td>
     <td data-l="Category"><select class="imp-cat">${impCatOptions(t.type,t.cat)}</select></td>
-    <td data-l="Note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button> ${t.dup?'<span class="dup-chip">\u26a0 duplicate?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
+    <td data-l="Note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button> ${t.tag?`<span class="tag iv" style="font-size:.64rem">${impTagLabel(t.tag)}</span>`:""}${t.dup?'<span class="dup-chip">\u26a0 duplicate?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
   </tr>`;
     /* expanded editor: the same fields as the transaction entry screen */
     const ed=impEditIdx===i?`<tr class="imp-editor"><td colspan="7"><div class="imp-ed-grid">
@@ -2544,6 +2629,7 @@ function renderImport(){
       <label>Description<input type="text" class="imp-e-desc" value="${esc(t.desc)}"></label>
       <label>Amount<input type="number" class="imp-e-amt" min="0" step="0.01" value="${t.amount}"></label>
       <label>Payment method<select class="imp-e-method">${impMethodOptions(t.method||"Bank Import")}</select></label>
+      <label>Tag to loan / investment<select class="imp-e-tag">${impTagOptions(t)}</select></label>
       <div class="imp-ed-actions"><button type="button" class="btn-accent imp-apply">Apply</button><button type="button" class="icon-btn imp-cancel">Close</button></div>
     </div></td></tr>`:"";
     return row+ed;
@@ -2573,6 +2659,15 @@ $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
     const amt=num(ed.querySelector(".imp-e-amt").value);
     if(amt>0)t.amount=r2(amt);
     t.method=ed.querySelector(".imp-e-method").value;
+    t.tag=ed.querySelector(".imp-e-tag")?ed.querySelector(".imp-e-tag").value:"";
+    /* a tag settles what the line IS, so line up type & category with it */
+    const act=(t.tag||"").split(":")[0];
+    if(act==="divinv"){t.type="Income";t.cat="Dividends / Profit";}
+    else if(act==="intld"){t.type="Income";t.cat="Interest";}
+    else if(act==="newinv"||act==="topinv"){t.type="Expense";t.cat="Investment";}
+    else if(t.tag==="newld:recv"){t.type="Expense";t.cat="Debt Given";}
+    else if(t.tag==="newld:pay"){t.type="Income";t.cat="Debt Taken";}
+    else if(act==="payld"){t.cat=t.type==="Income"?"Debt Settlement":"Loan Repayment";}
     t.dup=importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
     impEditIdx=-1;renderImport();
   }
@@ -2648,10 +2743,36 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
   if(!inc.length)return;
   const dups=inc.filter(t=>t.dup).length;
   if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Post anyway?`))return;
+  let created=0;
   inc.forEach(t=>{
-    txns.push({id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
+    const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
+    const [act,target]=(t.tag||"").split(":");
+    if(act==="payld"&&target){
+      const r=lends.find(l=>l.id===target);
+      if(r){txn.loanRef=r.id;txn.ref="Payment: "+r.id+" ("+r.person+")";}
+    }else if(act==="intld"&&target){
+      const r=lends.find(l=>l.id===target);
+      if(r)txn.ref="Interest: "+r.id+" ("+r.person+")";
+    }else if(act==="divinv"&&target){
+      const v=invs.find(x=>x.id===target);
+      if(v)txn.ref="Dividend: "+v.id+" ("+v.name+")";
+    }else if(act==="topinv"&&target){
+      const v=invs.find(x=>x.id===target);
+      if(v){v.amount=r2(v.amount+t.amount);v.current=r2(v.current+t.amount);txn.ref="Linked: "+v.id+" (top-up)";}
+    }else if(act==="newinv"){
+      const id=nextId(invs,"INV",1);
+      invs.push({id,name:t.desc.slice(0,40)||"Imported investment",assetType:"Other",date:t.date,amount:t.amount,current:t.amount,bank:importBank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
+      txn.ref="Linked: "+id;created++;
+    }else if(act==="newld"){
+      const recvNew=target==="recv";
+      const id=nextId(lends,"DEBT",1);
+      lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:t.desc.slice(0,30)||"From statement",purpose:"Statement import",principal:t.amount,rate:0,term:0,balance:t.amount,issue:t.date,due:"",status:"Open",closedDate:"",closeBank:"",txnRef:""});
+      txn.ref="Linked: "+id+" ("+t.desc.slice(0,30)+")";created++;
+    }
+    txns.push(txn);
+    if(txn.loanRef)applyLoanPayment(txn);       // part payments reduce the balance and can auto-close
   });
-  toast(`${inc.length} transaction${inc.length===1?"":"s"} posted to ${importBank}`);
+  toast(`${inc.length} transaction${inc.length===1?"":"s"} posted to ${importBank}`+(created?` \u00b7 ${created} new record${created===1?"":"s"} created`:""));
   importRows=[];importBank="";importFile="";
   $("#impReview").style.display="none";$("#impStatus").style.display="none";
   if($("#impFile"))$("#impFile").value="";

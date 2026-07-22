@@ -220,7 +220,16 @@
   .add-card button.btn-cancel-edit{background:var(--wash);color:var(--muted);border:1px solid var(--line-strong);font-weight:600;margin-top:.5rem}
   .add-card button.btn-cancel-edit:hover{filter:none;color:var(--text);background:var(--wash-hover)}
   form.editing{outline:2px solid var(--amber);outline-offset:3px;border-radius:var(--r-lg);position:relative}
-  form.editing::before{content:"Editing transaction";position:absolute;top:-.7rem;left:1rem;background:var(--amber);color:#08111C;font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.12rem .55rem;border-radius:999px}
+  form.editing::before{content:"Editing";position:absolute;top:-.7rem;left:1rem;background:var(--amber);color:#08111C;font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:.12rem .55rem;border-radius:999px}
+  .calc-preview{grid-column:1/-1;background:var(--wash);border:1px solid var(--line);border-radius:12px;padding:.75rem .9rem;margin-top:.25rem}
+  .calc-preview .warn{font-size:.8rem;color:var(--amber)}
+  .calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.7rem}
+  .calc-grid>div{display:flex;flex-direction:column;gap:.15rem}
+  .calc-grid span{font-size:.65rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .calc-grid b{font-family:var(--mono);font-size:.95rem;font-variant-numeric:tabular-nums}
+  .calc-grid b.neg{color:var(--coral)}
+  .ld-bar{display:block;height:4px;border-radius:99px;background:var(--wash-strong);margin-top:.3rem;overflow:hidden}
+  .ld-bar i{display:block;height:100%;background:var(--grad);border-radius:99px}
   .toolbar{display:flex;gap:.55rem;align-items:center;margin-bottom:.8rem;flex-wrap:wrap}
   .toolbar input[type="search"],.toolbar select{background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:.55rem .75rem;min-height:42px}
   .toolbar input[type="search"]{flex:1;min-width:160px;max-width:320px}
@@ -447,6 +456,7 @@
       <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Category / Source</label><select id="tCat"></select></div>
       <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f" id="tLoanWrap"><label for="tLoan" id="tLoanLabel">Apply to loan / debt <i>(optional)</i></label><select id="tLoan"><option value="">— none —</option></select></div>
       <div class="f" id="tBankWrap"><label for="tBank" id="tBankLabel">Bank / Account</label><select id="tBank"></select></div>
       <div class="f" id="tBankToWrap" style="display:none"><label for="tBankTo">To account</label><select id="tBankTo"></select></div>
       <div class="f" id="tPayWrap"><label for="tPay">Payment method</label><select id="tPay"></select></div>
@@ -504,10 +514,13 @@
       <div class="f"><label for="ldPerson" id="ldPersonLabel">Person / Lender</label><input type="text" id="ldPerson" required></div>
       <div class="f"><label for="ldPurpose">Category / Purpose</label><input type="text" id="ldPurpose" placeholder="e.g. Money given, Housing loan"></div>
       <div class="f"><label for="ldPrincipal">Principal / Original</label><input type="number" id="ldPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="ldRate">Interest rate <i>(% per year, optional)</i></label><input type="number" id="ldRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
+      <div class="f"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
       <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
       <div class="f" id="ldFundWrap"><label for="ldFundBank" id="ldFundLabel">Funded from bank <i>(optional)</i></label><select id="ldFundBank"></select></div>
-      <div class="f"><button type="submit">+ Add record</button></div>
+      <div class="f"><button type="submit">+ Add record</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+      <div id="ldCalcPreview" class="calc-preview" style="display:none"></div>
     </form>
     <div class="toolbar">
       <input type="search" id="searchLD" placeholder="Search person / purpose…">
@@ -516,7 +529,7 @@
       <span class="sum" id="ldFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblLD"><thead><tr><th>Record</th><th>Type</th><th>Person / Lender</th><th>Purpose</th><th style="text-align:right">Principal</th><th style="text-align:right">Balance due</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblLD"><thead><tr><th>Record</th><th>Type</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">Rate</th><th style="text-align:right">EMI</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyLD" style="display:none">No loans or debts yet.</div>
     </div>
   </section>
@@ -1171,6 +1184,7 @@ $("#btnDownloadCfg").addEventListener("click",async()=>{
 /* ---------- state ---------- */
 let txns=[];      // {id,date,type,cat,desc,amount,bank,method,ref}
 let editingTxn=null;  // Txn ID currently being edited in the posting form
+let editingLD=null;   // Loan/debt Record ID currently being edited
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
@@ -1247,6 +1261,10 @@ function parseWorkbook(buf,name){
       bank=(parts[0]||"").trim();
       toBank=(parts[1]||toBank).trim();
     }
+    const ref=String(gv(r,"Linked Entity Ref","Ref","Reference")||"").trim();
+    // "Payment: LOAN-01 (...)" marks a repayment posted against a loan/debt.
+    // "Linked:" (funding) and "Auto-Posted:" (closure) are deliberately excluded.
+    const pm=/^Payment:\s*((?:LOAN|DEBT)-\d+)/i.exec(ref);
     txns.push({
       id:id||nextTxnId(),
       date:normDate(gv(r,"Date"))||todayISO(),
@@ -1257,7 +1275,8 @@ function parseWorkbook(buf,name){
       bank,
       toBank,
       method:String(gv(r,"Payment Method","Method")||"").trim(),
-      ref:String(gv(r,"Linked Entity Ref","Ref","Reference")||"").trim()
+      ref,
+      loanRef:pm?pm[1].toUpperCase():""
     });
   });
 
@@ -1289,6 +1308,8 @@ function parseWorkbook(buf,name){
       person,
       purpose:String(gv(r,"Category / Purpose","Purpose")||"").trim(),
       principal,
+      rate:num(gv(r,"Interest Rate (%)","Interest Rate","Rate")),
+      term:num(gv(r,"Term (Months)","Term Months","Term","Tenure")),
       balance:balRaw===""?principal:num(balRaw),
       issue:normDate(gv(r,"Issue Date","Date")),
       due:normDate(gv(r,"Due Date","Due")),
@@ -1386,10 +1407,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
-  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref"];
-  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||""]);
-  const wsL=bannerSheet("Loans & Debts Management","Track money borrowed/lent. Closing an entry auto-posts a transaction.",ldHeaders,ldData);
-  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18}];
+  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref"];
+  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||""]);
+  const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due.",ldHeaders,ldData);
+  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18}];
   XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
 
   // Investments
@@ -1450,6 +1471,21 @@ function syncTxnCat(){
     $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
     cat.innerHTML=src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
   }
+  syncTxnLoan();
+}
+/* The loan selector offers what makes sense for the direction of money:
+   an Expense can pay down something you owe, Income can settle something owed to you. */
+function syncTxnLoan(){
+  const wrap=$("#tLoanWrap"), sel=$("#tLoan");
+  if(!wrap||!sel)return;
+  const type=$("#tType")?$("#tType").value:"Income";
+  if(type==="Transfer"){wrap.style.display="none";sel.innerHTML='<option value="">— none —</option>';return;}
+  const opts=type==="Expense"?ldPayable():ldReceivable();
+  $("#tLoanLabel").innerHTML=type==="Expense"?'Pay towards loan / debt <i>(optional)</i>':'Settle money owed to you <i>(optional)</i>';
+  wrap.style.display=opts.length?"":"none";
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— none —</option>'+opts.map(l=>
+    `<option value="${esc(l.id)}"${l.id===cur?" selected":""}>${esc(l.person)} · ${esc(l.id)} — ${fmt(l.balance)} due</option>`).join("");
 }
 
 /* ---------- render all ---------- */
@@ -1751,6 +1787,28 @@ function renderStatement(){
 
 /* ---------- loans & debts ---------- */
 function ldLabel(type){return type==="Debt Receivable"?"Receivable · owed to me":type==="Debt Payable"?"Payable · I owe":"Bank loan · I owe";}
+/* ---------- loan interest maths ----------
+   EMI uses the standard reducing-balance amortisation formula.
+   Net payable = EMI x term. With no term we cannot spread interest,
+   so net payable falls back to the principal.                        */
+function ldEmi(r){
+  const P=+r.principal||0, n=Math.round(+r.term||0), annual=+r.rate||0;
+  if(P<=0||n<=0)return 0;
+  if(annual<=0)return r2(P/n);
+  const i=annual/12/100, f=Math.pow(1+i,n);
+  return r2(P*i*f/(f-1));
+}
+function ldNetPayable(r){
+  const n=Math.round(+r.term||0);
+  if(n>0)return r2(ldEmi(r)*n);
+  return r2(+r.principal||0);
+}
+function ldInterest(r){return r2(ldNetPayable(r)-(+r.principal||0));}
+/* money already applied against a record, from linked "Payment:" transactions */
+function ldPaid(id){return r2(txns.filter(t=>t.loanRef===id).reduce((s,t)=>s+t.amount,0));}
+/* open records the transaction form can post a payment against */
+function ldPayable(){return lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");}
+function ldReceivable(){return lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable");}
 function renderLD(){
   const q=$("#searchLD").value.trim().toLowerCase();
   const ft=$("#filterLDType").value,fs=$("#filterLDStatus").value;
@@ -1759,21 +1817,27 @@ function renderLD(){
     .sort((a,b)=>(b.r.issue||"").localeCompare(a.r.issue||""));
   const recv=lends.filter(l=>l.type==="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
   const pay=lends.filter(l=>l.type!=="Debt Receivable"&&l.status!=="Closed").reduce((s,l)=>s+l.balance,0);
-  $("#ldTotalHead").textContent=`${fmt(recv)} owed to you · ${fmt(pay)} you owe`;
+  const interestOpen=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable").reduce((s,l)=>s+ldInterest(l),0);
+  $("#ldTotalHead").innerHTML=`${fmt(recv)} owed to you · ${fmt(pay)} you owe`+(interestOpen>0?` <span style="color:var(--muted)">(incl. ${fmt(interestOpen)} interest)</span>`:"");
   $("#ldFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
   $("#tblLD tbody").innerHTML=rows.map(({r,i})=>{
     const closed=r.status==="Closed";
     const recvType=r.type==="Debt Receivable";
+    const net=ldNetPayable(r), emi=ldEmi(r), paid=r2(net-r.balance);
+    const pct=net>0?Math.max(0,Math.min(100,paid/net*100)):0;
+    const interest=ldInterest(r);
     return `<tr data-i="${i}"${closed?' style="opacity:.62"':''}>
       <td data-l="Record" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(r.id)}</td>
       <td data-l="Type"><span class="tag ${recvType?"given":"taken"}">${esc(ldLabel(r.type))}</span></td>
-      <td data-l="Person"><strong>${esc(r.person)}</strong>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
-      <td data-l="Purpose" style="color:var(--muted);font-size:.83rem">${esc(r.purpose||"—")}</td>
+      <td data-l="Person"><strong>${esc(r.person)}</strong><span style="display:block;font-size:.72rem;color:var(--muted)">${esc(r.purpose||"—")}${r.due?" · due "+esc(r.due):""}</span>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
       <td data-l="Principal" class="num">${fmt(r.principal)}</td>
-      <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<span class="${recvType?"pos":"neg"}">${fmt(r.balance)}</span>`}</td>
-      <td data-l="Due" style="color:var(--muted);font-size:.83rem">${esc(r.due||"—")}</td>
+      <td data-l="Rate" class="num">${r.rate>0?esc(r.rate)+"%":'<span style="color:var(--muted)">—</span>'}</td>
+      <td data-l="EMI" class="num">${emi>0?fmt(emi)+`<span style="display:block;font-size:.68rem;color:var(--muted)">${r.term} mo</span>`:'<span style="color:var(--muted)">—</span>'}</td>
+      <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span style="display:block;font-size:.68rem;color:var(--coral)">+${fmt(interest)} int</span>`:""}</td>
+      <td data-l="Paid" class="num">${fmt(paid)}${net>0&&!closed?`<span class="ld-bar"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
+      <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<strong class="${recvType?"pos":"neg"}">${fmt(r.balance)}</strong>`}</td>
       <td data-l="Status">${closed?`<span style="font-size:.75rem;color:var(--muted)">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Delete</button>`}</div></td></tr>`;
+      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editLD">Edit</button><button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Delete</button>`}</div></td></tr>`;
   }).join("");
   $("#emptyLD").style.display=lends.length?"none":"block";
   $("#tblLD").style.display=lends.length?"":"none";
@@ -1808,6 +1872,30 @@ function renderInv(){
   $("#tblInv").style.display=invs.length?"":"none";
 }
 
+/* ---------- applying payments against a loan / debt ----------
+   A payment lowers Balance Due. When the balance reaches zero the record
+   closes itself. Reversing (edit or delete) puts the money back and
+   re-opens the record if that payment was what closed it.              */
+function applyLoanPayment(txn){
+  if(!txn.loanRef)return;
+  const r=lends.find(l=>l.id===txn.loanRef);
+  if(!r)return;
+  r.balance=r2(r.balance-txn.amount);
+  if(r.balance<=0.004){
+    r.balance=0;r.status="Closed";
+    r.closedDate=txn.date;r.closeBank=txn.bank||"";r.txnRef=txn.id;
+  }
+}
+function reverseLoanPayment(txn){
+  if(!txn||!txn.loanRef)return;
+  const r=lends.find(l=>l.id===txn.loanRef);
+  if(!r)return;
+  if(r.status==="Closed"&&r.txnRef===txn.id){
+    r.status="Open";r.closedDate="";r.closeBank="";r.txnRef="";
+  }
+  r.balance=r2(r.balance+txn.amount);
+}
+
 /* ---------- forms ---------- */
 $("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
@@ -1815,23 +1903,32 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   const type=$("#tType").value;
   const amount=num($("#tAmt").value);
   if(amount<=0){toast("Enter an amount");return;}
+  const loanId=(type!=="Transfer"&&$("#tLoan"))?$("#tLoan").value:"";
+  const lrec=loanId?lends.find(l=>l.id===loanId):null;
   let rec;
   if(type==="Transfer"){
     const from=$("#tBank").value,to=$("#tBankTo").value;
     if(from===to){toast("From and To accounts must differ");return;}
-    rec={date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:""};
+    rec={date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:"",loanRef:""};
   }else{
-    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:""};
+    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,
+         ref:lrec?("Payment: "+lrec.id+" ("+lrec.person+")"):"",loanRef:lrec?lrec.id:""};
   }
   if(editingTxn){
     const t=txns.find(x=>x.id===editingTxn);
-    if(t){t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.desc=rec.desc;t.amount=rec.amount;t.bank=rec.bank;t.toBank=rec.toBank;t.method=rec.method;}
+    if(t){
+      reverseLoanPayment(t);                       // undo the old effect first
+      t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.desc=rec.desc;t.amount=rec.amount;
+      t.bank=rec.bank;t.toBank=rec.toBank;t.method=rec.method;t.ref=rec.ref;t.loanRef=rec.loanRef;
+      applyLoanPayment(t);                         // then apply the new one
+    }
     cancelEditTxn();
     setDirty(true);renderAll();toast("Transaction updated");
   }else{
     rec.id=nextTxnId();txns.push(rec);
+    applyLoanPayment(rec);
     e.target.reset();$("#tDate").value=todayISO();syncTxnCat();setDirty(true);renderAll();
-    toast(type+" added");
+    toast(lrec?`${type} added — ${lrec.person} now ${fmt(lrec.balance)} due`:type+" added");
   }
 });
 function loadTxnIntoForm(t){
@@ -1847,6 +1944,14 @@ function loadTxnIntoForm(t){
     if($("#tCat"))$("#tCat").value=t.cat||"";
     if($("#tBank"))$("#tBank").value=t.bank||"";
     if($("#tPay"))$("#tPay").value=t.method||"";
+    if($("#tLoan")&&t.loanRef){
+      // the record may already be closed and filtered out — re-add it so it stays selectable
+      if(!Array.from($("#tLoan").options).some(o=>o.value===t.loanRef)){
+        const r=lends.find(l=>l.id===t.loanRef);
+        if(r){$("#tLoan").insertAdjacentHTML("beforeend",`<option value="${esc(r.id)}">${esc(r.person)} · ${esc(r.id)}</option>`);$("#tLoanWrap").style.display="";}
+      }
+      $("#tLoan").value=t.loanRef;
+    }
   }
   // switch the submit button into "update" mode + reveal cancel
   const submitBtn=$("#formTxn button[type=submit]");
@@ -1871,22 +1976,81 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   const type=$("#ldType").value;
   const principal=num($("#ldPrincipal").value);
   if(principal<=0){toast("Enter the principal amount");return;}
+  const rate=num($("#ldRate").value), term=Math.round(num($("#ldTerm").value));
+  /* editing an existing record: update in place, keeping payments already made */
+  if(editingLD){
+    const r=lends.find(l=>l.id===editingLD);
+    if(r){
+      const oldNet=ldNetPayable(r);
+      r.type=type;r.person=$("#ldPerson").value.trim();r.purpose=$("#ldPurpose").value.trim();
+      r.principal=principal;r.rate=rate;r.term=term;
+      r.issue=$("#ldIssue").value||r.issue;r.due=$("#ldDue").value||"";
+      // shift the outstanding balance by however much the net payable moved
+      r.balance=r2(r.balance+(ldNetPayable(r)-oldNet));
+      if(r.balance<0)r.balance=0;
+    }
+    cancelEditLD();setDirty(true);renderAll();toast("Record updated");
+    return;
+  }
   const prefix=type==="Bank Loan Payable"?"LOAN":"DEBT";
   const id=nextId(lends,prefix,1);
-  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,balance:principal,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",closedDate:"",closeBank:"",txnRef:""};
+  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",closedDate:"",closeBank:"",txnRef:""};
+  rec.balance=ldNetPayable(rec);   // liability starts at principal + interest
   lends.push(rec);
   // Optionally auto-post the cash movement when a debt is funded from a bank
   const fund=$("#ldFundBank").value;
   if(fund&&type!=="Bank Loan Payable"){
     if(type==="Debt Receivable"){ // I gave money out → expense-like debit from bank
-      txns.push({id:nextTxnId(),date:rec.issue,type:"Expense",cat:"Debt Given",desc:"Lent to "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")"});
+      txns.push({id:nextTxnId(),date:rec.issue,type:"Expense",cat:"Debt Given",desc:"Lent to "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")",loanRef:""});
     }else{ // Debt Payable: I borrowed → income-like credit into bank
-      txns.push({id:nextTxnId(),date:rec.issue,type:"Income",cat:"Debt Taken",desc:"Borrowed from "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")"});
+      txns.push({id:nextTxnId(),date:rec.issue,type:"Income",cat:"Debt Taken",desc:"Borrowed from "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")",loanRef:""});
     }
   }
-  e.target.reset();$("#ldIssue").value=todayISO();setDirty(true);renderAll();
-  toast("Record added");
+  e.target.reset();$("#ldIssue").value=todayISO();updateLdPreview();setDirty(true);renderAll();
+  toast(rec.term>0?`${id} added — EMI ${fmt(ldEmi(rec))}, net payable ${fmt(ldNetPayable(rec))}`:"Record added");
 });
+/* live EMI / net-payable preview under the loan form */
+function updateLdPreview(){
+  const box=$("#ldCalcPreview");if(!box)return;
+  const p=num($("#ldPrincipal").value), rate=num($("#ldRate").value), term=Math.round(num($("#ldTerm").value));
+  if(p<=0||(rate<=0&&term<=0)){box.style.display="none";return;}
+  const probe={principal:p,rate,term};
+  if(term<=0){
+    box.style.display="";
+    box.innerHTML=`<span class="warn">Add a term in months to work out the EMI and total interest. Without it the liability stays at the principal, ${fmt(p)}.</span>`;
+    return;
+  }
+  const emi=ldEmi(probe), net=ldNetPayable(probe), int=ldInterest(probe);
+  box.style.display="";
+  box.innerHTML=`<div class="calc-grid">
+    <div><span>Monthly EMI</span><b>${fmt(emi)}</b></div>
+    <div><span>Total interest</span><b class="neg">${fmt(int)}</b></div>
+    <div><span>Net payable</span><b>${fmt(net)}</b></div>
+    <div><span>Term</span><b>${term} months</b></div></div>`;
+}
+["ldPrincipal","ldRate","ldTerm"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",updateLdPreview);});
+function loadLDIntoForm(r){
+  editingLD=r.id;
+  $("#ldType").value=r.type;$("#ldPerson").value=r.person;$("#ldPurpose").value=r.purpose||"";
+  $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
+  $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
+  if($("#ldFundWrap"))$("#ldFundWrap").style.display="none";   // funding only applies to new records
+  const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="✓ Update record";
+  if($("#btnCancelLD"))$("#btnCancelLD").style.display="";
+  $("#formLD").classList.add("editing");
+  updateLdPreview();window.scrollTo(0,0);
+  toast("Editing "+r.id+" — change the fields and press Update");
+}
+function cancelEditLD(){
+  editingLD=null;
+  const f=$("#formLD");if(f){f.reset();f.classList.remove("editing");}
+  $("#ldIssue").value=todayISO();
+  if($("#ldFundWrap"))$("#ldFundWrap").style.display="";
+  const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="+ Add record";
+  if($("#btnCancelLD"))$("#btnCancelLD").style.display="none";
+  updateLdPreview();
+}
+$("#btnCancelLD")&&$("#btnCancelLD").addEventListener("click",cancelEditLD);
 $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
   const amount=num($("#ivAmt").value);
@@ -1895,7 +2059,7 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   const bank=$("#ivBank").value;
   invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
   // auto-post: money leaves the funding bank
-  if(bank)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id});
+  if(bank)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
   e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
   toast("Investment added");
 });
@@ -1909,12 +2073,19 @@ document.addEventListener("click",e=>{
   const done=()=>{setDirty(true);renderAll();};
   switch(btn.dataset.act){
     case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
-    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();txns.splice(i,1);done();}break;
+    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;
-    case "reopenLD":{const r=lends[i];if(confirm(`Reopen the record for "${r.person}"? The settlement transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closeBank="";r.txnRef="";r.balance=r.principal;done();}break;}
-    case "delLD":if(confirm(`Delete the record for "${lends[i].person}"?`)){lends.splice(i,1);done();}break;
+    case "editLD":{const r=lends[i];if(r)loadLDIntoForm(r);break;}
+    case "reopenLD":{const r=lends[i];if(confirm(`Reopen the record for "${r.person}"? The settlement transaction will be removed.`)){
+      const settled=txns.find(t=>t.id===r.txnRef);
+      txns=txns.filter(t=>t.id!==r.txnRef);
+      r.status="Open";r.closedDate="";r.closeBank="";r.txnRef="";
+      // give back exactly what the settlement cleared, so partial payments survive
+      r.balance=r2(r.balance+(settled?settled.amount:ldNetPayable(r)));
+      done();}break;}
+    case "delLD":if(confirm(`Delete the record for "${lends[i].person}"?`)){if(editingLD===lends[i].id)cancelEditLD();lends.splice(i,1);done();}break;
     case "delInv":if(confirm(`Delete "${invs[i].name}"?`)){invs.splice(i,1);done();}break;
   }
 });
@@ -1961,12 +2132,12 @@ $("#btnCloseConfirm")&&$("#btnCloseConfirm").addEventListener("click",()=>{
   const txnId=nextTxnId();
   if(closeCtx.kind==="inv"){
     const r=invs[closeCtx.idx];
-    txns.push({id:txnId,date,type:"Income",cat:"Investment Redemption",desc:"Redeemed "+r.name,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.name+")"});
+    txns.push({id:txnId,date,type:"Income",cat:"Investment Redemption",desc:"Redeemed "+r.name,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.name+")",loanRef:""});
     r.status="Closed";r.closedDate=date;r.closedValue=amt;r.current=amt;r.bank=bank;r.txnRef=txnId;
   }else{
     const r=lends[closeCtx.idx];
     const recv=r.type==="Debt Receivable";
-    txns.push({id:txnId,date,type:recv?"Income":"Expense",cat:recv?"Debt Settlement":"Debt Repayment",desc:(recv?"Repayment received from ":"Repaid ")+r.person,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.person+")"});
+    txns.push({id:txnId,date,type:recv?"Income":"Expense",cat:recv?"Debt Settlement":"Debt Repayment",desc:(recv?"Repayment received from ":"Repaid ")+r.person,amount:amt,bank,toBank:"",method:"",ref:"Auto-Posted: "+r.id+" ("+r.person+")",loanRef:""});
     r.status="Closed";r.closedDate=date;r.closeBank=bank;r.balance=0;r.txnRef=txnId;
   }
   $("#closeOverlay").style.display="none";

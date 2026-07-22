@@ -238,11 +238,11 @@
 
   .table-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow-x:auto}
   table{width:100%;border-collapse:collapse;min-width:680px}
-  th{text-align:left;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.75rem .9rem;border-bottom:1px solid var(--line);font-weight:600}
-  td{padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.88rem;vertical-align:middle}
+  th{text-align:left;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.75rem .75rem;border-bottom:1px solid var(--line);font-weight:600}
+  td{padding:.6rem .75rem;border-bottom:1px solid var(--line);font-size:.88rem;vertical-align:middle}
   tr:last-child td{border-bottom:none}
   tbody tr:hover{background:var(--row-hover)}
-  td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.num{font-family:var(--mono);font-size:.82rem;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   td .pos{color:var(--mint)} td .neg{color:var(--coral)}
   .tag{font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .65rem;white-space:nowrap}
   .tag.in{background:var(--mint-dim);color:var(--mint)}
@@ -258,6 +258,58 @@
   .icon-btn:hover{border-color:var(--line-strong);color:var(--text)}
   .icon-btn.danger:hover{border-color:var(--coral);color:var(--coral)}
   .icon-btn.confirm{background:var(--mint);border-color:var(--mint);color:#08111C;font-weight:700}
+
+  /* ---------- dense data-table refinements ---------- */
+  tbody td{height:56px}                                   /* one predictable row height */
+  .mono-id{font-family:var(--mono);font-size:.74rem;color:var(--muted);display:block;margin-bottom:.22rem}
+  .cell-sub{display:block;font-size:.68rem;color:var(--muted);font-weight:400;margin-top:.1rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell-sub.coral{color:var(--coral)}
+  .dash{color:var(--muted)}
+  tr.is-closed{opacity:.6}
+  /* the name column truncates instead of wrapping into slivers */
+  .ld-name{display:block;font-weight:600;font-size:.87rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ld-sub{display:block;font-size:.71rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:.1rem}
+  .ld-bar{display:block;height:3px;border-radius:99px;background:var(--wash-strong);margin-top:.35rem;overflow:hidden}
+  .ld-bar i{display:block;height:100%;background:var(--grad);border-radius:99px}
+  /* transactions table: give the description room, pin the rest */
+  #tblTxn{min-width:1080px;table-layout:fixed}
+  #tblTxn th:nth-child(1),#tblTxn td:nth-child(1){width:92px}
+  #tblTxn th:nth-child(2),#tblTxn td:nth-child(2){width:100px}
+  #tblTxn th:nth-child(3),#tblTxn td:nth-child(3){width:98px}
+  #tblTxn th:nth-child(4),#tblTxn td:nth-child(4){width:136px}
+  #tblTxn th:nth-child(5),#tblTxn td:nth-child(5){width:auto;min-width:150px}
+  #tblTxn th:nth-child(6),#tblTxn td:nth-child(6){width:126px}
+  #tblTxn th:nth-child(7),#tblTxn td:nth-child(7){width:140px}
+  #tblTxn th:nth-child(8),#tblTxn td:nth-child(8){width:104px}
+  #tblTxn th:nth-child(9),#tblTxn td:nth-child(9){width:132px}
+  #tblTxn td:nth-child(4),#tblTxn td:nth-child(5),#tblTxn td:nth-child(7){overflow:hidden;text-overflow:ellipsis}
+  @media(max-width:640px){#tblTxn{min-width:0;table-layout:auto}#tblTxn th,#tblTxn td{width:auto!important;overflow:visible}}
+
+  /* fixed geometry so columns stop fighting each other */
+  #tblLD{min-width:1150px;table-layout:fixed}
+  #tblLD th:nth-child(1),#tblLD td:nth-child(1){width:104px}
+  #tblLD th:nth-child(2),#tblLD td:nth-child(2){width:auto;min-width:150px}
+  #tblLD th:nth-child(3),#tblLD td:nth-child(3){width:128px}
+  #tblLD th:nth-child(4),#tblLD td:nth-child(4){width:122px}
+  #tblLD th:nth-child(5),#tblLD td:nth-child(5){width:138px}
+  #tblLD th:nth-child(6),#tblLD td:nth-child(6){width:128px}
+  #tblLD th:nth-child(7),#tblLD td:nth-child(7){width:138px}
+  #tblLD th:nth-child(8),#tblLD td:nth-child(8){width:82px}
+  #tblLD th:nth-child(9),#tblLD td:nth-child(9){width:152px}
+  /* keep the action buttons reachable while the table scrolls sideways */
+  @media(min-width:641px){
+    #tblLD td.acts,#tblLD th.acts{position:sticky;right:0;background:var(--card);box-shadow:-10px 0 10px -10px rgba(0,0,0,.35)}
+    #tblLD tbody tr:hover td.acts{background:var(--row-hover)}
+  }
+  /* drop the least essential columns before the layout gets cramped */
+  @media(max-width:1180px) and (min-width:641px){
+    #tblLD{min-width:1030px}
+    #tblLD th:nth-child(6),#tblLD td:nth-child(6){display:none}
+  }
+  @media(max-width:1000px) and (min-width:641px){
+    #tblLD{min-width:900px}
+    #tblLD th:nth-child(3),#tblLD td:nth-child(3){display:none}
+  }
   .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
   .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
   .bank-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--bc,var(--gold))}
@@ -294,6 +346,17 @@
     td input,td select{max-width:62%}
     .row-actions{justify-content:flex-end}
     .toolbar .sum{margin-left:0;width:100%}
+    /* undo the desktop grid so the mobile cards lay out freely */
+    #tblLD{min-width:0;table-layout:auto}
+    #tblLD th,#tblLD td{width:auto!important}
+    #tblLD td.acts{position:static;box-shadow:none;background:none}
+    tbody td{height:auto}
+    .ld-who,.ld-id{max-width:none;flex-wrap:wrap;align-items:center}
+    .ld-name{flex:1;min-width:0;text-align:right;white-space:normal}
+    .ld-sub{flex-basis:100%;text-align:right;white-space:normal}
+    .mono-id{display:inline;margin:0 0 0 auto}
+    .cell-sub{margin-left:.4rem;white-space:normal;overflow:visible}
+    .ld-bar{width:100%;flex-basis:100%;min-width:60px}
   }
 </style>
 </head>
@@ -529,7 +592,7 @@
       <span class="sum" id="ldFilteredSum"></span>
     </div>
     <div class="table-card">
-      <table id="tblLD"><thead><tr><th>Record</th><th>Type</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">Rate</th><th style="text-align:right">EMI</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblLD"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyLD" style="display:none">No loans or debts yet.</div>
     </div>
   </section>
@@ -1787,6 +1850,7 @@ function renderStatement(){
 
 /* ---------- loans & debts ---------- */
 function ldLabel(type){return type==="Debt Receivable"?"Receivable · owed to me":type==="Debt Payable"?"Payable · I owe":"Bank loan · I owe";}
+function ldShort(type){return type==="Debt Receivable"?"Receivable":type==="Debt Payable"?"Payable":"Bank loan";}
 /* ---------- loan interest maths ----------
    EMI uses the standard reducing-balance amortisation formula.
    Net payable = EMI x term. With no term we cannot spread interest,
@@ -1826,18 +1890,17 @@ function renderLD(){
     const net=ldNetPayable(r), emi=ldEmi(r), paid=r2(net-r.balance);
     const pct=net>0?Math.max(0,Math.min(100,paid/net*100)):0;
     const interest=ldInterest(r);
-    return `<tr data-i="${i}"${closed?' style="opacity:.62"':''}>
-      <td data-l="Record" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(r.id)}</td>
-      <td data-l="Type"><span class="tag ${recvType?"given":"taken"}">${esc(ldLabel(r.type))}</span></td>
-      <td data-l="Person"><strong>${esc(r.person)}</strong><span style="display:block;font-size:.72rem;color:var(--muted)">${esc(r.purpose||"—")}${r.due?" · due "+esc(r.due):""}</span>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
+    const sub=[r.purpose,r.due?"due "+r.due:""].filter(Boolean).join(" · ");
+    return `<tr data-i="${i}"${closed?' class="is-closed"':''}>
+      <td data-l="Record" class="ld-id"><span class="mono-id">${esc(r.id)}</span><span class="tag ${recvType?"given":"taken"}" title="${esc(ldLabel(r.type))}">${esc(ldShort(r.type))}</span></td>
+      <td data-l="Person / Lender" class="ld-who"><strong class="ld-name" title="${esc(r.person)}">${esc(r.person)}</strong>${sub?`<span class="ld-sub" title="${esc(sub)}">${esc(sub)}</span>`:""}${closed&&r.txnRef?`<span class="ld-sub">🔗 ${esc(r.txnRef)}</span>`:""}</td>
       <td data-l="Principal" class="num">${fmt(r.principal)}</td>
-      <td data-l="Rate" class="num">${r.rate>0?esc(r.rate)+"%":'<span style="color:var(--muted)">—</span>'}</td>
-      <td data-l="EMI" class="num">${emi>0?fmt(emi)+`<span style="display:block;font-size:.68rem;color:var(--muted)">${r.term} mo</span>`:'<span style="color:var(--muted)">—</span>'}</td>
-      <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span style="display:block;font-size:.68rem;color:var(--coral)">+${fmt(interest)} int</span>`:""}</td>
-      <td data-l="Paid" class="num">${fmt(paid)}${net>0&&!closed?`<span class="ld-bar"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
+      <td data-l="EMI / rate" class="num">${r.rate>0?(emi>0?`${fmt(emi)}<span class="cell-sub">${esc(r.rate)}% · ${r.term} mo</span>`:`${esc(r.rate)}%<span class="cell-sub">no term set</span>`):'<span class="dash">—</span>'}</td>
+      <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span class="cell-sub coral">+${fmt(interest)} int</span>`:""}</td>
+      <td data-l="Paid" class="num">${paid>0?fmt(paid):'<span class="dash">—</span>'}${net>0&&!closed&&paid>0?`<span class="ld-bar" title="${pct.toFixed(1)}% repaid"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
       <td data-l="Balance due" class="num">${closed?'<span class="tag done">Closed ✓</span>':`<strong class="${recvType?"pos":"neg"}">${fmt(r.balance)}</strong>`}</td>
-      <td data-l="Status">${closed?`<span style="font-size:.75rem;color:var(--muted)">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editLD">Edit</button><button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Delete</button>`}</div></td></tr>`;
+      <td data-l="Status">${closed?`<span class="cell-sub">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
+      <td data-l="" class="acts"><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenLD">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editLD">Edit</button><button type="button" class="icon-btn" data-act="closeLD" title="Settle / close">Close</button><button type="button" class="icon-btn danger" data-act="delLD">Del</button>`}</div></td></tr>`;
   }).join("");
   $("#emptyLD").style.display=lends.length?"none":"block";
   $("#tblLD").style.display=lends.length?"":"none";

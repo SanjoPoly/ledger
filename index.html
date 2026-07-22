@@ -285,6 +285,27 @@
   #tblTxn td:nth-child(4),#tblTxn td:nth-child(5),#tblTxn td:nth-child(7){overflow:hidden;text-overflow:ellipsis}
   @media(max-width:640px){#tblTxn{min-width:0;table-layout:auto}#tblTxn th,#tblTxn td{width:auto!important;overflow:visible}}
 
+  /* ---------- statement import ---------- */
+  .pill[data-tab="imp"] .dot{background:var(--pink)}
+  .imp-legend{display:flex;gap:.6rem;margin:.2rem 0 .7rem;flex-wrap:wrap}
+  .dup-chip{background:var(--amber-dim);color:var(--amber);font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .6rem;white-space:nowrap}
+  .auto-chip{background:var(--mint-dim);color:var(--mint);font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .6rem;white-space:nowrap}
+  tr.dup-row td{background:var(--amber-dim)}
+  tr.dup-row:hover td{background:var(--amber-dim)}
+  #tblImp{min-width:900px;table-layout:fixed}
+  #tblImp th.chk,#tblImp td.chk{width:44px}
+  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:142px}
+  #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:160px}
+  #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:118px}
+  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:112px}
+  #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:150px}
+  #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:120px}
+  #tblImp .imp-chk{width:17px;height:17px;accent-color:var(--mint)}
+  #tblImp input[type="date"],#tblImp select,#tblImp .imp-desc{width:100%}
+  .imp-actions{display:flex;gap:.6rem;margin-top:.9rem;align-items:center;flex-wrap:wrap}
+  .imp-actions .btn-accent{min-height:46px}
+  @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}}
+
   /* fixed geometry so columns stop fighting each other */
   #tblLD{min-width:1150px;table-layout:fixed}
   #tblLD th:nth-child(1),#tblLD td:nth-child(1){width:104px}
@@ -477,6 +498,7 @@
     <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
     <button class="pill" data-tab="ld"><span class="dot"></span>Loans &amp; Debts</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
+    <button class="pill" data-tab="imp"><span class="dot"></span>Statement Upload</button>
   </nav>
 
   <!-- ============ DASHBOARD ============ -->
@@ -618,6 +640,30 @@
       <table id="tblInv"><thead><tr><th>Inv ID</th><th>Asset</th><th>Type</th><th>Bank</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyInv" style="display:none">No investments yet.</div>
     </div>
+  </section>
+
+  <!-- ============ STATEMENT UPLOAD ============ -->
+  <section class="panel" id="panel-imp">
+    <div class="section-head"><h2>Bank statement upload</h2><span class="total" id="impHead"></span></div>
+    <div class="add-card" id="impCard">
+      <div class="f"><label for="impBank">Bank account <i>(one bank per upload)</i></label><select id="impBank" class="bank-select"></select></div>
+      <div class="f"><label for="impFile">Statement file <i>(PDF or TXT / CSV)</i></label><input type="file" id="impFile" accept=".pdf,.txt,.csv,text/plain,application/pdf"></div>
+      <div class="f" style="align-self:end"><button type="button" class="btn-accent" id="btnImpParse" style="width:100%">Read statement</button></div>
+      <div id="impStatus" class="calc-preview" style="display:none"></div>
+    </div>
+
+    <div id="impReview" style="display:none">
+      <div class="section-head"><h2 style="font-size:1rem">Transactions found</h2><span class="total" id="impSummary"></span></div>
+      <div class="imp-legend"><span class="dup-chip">⚠ Same amount already in ledger</span><span class="auto-chip">✦ Auto-detected income</span></div>
+      <div class="table-card">
+        <table id="tblImp"><thead><tr><th class="chk"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Type</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="imp-actions">
+        <button type="button" class="btn-accent" id="btnImpPost">Post selected to ledger</button>
+        <button type="button" class="icon-btn" id="btnImpClear" style="min-height:46px">Discard</button>
+      </div>
+    </div>
+    <div class="empty" id="impEmpty" style="display:none">No transactions could be read from that file. If it's a scanned-image PDF, the text can't be extracted — try the TXT export from your bank instead.</div>
   </section>
 </main>
 
@@ -1509,7 +1555,7 @@ function refreshSelects(){
   const pay=$("#tPay");if(pay)pay.innerHTML=opts(lists.payMethods);
   const iv=$("#ivType");if(iv)iv.innerHTML=opts(lists.investTypes);
   // bank selects
-  ["tBank","tBankTo","ivBank","ldFundBank"].forEach(id=>{const el=$("#"+id);if(el){const cur=el.value;el.innerHTML=bankOpts(cur);}});
+  ["tBank","tBankTo","ivBank","ldFundBank","impBank"].forEach(id=>{const el=$("#"+id);if(el){const cur=el.value;el.innerHTML=bankOpts(cur);}});
   // filters
   const fb=$("#filterTxnBank");if(fb){const cur=fb.value;fb.innerHTML='<option value="">All accounts</option>'+banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join("");}
   const sb=$("#stmtBank");if(sb){const cur=sb.value;sb.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— no banks —</option>';}
@@ -2291,12 +2337,242 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   b.classList.add("active");
   const tab=b.dataset.tab;
   $$(".panel").forEach(p=>p.classList.remove("active"));
-  const map={home:"panel-home",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv"};
+  const map={home:"panel-home",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",imp:"panel-imp"};
   const panel=$("#"+map[tab]);if(panel)panel.classList.add("active");
   if(tab==="bank"){renderBank();renderStatement();refreshSelects();if($("#recDate")&&!$("#recDate").value)$("#recDate").value=todayISO();}
+  if(tab==="imp")refreshSelects();
   if(tab==="home")renderDash();
   window.scrollTo(0,0);
 }));
+
+/* ============================================================
+   BANK STATEMENT IMPORT
+   Upload a PDF / TXT statement → parse transactions → review,
+   fix types & categories → post to the ledger.
+============================================================ */
+let importRows=[];      // {date,desc,amount,type,cat,include,dup,auto,note}
+let importBank="", importFile="";
+
+/* pdf.js is loaded only when a PDF is actually chosen */
+let pdfjsReady=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  if(pdfjsReady)return pdfjsReady;
+  pdfjsReady=new Promise((res,rej)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";res();};
+    s.onerror=()=>{pdfjsReady=null;rej(new Error("Couldn't load the PDF reader — check your connection and retry."));};
+    document.head.appendChild(s);
+  });
+  return pdfjsReady;
+}
+async function pdfToLines(buf){
+  await loadPdfJs();
+  const doc=await window.pdfjsLib.getDocument({data:buf}).promise;
+  const lines=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const tc=await page.getTextContent();
+    /* group text items into visual lines by their y position */
+    const rows={};
+    tc.items.forEach(it=>{
+      const y=Math.round(it.transform[5]/2)*2;   // 2px tolerance
+      (rows[y]=rows[y]||[]).push({x:it.transform[4],s:it.str});
+    });
+    Object.keys(rows).map(Number).sort((a,b)=>b-a).forEach(y=>{
+      const line=rows[y].sort((a,b)=>a.x-b.x).map(i=>i.s).join(" ").replace(/\s+/g," ").trim();
+      if(line)lines.push(line);
+    });
+  }
+  return lines;
+}
+
+/* ---------- text → candidate transactions ---------- */
+const IMP_MONTHS={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function impParseDate(s){
+  let m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
+  if(m)return `${m[1]}-${String(+m[2]).padStart(2,"0")}-${String(+m[3]).padStart(2,"0")}`;
+  m=/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/.exec(s);
+  if(m){let y=+m[3];if(y<100)y+=2000;return `${y}-${String(+m[2]).padStart(2,"0")}-${String(+m[1]).padStart(2,"0")}`;}   // DD/MM/YY(YY)
+  m=/^(\d{1,2})[ \-]([A-Za-z]{3})[a-z]*[ \-](\d{2,4})/.exec(s);
+  if(m){const mo=IMP_MONTHS[m[2].toLowerCase().slice(0,3)];if(mo){let y=+m[3];if(y<100)y+=2000;return `${y}-${String(mo).padStart(2,"0")}-${String(+m[1]).padStart(2,"0")}`;}}
+  return null;
+}
+function impDetectNature(desc){
+  const d=desc.toLowerCase();
+  if(/\bint(erest)?\b|int\.pd|sb int|savings interest/.test(d))return {type:"Income",cat:"Interest",auto:true};
+  if(/\bdiv(idend)?\b|dividend/.test(d))return {type:"Income",cat:"Dividends / Profit",auto:true};
+  if(/salary|payroll|sal cr/.test(d))return {type:"Income",cat:"Salary",auto:true};
+  return null;
+}
+function parseStatementText(lines){
+  const SKIP=/opening balance|closing balance|balance b\/f|balance c\/f|brought forward|carried forward|statement (of|for)|page \d+|^date\b.*(particular|narration|description|details)|total\b|^\s*$/i;
+  const AMT=/-?(?:\d{1,3}(?:,\d{2,3})+|\d+)\.\d{2}\b/g;
+  const DATE_HEAD=/^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{1,2}[ \-][A-Za-z]{3,9}[ \-]\d{2,4})/;
+  const rows=[];let pending=null;
+  const flush=()=>{if(pending){rows.push(pending);pending=null;}};
+  for(const raw of lines){
+    const line=raw.trim();
+    if(!line||SKIP.test(line))continue;
+    const date=impParseDate(line);
+    if(date){
+      flush();
+      const dm=DATE_HEAD.exec(line);                       // strip exactly the matched date, nothing more
+      pending={date,text:(dm?line.slice(dm[0].length):line).trim(),extra:0};
+    }else if(pending&&pending.extra<3){
+      pending.text+=" "+line;pending.extra++;
+    }
+    if(pending){
+      AMT.lastIndex=0;
+      if(AMT.test(pending.text))flush();
+    }
+  }
+  flush();
+  /* second pass: pull numbers out of each row's text */
+  const out=[];
+  rows.forEach(r=>{
+    AMT.lastIndex=0;
+    const matches=r.text.match(AMT)||[];
+    if(!matches.length)return;
+    const nums=matches.map(a=>parseFloat(a.replace(/,/g,"")));
+    const balance=matches.length>=2?nums[nums.length-1]:null;
+    let amount=matches.length>=2?nums[nums.length-2]:nums[0];
+    let dir=null;                              // "cr" | "dr" | null
+    if(amount<0){dir="dr";amount=Math.abs(amount);}
+    /* markers: after the amounts ("1,500.00 Dr") or as narration suffixes ("NEFT CR", "ACH CR") */
+    const tail=r.text.slice(r.text.indexOf(matches[0]));
+    if(/\b(cr|credit)\b/i.test(tail)&&!/credit card/i.test(tail))dir=dir||"cr";
+    if(/\b(dr|debit)\b/i.test(tail)&&!/debit card/i.test(tail))dir=dir||"dr";
+    if(!dir){
+      if(/\b(?:neft|ach|imps|rtgs|upi|sal|salary|int)[ \.\-]?cr\b/i.test(r.text))dir="cr";
+      else if(/\b(?:neft|ach|imps|rtgs|upi)[ \.\-]?dr\b/i.test(r.text))dir="dr";
+    }
+    /* narration: drop the amounts, lone ref numbers, value dates, and marker words */
+    let desc=r.text;
+    matches.forEach(a=>{desc=desc.replace(a,"");});
+    desc=desc.replace(/\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g,"")
+             .replace(/\b\d{6,}\b/g,"")
+             .replace(/\b(cr|dr|credit|debit)\b/gi,"")
+             .replace(/[|\u00b7]+/g," ").replace(/[\/\-]{2,}/g," ").replace(/\s+/g," ").trim().slice(0,80);
+    if(amount>0)out.push({date:r.date,desc:desc||"(no narration)",amount:r2(amount),balance,dir});
+  });
+  /* third pass: use running-balance deltas to fix direction (statement may run either way) */
+  const score=arr=>{let s=0,prev=null;arr.forEach(t=>{if(t.balance!=null&&prev!=null){const d=r2(t.balance-prev);if(Math.abs(d-t.amount)<0.02||Math.abs(d+t.amount)<0.02)s++;}if(t.balance!=null)prev=t.balance;});return s;};
+  const fwd=score(out), rev=score(out.slice().reverse());
+  const ordered=rev>fwd?out.slice().reverse():out;
+  let prev=null;
+  ordered.forEach(t=>{
+    if(t.balance!=null&&prev!=null){
+      const d=r2(t.balance-prev);
+      if(Math.abs(d-t.amount)<0.02)t.dir="cr";
+      else if(Math.abs(d+t.amount)<0.02)t.dir="dr";
+    }
+    if(t.balance!=null)prev=t.balance;
+  });
+  return out;   // original order for display
+}
+
+/* ---------- review table ---------- */
+function impCatOptions(type,sel){
+  const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+  return src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
+}
+function renderImport(){
+  const body=$("#tblImp tbody");if(!body)return;
+  body.innerHTML=importRows.map((t,i)=>`<tr data-imp="${i}" class="${t.dup?"dup-row":""}">
+    <td data-l="Include" class="chk"><input type="checkbox" class="imp-chk"${t.include?" checked":""}></td>
+    <td data-l="Date"><input type="date" class="imp-date" value="${esc(t.date)}"></td>
+    <td data-l="Description" class="imp-desc-cell"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
+    <td data-l="Amount" class="num">${fmt(t.amount)}</td>
+    <td data-l="Type"><select class="imp-type"><option${t.type==="Income"?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></td>
+    <td data-l="Category"><select class="imp-cat">${impCatOptions(t.type,t.cat)}</select></td>
+    <td data-l="Note">${t.dup?'<span class="dup-chip">⚠ duplicate?</span>':""}${t.auto?'<span class="auto-chip">✦ auto</span>':""}</td>
+  </tr>`).join("");
+  const inc=importRows.filter(t=>t.include);
+  $("#impSummary").textContent=`${importRows.length} found · ${inc.length} selected · ${importRows.filter(t=>t.dup).length} possible duplicate${importRows.filter(t=>t.dup).length===1?"":"s"}`;
+  $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
+  $("#btnImpPost").disabled=!inc.length;
+}
+$("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
+  const tr=e.target.closest("tr[data-imp]");if(!tr)return;
+  const t=importRows[+tr.dataset.imp];if(!t)return;
+  if(e.target.classList.contains("imp-chk"))t.include=e.target.checked;
+  if(e.target.classList.contains("imp-date"))t.date=e.target.value||t.date;
+  if(e.target.classList.contains("imp-desc"))t.desc=e.target.value.trim();
+  if(e.target.classList.contains("imp-type")){t.type=e.target.value;t.cat=(t.type==="Income"?lists.incomeCats:lists.expenseCats)[0]||"Other";renderImport();return;}
+  if(e.target.classList.contains("imp-cat"))t.cat=e.target.value;
+  const inc=importRows.filter(x=>x.include);
+  $("#impSummary").textContent=`${importRows.length} found · ${inc.length} selected · ${importRows.filter(x=>x.dup).length} possible duplicates`;
+  $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
+  $("#btnImpPost").disabled=!inc.length;
+});
+
+/* ---------- parse button ---------- */
+$("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
+  const bank=$("#impBank").value, fileEl=$("#impFile"), status=$("#impStatus");
+  $("#impEmpty").style.display="none";
+  if(!bank){toast("Pick the bank this statement belongs to");return;}
+  if(!fileEl.files||!fileEl.files[0]){toast("Choose a statement file first");return;}
+  const file=fileEl.files[0];
+  status.style.display="";status.innerHTML="Reading "+esc(file.name)+"…";
+  try{
+    let lines;
+    if(/\.pdf$/i.test(file.name)||file.type==="application/pdf"){
+      const buf=new Uint8Array(await file.arrayBuffer());
+      lines=await pdfToLines(buf);
+    }else{
+      const text=await file.text();
+      lines=text.split(/\r?\n/);
+    }
+    const parsed=parseStatementText(lines);
+    if(!parsed.length){
+      status.style.display="none";
+      $("#impReview").style.display="none";
+      $("#impEmpty").style.display="block";
+      return;
+    }
+    /* duplicate check: same amount already on this bank's ledger */
+    const existing=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
+    importBank=bank;importFile=file.name;
+    importRows=parsed.map(t=>{
+      const nature=impDetectNature(t.desc);
+      const type=nature?nature.type:(t.dir==="cr"?"Income":"Expense");
+      const cat=nature?nature.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
+      const dup=existing.has(r2(t.amount));
+      return {date:t.date,desc:t.desc,amount:t.amount,type,cat,auto:!!nature,dup,include:!dup};
+    });
+    status.innerHTML=`Read <b>${importRows.length}</b> transactions from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `+
+      `Income/expense was worked out from the running balance where possible — check each row before posting.`;
+    $("#impReview").style.display="";
+    renderImport();
+  }catch(err){
+    console.error(err);
+    status.style.display="";
+    status.innerHTML='<span class="warn">'+esc(err.message||"Couldn't read that file.")+"</span>";
+  }
+});
+
+/* ---------- post / discard ---------- */
+$("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
+  const inc=importRows.filter(t=>t.include&&t.amount>0);
+  if(!inc.length)return;
+  const dups=inc.filter(t=>t.dup).length;
+  if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Post anyway?`))return;
+  inc.forEach(t=>{
+    txns.push({id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:"Bank Import",ref:"Import: "+importFile,loanRef:""});
+  });
+  toast(`${inc.length} transaction${inc.length===1?"":"s"} posted to ${importBank}`);
+  importRows=[];importBank="";importFile="";
+  $("#impReview").style.display="none";$("#impStatus").style.display="none";
+  if($("#impFile"))$("#impFile").value="";
+  setDirty(true);renderAll();
+});
+$("#btnImpClear")&&$("#btnImpClear").addEventListener("click",()=>{
+  importRows=[];importBank="";importFile="";
+  $("#impReview").style.display="none";$("#impStatus").style.display="none";$("#impEmpty").style.display="none";
+  if($("#impFile"))$("#impFile").value="";
+});
 
 /* ---------- top-bar buttons ---------- */
 $("#btnSave")&&$("#btnSave").addEventListener("click",saveFile);

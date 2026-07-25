@@ -1152,7 +1152,7 @@ $("#btnCreateGo").addEventListener("click",async()=>{
   owner=$("#cName").value.trim();username=user;
   currency=$("#cCurrency").value;
   passHash=await hashPin(pin);sessionPass=pin;
-  txns=[];banks=[];lends=[];invs=[];
+  txns=[];banks=[];lends=[];invs=[];coa=[];
   if(creatingToGithub){storageMode="github";fileName=gh.path.split("/").pop();
     if(rememberDevice&&gh.token)await saveProfile(pin);}
   else{storageMode="local";fileHandle=null;fileName="my-money.xlsx";}
@@ -1321,6 +1321,7 @@ let editingLD=null;   // Loan/debt Record ID currently being edited
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
+let coa=[];       // {number,name,type,category,sub,keywords} — Chart of Accounts
 
 /* ---------- id helpers ---------- */
 function nextTxnId(){
@@ -1356,7 +1357,7 @@ function sheetRows(wb,name){
   // headers are on row 3 (rows 1-2 are title/subtitle banners)
   const all=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",blankrows:false});
   // find the header row: the row containing "Txn ID" / "Account ID" / "Record ID" / "Inv ID"
-  let hi=all.findIndex(r=>r.some(c=>/^(Txn ID|Account ID|Record ID|Inv ID)$/i.test(String(c).trim())));
+  let hi=all.findIndex(r=>r.some(c=>/^(Txn ID|Account ID|Record ID|Inv ID|Account Number)$/i.test(String(c).trim())));
   if(hi<0)hi=2;
   const headers=all[hi].map(h=>String(h).trim());
   const out=[];
@@ -1379,7 +1380,7 @@ function gv(o,...keys){
 
 function parseWorkbook(buf,name){
   const wb=XLSX.read(new Uint8Array(buf),{type:"array"});
-  txns=[];banks=[];lends=[];invs=[];
+  txns=[];banks=[];lends=[];invs=[];coa=[];
 
   // Transactions
   sheetRows(wb,"Transactions").forEach(r=>{
@@ -1474,6 +1475,21 @@ function parseWorkbook(buf,name){
     });
   });
 
+  // Chart of Accounts (optional sheet — main accounts + statement-matching keywords)
+  coa=[];
+  sheetRows(wb,"Chart of Accounts").forEach(r=>{
+    const numv=String(gv(r,"Account Number")||"").trim();
+    const nm=String(gv(r,"Name","Account Name")||"").trim();
+    if(!numv&&!nm)return;
+    coa.push({
+      number:numv,name:nm,
+      type:String(gv(r,"Account Type")||"").trim(),
+      category:String(gv(r,"Account Category")||"").trim(),
+      sub:String(gv(r,"Account Sub Category","Sub Category")||"").trim(),
+      keywords:String(gv(r,"Key Words for Matching","Keywords for Matching","Keywords")||"").trim()
+    });
+  });
+
   // Settings + Lists (optional sheets, for currency/owner/login and category lists)
   const setWs=wb.Sheets["Settings"];
   if(setWs){
@@ -1552,6 +1568,13 @@ function buildWorkbook(){
   const wsI=bannerSheet("Investment Portfolio Tracker","Monitor portfolio valuation and real-time gains/losses",ivHeaders,ivData);
   wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18}];
   XLSX.utils.book_append_sheet(wb,wsI,"Investments");
+
+  // Chart of Accounts — preserved on every save so hand-added accounts survive
+  const coaHeaders=["Account Number","Name","Account Type","Account Category","Account Sub Category","Key Words for Matching"];
+  const coaData=coa.map(a=>[a.number,a.name,a.type,a.category,a.sub,a.keywords]);
+  const wsC=bannerSheet("Chart of Accounts","Main accounts with 5-digit codes: 1=Asset 2=Liability 3=Equity 4=Income 5=Expense. Keywords drive statement-upload auto-matching.",coaHeaders,coaData);
+  wsC["!cols"]=[{wch:14},{wch:30},{wch:12},{wch:20},{wch:24},{wch:46}];
+  XLSX.utils.book_append_sheet(wb,wsC,"Chart of Accounts");
 
   // Lists
   const listHead=["Income Categories","Expense Categories","Payment Methods","Investment Types","Loan Types"];
@@ -2624,6 +2647,25 @@ function impParseDate(s){
   if(m){const mo=IMP_MONTHS[m[2].toLowerCase().slice(0,3)];if(mo){let y=+m[3];if(y<100)y+=2000;return `${y}-${String(mo).padStart(2,"0")}-${String(+m[1]).padStart(2,"0")}`;}}
   return null;
 }
+/* COA keyword matcher: the longest matching keyword wins.
+   Short keywords (3 chars or fewer) must match whole words so "div"
+   catches "TML DIV" but never "Divya". Only Income/Expense accounts
+   take part — asset and liability accounts don't categorise spending. */
+function impMatchCoa(desc){
+  if(!coa.length)return null;
+  const d=String(desc||"").toLowerCase();
+  let best=null;
+  coa.forEach(a=>{
+    if(a.type!=="Income"&&a.type!=="Expense")return;
+    String(a.keywords||"").split(",").map(k=>k.trim().toLowerCase()).filter(Boolean).forEach(k=>{
+      const hit=k.length<=3
+        ?new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(d)
+        :d.includes(k);
+      if(hit&&(!best||k.length>best.kw.length))best={kw:k,type:a.type,cat:a.name};
+    });
+  });
+  return best?{type:best.type,cat:best.cat,auto:true}:null;
+}
 function impDetectNature(desc){
   const d=desc.toLowerCase();
   if(/\bint(erest)?\b|int\.pd|sb ?int|savings interest/.test(d))return {type:"Income",cat:"Interest",auto:true};
@@ -2712,7 +2754,8 @@ function parseStatementText(lines){
 /* ---------- review table ---------- */
 function impCatOptions(type,sel){
   const src=type==="Income"?lists.incomeCats:lists.expenseCats;
-  return src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
+  const pre=sel&&!src.includes(sel)?`<option selected>${esc(sel)}</option>`:"";
+  return pre+src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
 }
 /* ---------- statement tagging: link a line to loans/debts/investments ----------
    Tag values encode action:target —
@@ -2876,7 +2919,7 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
     importExisting=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
     importBank=bank;importFile=file.name;impEditIdx=-1;
     importRows=parsed.map(t=>{
-      const nature=impDetectNature(t.desc);
+      const nature=impMatchCoa(t.desc)||impDetectNature(t.desc);
       const type=nature?nature.type:(t.dir==="cr"?"Income":"Expense");
       const cat=nature?nature.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
       const dup=importExisting.has(r2(t.amount));

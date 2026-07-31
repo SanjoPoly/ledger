@@ -328,6 +328,19 @@
   #tblCoa td:nth-child(2),#tblCoa td:nth-child(4),#tblCoa td:nth-child(5){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .coa-kw{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:.76rem;font-family:var(--mono)}
   @media(max-width:640px){#tblCoa{min-width:0;table-layout:auto}#tblCoa th,#tblCoa td{width:auto!important;white-space:normal;overflow:visible}.coa-kw{white-space:normal}}
+  /* ---------- financial statements ---------- */
+  .fin-st{font-size:.84rem;padding:.2rem 0 .4rem}
+  .fin-row{display:flex;justify-content:space-between;gap:.8rem;padding:.26rem 0;align-items:baseline}
+  .fin-row span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.82rem}
+  .fin-row span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fin-sub{padding-left:.95rem;color:var(--muted)}
+  .fin-sec{display:flex;justify-content:space-between;gap:.8rem;font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:.65rem 0 .1rem;border-bottom:1px solid var(--line);padding-bottom:.3rem}
+  .fin-sec span:last-child{font-family:var(--mono);letter-spacing:0;font-size:.74rem}
+  .fin-total{border-top:1px solid var(--line-strong);margin-top:.4rem;padding-top:.45rem;font-weight:700}
+  .fin-net{background:var(--wash);border-radius:10px;padding:.55rem .7rem;margin-top:.6rem;border-top:none}
+  .fin-head-line{font-weight:800;font-size:.9rem;margin:.3rem 0 .1rem}
+  .fin-head-line.pos{color:var(--mint)} .fin-head-line.neg{color:var(--coral)}
+  .mini-select{background:var(--wash);border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;font-size:.72rem;color:var(--text);text-transform:none;letter-spacing:0}
 
   /* fixed geometry so columns stop fighting each other */
   .tbl-ld{min-width:1150px;table-layout:fixed}
@@ -555,6 +568,10 @@
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
     </div>
+    <div class="charts">
+      <div class="chart-card"><h3>Assets &amp; liabilities <small>statement \u00b7 as of today</small></h3><div id="stBalance" class="fin-st"></div></div>
+      <div class="chart-card"><h3>Income &amp; expense <small>statement \u00b7 <select id="stPeriod" class="mini-select"></select></small></h3><div id="stPL" class="fin-st"></div></div>
+    </div>
   </section>
 
   <!-- ============ ADD / POST ============ -->
@@ -710,8 +727,8 @@
       <div class="f"><label for="coaNum">Account number <i>(5 digits \u00b7 1 Asset \u00b7 2 Liability \u00b7 3 Equity \u00b7 4 Income \u00b7 5 Expense)</i></label><input type="text" id="coaNum" maxlength="5" inputmode="numeric" placeholder="e.g. 52003" required></div>
       <div class="f"><label for="coaName">Name</label><input type="text" id="coaName" placeholder="e.g. Groceries" required></div>
       <div class="f"><label for="coaType">Account type</label><select id="coaType"><option>Asset</option><option>Liability</option><option>Equity</option><option>Income</option><option>Expense</option></select></div>
-      <div class="f"><label for="coaCat">Account category</label><input type="text" id="coaCat" placeholder="e.g. Food"></div>
-      <div class="f"><label for="coaSub">Account sub category</label><input type="text" id="coaSub" placeholder="e.g. Provisions"></div>
+      <div class="f"><label for="coaCat">Account category <i>(filtered by type)</i></label><select id="coaCat"></select><input type="text" id="coaCatNew" placeholder="New category name" style="display:none;margin-top:.4rem"></div>
+      <div class="f"><label for="coaSub">Account sub category <i>(filtered by category)</i></label><select id="coaSub"></select><input type="text" id="coaSubNew" placeholder="New sub category name" style="display:none;margin-top:.4rem"></div>
       <div class="f"><label for="coaKw">Keywords for statement matching <i>(comma-separated)</i></label><input type="text" id="coaKw" placeholder="grocery,supermarket,dmart"></div>
       <div class="f"><button type="submit">+ Add account</button><button type="button" id="btnCancelCoa" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
@@ -919,6 +936,7 @@ function applyTheme(t,persist){
 /* ---------- category lists from the master ---------- */
 const SELECT_LIST_MAP=[["inCat","incomeCats"],["exCat","expenseCats"],["exPay","payMethods"],["ivType","investTypes"],["lnType","loanTypes"]];
 function refreshSelects(){
+  try{syncCoaCat();}catch(e){}
   SELECT_LIST_MAP.forEach(([id,key])=>{
     const sel=$("#"+id);if(!sel)return;
     const cur=sel.value;
@@ -1631,6 +1649,7 @@ function buildWorkbook(){
 
 /* ---------- lists / selects ---------- */
 function refreshSelects(){
+  try{syncCoaCat();}catch(e){}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
   // transaction category depends on type
@@ -1643,6 +1662,21 @@ function refreshSelects(){
   const fb=$("#filterTxnBank");if(fb){const cur=fb.value;fb.innerHTML='<option value="">All accounts</option>'+banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join("");}
   const sb=$("#stmtBank");if(sb){const cur=sb.value;sb.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— no banks —</option>';}
   const rb=$("#recBank");if(rb){const cur=rb.value;rb.innerHTML=banks.length?banks.map(b=>`<option${b.name===cur?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';}
+}
+/* posting categories come from the COA when one exists:
+   Income \u2192 4xxxx accounts, Expense \u2192 5xxxx accounts, grouped by Account Category.
+   With no COA loaded, the old Lists still apply.                             */
+function txnCatOptions(type,cur){
+  const accts=coa.filter(a=>a.type===type&&a.name)
+    .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  if(!accts.length){
+    const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+    return src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
+  }
+  const byCat={};
+  accts.forEach(a=>{(byCat[a.category||"Other"]=byCat[a.category||"Other"]||[]).push(a.name);});
+  return Object.entries(byCat).map(([c,names])=>
+    `<optgroup label="${esc(c)}">`+names.map(n=>`<option${n===cur?" selected":""}>${esc(n)}</option>`).join("")+"</optgroup>").join("");
 }
 function syncTxnCat(){
   const type=$("#tType")?$("#tType").value:"Income";
@@ -1660,9 +1694,8 @@ function syncTxnCat(){
   }else{
     catWrap.style.display="";payWrap.style.display="";toWrap.style.display="none";
     $("#tBankLabel").textContent="Bank / Account";
-    const src=type==="Income"?lists.incomeCats:lists.expenseCats;
     $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
-    cat.innerHTML=src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
+    cat.innerHTML=txnCatOptions(type,cur);
   }
   syncTxnLoan();
 }
@@ -1717,6 +1750,68 @@ const thisMonthKey=()=>new Date().toISOString().slice(0,7);
 function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
 function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
+/* P&L grouped through the COA: each transaction category maps to its account,
+   and accounts roll up under their Account Category.                          */
+function plGroups(mk){
+  const inP=t=>!mk||monthKeyOf(t.date)===mk;
+  const build=type=>{
+    const sums={};
+    txns.filter(t=>t.type===type&&inP(t)).forEach(t=>{const c=t.cat||"Other";sums[c]=r2((sums[c]||0)+t.amount);});
+    const groups={};
+    Object.entries(sums).forEach(([cat,amt])=>{
+      const c=cat.toLowerCase();
+      /* map the transaction category to a COA account: exact name first,
+         then name containment either way, then the account's own keywords */
+      const acct=coa.find(a=>a.type===type&&a.name.toLowerCase()===c)
+        ||coa.find(a=>a.type===type&&(a.name.toLowerCase().includes(c)||c.includes(a.name.toLowerCase())))
+        ||coa.find(a=>a.type===type&&String(a.keywords||"").toLowerCase().split(",").some(k=>{k=k.trim();return k&&(k.length<=3?new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(c):c.includes(k));}));
+      const g=acct?(acct.category||"Other"):"Other";
+      (groups[g]=groups[g]||[]).push({name:cat,amt});
+    });
+    const list=Object.entries(groups)
+      .map(([g,accounts])=>({cat:g,accounts:accounts.sort((a,b)=>b.amt-a.amt),total:r2(accounts.reduce((sm,x)=>sm+x.amt,0))}))
+      .sort((a,b)=>b.total-a.total);
+    return {list,total:r2(list.reduce((sm,g)=>sm+g.total,0))};
+  };
+  return {income:build("Income"),expense:build("Expense")};
+}
+function renderStatements(){
+  const bs=$("#stBalance");if(!bs)return;
+  /* ----- assets & liabilities (from the live registers) ----- */
+  const bankRows=banks.map(b=>({name:b.name,amt:bankBalance(b.name)}));
+  const invRows=invs.filter(v=>v.status!=="Closed").map(v=>({name:v.name+" \u00b7 "+v.id,amt:v.current}));
+  const recvRows=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable").map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
+  const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable").map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
+  const aT=r2([...bankRows,...invRows,...recvRows].reduce((sm,x)=>sm+x.amt,0));
+  const lT=r2(payRows.reduce((sm,x)=>sm+x.amt,0));
+  const sec=(title,rows,cls)=>rows.length
+    ?`<div class="fin-sec"><span>${title}</span><span>${fmt(r2(rows.reduce((sm,x)=>sm+x.amt,0)))}</span></div>`
+      +rows.map(x=>`<div class="fin-row fin-sub"><span>${esc(x.name)}</span><span class="${cls||""}">${fmt(x.amt)}</span></div>`).join("")
+    :"";
+  bs.innerHTML=
+    sec("Cash & bank",bankRows)+sec("Investments",invRows)+sec("Money owed to you",recvRows)
+    +`<div class="fin-row fin-total"><span>Total assets</span><span class="pos">${fmt(aT)}</span></div>`
+    +sec("Loans & borrowings",payRows,"neg")
+    +`<div class="fin-row fin-total"><span>Total liabilities</span><span class="neg">${fmt(lT)}</span></div>`
+    +`<div class="fin-row fin-total fin-net"><span>Net worth (equity)</span><span class="${aT-lT>=0?"pos":"neg"}">${fmt(r2(aT-lT))}</span></div>`;
+  /* ----- income & expense statement for the chosen period ----- */
+  const sel=$("#stPeriod");
+  const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
+  const cur=sel.dataset.init?sel.value:(months.includes(thisMonthKey())?thisMonthKey():"");
+  sel.dataset.init=1;
+  sel.innerHTML='<option value=""'+(cur===""?" selected":"")+'>All time</option>'
+    +months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===cur?" selected":""}>${l}</option>`;}).join("");
+  const pl=plGroups(sel.value);
+  const grp=(g,cls)=>`<div class="fin-sec"><span>${esc(g.cat)}</span><span>${fmt(g.total)}</span></div>`
+    +g.accounts.map(a=>`<div class="fin-row fin-sub"><span>${esc(a.name)}</span><span class="${cls}">${fmt(a.amt)}</span></div>`).join("");
+  const net=r2(pl.income.total-pl.expense.total);
+  $("#stPL").innerHTML=
+    `<div class="fin-head-line pos">Income \u00b7 ${fmt(pl.income.total)}</div>`+(pl.income.list.map(g=>grp(g,"pos")).join("")||'<div class="empty-mini">No income in this period.</div>')
+    +`<div class="fin-head-line neg" style="margin-top:.75rem">Expenses \u00b7 ${fmt(pl.expense.total)}</div>`+(pl.expense.list.map(g=>grp(g,"neg")).join("")||'<div class="empty-mini">No expenses in this period.</div>')
+    +`<div class="fin-row fin-total fin-net"><span>Net ${sel.value?"for the period":"overall"}</span><span class="${net>=0?"pos":"neg"}">${net>=0?"+":""}${fmt(net)}</span></div>`;
+}
+$("#stPeriod")&&$("#stPeriod").addEventListener("change",renderStatements);
+
 function renderDash(){
   const mk=thisMonthKey();
   const incM=txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
@@ -1748,6 +1843,7 @@ function renderDash(){
   $("#kNetWorthSub").innerHTML=`Cash ${fmtShort(cash)} · Inv ${fmtShort(value)} · Owed ${fmtShort(recv)} − ${fmtShort(pay)}`;
 
   try{drawCharts();}catch(e){console.error("charts",e);}
+  try{renderStatements();}catch(e){console.error("statements",e);}
   renderTxList();
 }
 function drawCharts(){
@@ -2615,6 +2711,37 @@ let editingCoa=null;   // original account number of the row being edited
 const COA_TYPE_BY_DIGIT={"1":"Asset","2":"Liability","3":"Equity","4":"Income","5":"Expense"};
 const coaSort=(a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true});
 function coaTagClass(t){return t==="Income"?"in":t==="Expense"?"out":t==="Asset"?"given":t==="Liability"?"taken":"iv";}
+/* linked sub-masters: Type owns its Categories, a Category owns its Sub-categories.
+   Both lists are derived live from the accounts themselves.                     */
+function coaCatsFor(type){return [...new Set(coa.filter(a=>a.type===type&&a.category).map(a=>a.category))].sort();}
+function coaSubsFor(type,cat){return [...new Set(coa.filter(a=>a.type===type&&a.category===cat&&a.sub).map(a=>a.sub))].sort();}
+function syncCoaCat(want){
+  const catSel=$("#coaCat");if(!catSel)return;
+  const type=$("#coaType").value;
+  const cats=coaCatsFor(type);
+  const cur=want!==undefined?want:catSel.value;
+  catSel.innerHTML='<option value="">\u2014 none \u2014</option>'
+    +cats.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("")
+    +'<option value="__new">\u2795 New category\u2026</option>';
+  if(cur==="__new")catSel.value="__new";
+  $("#coaCatNew").style.display=catSel.value==="__new"?"":"none";
+  syncCoaSub();
+}
+function syncCoaSub(want){
+  const subSel=$("#coaSub");if(!subSel)return;
+  const type=$("#coaType").value;
+  const cat=$("#coaCat").value==="__new"?"":$("#coaCat").value;
+  const subs=coaSubsFor(type,cat);
+  const cur=want!==undefined?want:subSel.value;
+  subSel.innerHTML='<option value="">\u2014 none \u2014</option>'
+    +subs.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("")
+    +'<option value="__new">\u2795 New sub category\u2026</option>';
+  if(cur==="__new")subSel.value="__new";
+  $("#coaSubNew").style.display=subSel.value==="__new"?"":"none";
+}
+$("#coaType")&&$("#coaType").addEventListener("change",()=>syncCoaCat());
+$("#coaCat")&&$("#coaCat").addEventListener("change",()=>{$("#coaCatNew").style.display=$("#coaCat").value==="__new"?"":"none";syncCoaSub();});
+$("#coaSub")&&$("#coaSub").addEventListener("change",()=>{$("#coaSubNew").style.display=$("#coaSub").value==="__new"?"":"none";});
 function renderCoa(){
   const body=$("#tblCoa tbody");if(!body)return;
   const q=($("#searchCoa")?$("#searchCoa").value:"").trim().toLowerCase();
@@ -2644,7 +2771,10 @@ $("#formCoa")&&$("#formCoa").addEventListener("submit",e=>{
   /* the number is the account's identity \u2014 no two accounts may share one */
   const clash=coa.find(a=>a.number===numv&&a.number!==editingCoa);
   if(clash){toast(`Number ${numv} is already used by \u201c${clash.name}\u201d \u2014 pick a different number`);return;}
-  const rec={number:numv,name,type:$("#coaType").value,category:$("#coaCat").value.trim(),sub:$("#coaSub").value.trim(),keywords:$("#coaKw").value.trim()};
+  let category=$("#coaCat").value, sub=$("#coaSub").value;
+  if(category==="__new"){category=$("#coaCatNew").value.trim();if(!category){toast("Type the new category name");return;}}
+  if(sub==="__new"){sub=$("#coaSubNew").value.trim();if(!sub){toast("Type the new sub category name");return;}}
+  const rec={number:numv,name,type:$("#coaType").value,category,sub,keywords:$("#coaKw").value.trim()};
   if(editingCoa){
     const a=coa.find(x=>x.number===editingCoa);
     if(a)Object.assign(a,rec);
@@ -2655,11 +2785,17 @@ $("#formCoa")&&$("#formCoa").addEventListener("submit",e=>{
     toast(`Account ${numv} \u00b7 ${name} added`);
   }
   coa.sort(coaSort);
+  $("#coaCatNew").style.display="none";$("#coaSubNew").style.display="none";
+  $("#coaCatNew").value="";$("#coaSubNew").value="";
+  syncCoaCat("");
   setDirty(true);renderCoa();
 });
 function cancelEditCoa(){
   editingCoa=null;
   const f=$("#formCoa");if(f){f.reset();f.classList.remove("editing");}
+  syncCoaCat("");
+  if($("#coaCatNew")){$("#coaCatNew").style.display="none";$("#coaCatNew").value="";}
+  if($("#coaSubNew")){$("#coaSubNew").style.display="none";$("#coaSubNew").value="";}
   const b=document.querySelector("#formCoa button[type=submit]");if(b)b.textContent="+ Add account";
   if($("#btnCancelCoa"))$("#btnCancelCoa").style.display="none";
   renderCoa();
@@ -2672,7 +2808,10 @@ $("#tblCoa")&&$("#tblCoa").addEventListener("click",e=>{
   if(btn.dataset.coact==="edit"){
     editingCoa=a.number;
     $("#coaNum").value=a.number;$("#coaName").value=a.name;$("#coaType").value=a.type||"Expense";
-    $("#coaCat").value=a.category||"";$("#coaSub").value=a.sub||"";$("#coaKw").value=a.keywords||"";
+    syncCoaCat(a.category||"");$("#coaCat").value=a.category||"";
+    syncCoaSub(a.sub||"");$("#coaSub").value=a.sub||"";
+    $("#coaCatNew").style.display="none";$("#coaSubNew").style.display="none";
+    $("#coaKw").value=a.keywords||"";
     const b=document.querySelector("#formCoa button[type=submit]");if(b)b.textContent="\u2713 Update account";
     $("#btnCancelCoa").style.display="";$("#formCoa").classList.add("editing");
     renderCoa();window.scrollTo(0,0);
@@ -2687,7 +2826,7 @@ $("#tblCoa")&&$("#tblCoa").addEventListener("click",e=>{
 /* the first digit of the number implies the type \u2014 pre-select it as a convenience */
 $("#coaNum")&&$("#coaNum").addEventListener("input",()=>{
   const t=COA_TYPE_BY_DIGIT[$("#coaNum").value.trim().charAt(0)];
-  if(t&&!editingCoa)$("#coaType").value=t;
+  if(t&&!editingCoa){$("#coaType").value=t;syncCoaCat();}
 });
 ["searchCoa","filterCoaType"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",renderCoa);});
 
@@ -2872,9 +3011,10 @@ function parseStatementText(lines){
 
 /* ---------- review table ---------- */
 function impCatOptions(type,sel){
-  const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+  const names=coa.filter(a=>a.type===type).map(a=>a.name);
+  const src=names.length?names:(type==="Income"?lists.incomeCats:lists.expenseCats);
   const pre=sel&&!src.includes(sel)?`<option selected>${esc(sel)}</option>`:"";
-  return pre+src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
+  return pre+txnCatOptions(type,sel);
 }
 /* ---------- statement tagging: link a line to loans/debts/investments ----------
    Tag values encode action:target —

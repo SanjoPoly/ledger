@@ -272,7 +272,7 @@
   .ld-bar{display:block;height:3px;border-radius:99px;background:var(--wash-strong);margin-top:.35rem;overflow:hidden}
   .ld-bar i{display:block;height:100%;background:var(--grad);border-radius:99px}
   /* transactions table: give the description room, pin the rest */
-  #tblTxn{min-width:1080px;table-layout:fixed}
+  #tblTxn{min-width:1120px;table-layout:fixed}
   #tblTxn th:nth-child(1),#tblTxn td:nth-child(1){width:92px}
   #tblTxn th:nth-child(2),#tblTxn td:nth-child(2){width:100px}
   #tblTxn th:nth-child(3),#tblTxn td:nth-child(3){width:98px}
@@ -281,7 +281,7 @@
   #tblTxn th:nth-child(6),#tblTxn td:nth-child(6){width:126px}
   #tblTxn th:nth-child(7),#tblTxn td:nth-child(7){width:140px}
   #tblTxn th:nth-child(8),#tblTxn td:nth-child(8){width:104px}
-  #tblTxn th:nth-child(9),#tblTxn td:nth-child(9){width:132px}
+  #tblTxn th:nth-child(9),#tblTxn td:nth-child(9){width:168px}
   #tblTxn td:nth-child(4),#tblTxn td:nth-child(5),#tblTxn td:nth-child(7){overflow:hidden;text-overflow:ellipsis}
   @media(max-width:640px){#tblTxn{min-width:0;table-layout:auto}#tblTxn th,#tblTxn td{width:auto!important;overflow:visible}}
 
@@ -341,6 +341,13 @@
   .fin-head-line{font-weight:800;font-size:.9rem;margin:.3rem 0 .1rem}
   .fin-head-line.pos{color:var(--mint)} .fin-head-line.neg{color:var(--coral)}
   .mini-select{background:var(--wash);border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;font-size:.72rem;color:var(--text);text-transform:none;letter-spacing:0}
+  /* ---------- voucher ---------- */
+  .vch-table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .vch-table th{text-align:left;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:.45rem .5rem;border-bottom:1px solid var(--line-strong)}
+  .vch-table td{padding:.5rem;border-bottom:1px solid var(--line)}
+  .vch-table td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .vch-table tfoot td{border-bottom:none;border-top:2px solid var(--line-strong)}
+  .vch-narr{font-size:.78rem;color:var(--muted);margin-top:.7rem;line-height:1.4}
 
   /* fixed geometry so columns stop fighting each other */
   .tbl-ld{min-width:1150px;table-layout:fixed}
@@ -653,6 +660,7 @@
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
       <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
       <div class="f" id="ldFundWrap"><label for="ldFundBank" id="ldFundLabel">Funded from bank <i>(optional)</i></label><select id="ldFundBank"></select></div>
+      <div class="f"><label for="ldCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ldCoa"></select></div>
       <div class="f"><button type="submit">+ Add record</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <div id="ldCalcPreview" class="calc-preview" style="display:none"></div>
     </form>
@@ -683,6 +691,7 @@
       <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
       <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
+      <div class="f"><label for="ivCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ivCoa"></select></div>
       <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing investment \u2014 opening balance only, no bank posting</label></div>
       <div class="f"><button type="submit">+ Add investment</button></div>
     </form>
@@ -767,6 +776,7 @@
         <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
         <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
         <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
+        <div class="f"><label for="bCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="bCoa"></select></div>
         <div class="f wide" style="grid-column:1/-1"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
         <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add bank</button>
       </form>
@@ -863,6 +873,17 @@
   </div>
 </div>
 
+<div id="voucherOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:520px;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.25rem;margin-bottom:.15rem">Journal voucher</h2>
+    <p class="sub" id="vchMeta" style="margin-bottom:.8rem"></p>
+    <div id="vchBody"></div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem">
+      <button class="btn ghost" id="btnVchClose" style="flex:1">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" role="status"></div>
 
 
@@ -935,8 +956,15 @@ function applyTheme(t,persist){
 
 /* ---------- category lists from the master ---------- */
 const SELECT_LIST_MAP=[["inCat","incomeCats"],["exCat","expenseCats"],["exPay","payMethods"],["ivType","investTypes"],["lnType","loanTypes"]];
+function coaAcctOptions(type,sel){
+  const list=coa.filter(a=>a.type===type).slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  return '<option value="">\u2014 auto \u2014</option>'+list.map(a=>`<option value="${esc(a.number)}"${a.number===sel?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+}
 function refreshSelects(){
   try{syncCoaCat();}catch(e){}
+  const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value);
+  const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value);
+  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value);}
   SELECT_LIST_MAP.forEach(([id,key])=>{
     const sel=$("#"+id);if(!sel)return;
     const cur=sel.value;
@@ -1478,6 +1506,7 @@ function parseWorkbook(buf,name){
       acct:String(gv(r,"Account Number")||"").trim(),
       type:String(gv(r,"Account Type")||"Savings").trim()||"Savings",
       opening:num(gv(r,"Opening Balance")),
+      coa:String(gv(r,"Main Account")||"").trim(),
       recDate:normDate(gv(r,"Reconciled Date")),
       statement:gv(r,"Statement Balance")===""?null:num(gv(r,"Statement Balance")),
       notes:String(gv(r,"Notes")||"").trim()
@@ -1502,6 +1531,7 @@ function parseWorkbook(buf,name){
       issue:normDate(gv(r,"Issue Date","Date")),
       due:normDate(gv(r,"Due Date","Due")),
       status:String(gv(r,"Status")||"Open").trim()||"Open",
+      coa:String(gv(r,"Main Account")||"").trim(),
       closedDate:normDate(gv(r,"Closed Date")),
       closeBank:String(gv(r,"Close Bank Account","Close Bank")||"").trim(),
       txnRef:String(gv(r,"Auto-Posted Txn Ref","Txn Ref")||"").trim()
@@ -1522,6 +1552,7 @@ function parseWorkbook(buf,name){
       amount,
       current:curRaw===""?amount:num(curRaw),
       bank:String(gv(r,"Linked Bank","Bank")||"").trim(),
+      coa:String(gv(r,"Main Account")||"").trim(),
       status:String(gv(r,"Status")||"Open").trim()||"Open",
       closedDate:normDate(gv(r,"Closed Date")),
       closedValue:num(gv(r,"Closed Value")),
@@ -1597,28 +1628,28 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
-  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status"];
+  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status","Main Account"];
   const bkData=banks.map(b=>{
     const cr=bankCredits(b.name),db=bankDebits(b.name),book=r2(b.opening+cr-db);
     const stmt=b.statement;
     const disc=stmt==null?"":r2(book-stmt);
     const status=stmt==null?"Pending":(Math.abs(book-stmt)<0.01?"Reconciled":"Discrepancy");
-    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status];
+    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status,b.coa||""];
   });
   const wsB=bannerSheet("Bank Accounts & Reconciliation","Automated balance tracking with reconciliation discrepancy checking",bkHeaders,bkData);
-  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18}];
+  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18},{wch:12}];
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
-  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref"];
-  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||""]);
+  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref","Main Account"];
+  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||"",r.coa||""]);
   const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due.",ldHeaders,ldData);
   wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18}];
   XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
 
   // Investments
-  const ivHeaders=["Inv ID","Asset Name","Asset Type","Invested Date","Amount Invested","Current Value","Unrealized Gain/Loss","Linked Bank","Status","Closed Date","Closed Value","Auto-Posted Txn Ref"];
-  const ivData=invs.map(r=>[r.id,r.name,r.assetType,r.date,r.amount,r.current,r2(r.current-r.amount),r.bank,r.status,r.closedDate||"",r.status==="Closed"?(r.closedValue||0):"",r.txnRef||""]);
+  const ivHeaders=["Inv ID","Asset Name","Asset Type","Invested Date","Amount Invested","Current Value","Unrealized Gain/Loss","Linked Bank","Status","Closed Date","Closed Value","Auto-Posted Txn Ref","Main Account"];
+  const ivData=invs.map(r=>[r.id,r.name,r.assetType,r.date,r.amount,r.current,r2(r.current-r.amount),r.bank,r.status,r.closedDate||"",r.status==="Closed"?(r.closedValue||0):"",r.txnRef||"",r.coa||""]);
   const wsI=bannerSheet("Investment Portfolio Tracker","Monitor portfolio valuation and real-time gains/losses",ivHeaders,ivData);
   wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18}];
   XLSX.utils.book_append_sheet(wb,wsI,"Investments");
@@ -1648,8 +1679,15 @@ function buildWorkbook(){
 }
 
 /* ---------- lists / selects ---------- */
+function coaAcctOptions(type,sel){
+  const list=coa.filter(a=>a.type===type).slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  return '<option value="">\u2014 auto \u2014</option>'+list.map(a=>`<option value="${esc(a.number)}"${a.number===sel?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+}
 function refreshSelects(){
   try{syncCoaCat();}catch(e){}
+  const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value);
+  const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value);
+  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value);}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
   // transaction category depends on type
@@ -2026,7 +2064,7 @@ function renderTxn(){
       <td data-l="Amount" class="num"><span class="${sign}">${amt}</span></td>
       <td data-l="Account">${t.type==="Transfer"?esc(t.bank+" → "+t.toBank):bankTag(t.bank)}</td>
       <td data-l="Method" style="color:var(--muted);font-size:.83rem">${esc(t.method||"")}</td>
-      <td data-l="">${auto?'<span class="tag done" style="font-size:.62rem">auto</span>':`<div class="row-actions"><button type="button" class="icon-btn" data-act="editTxn">Edit</button><button type="button" class="icon-btn danger" data-act="delTxn">Delete</button></div>`}</td></tr>`;
+      <td data-l="">${auto?`<div class="row-actions"><button type="button" class="icon-btn" data-act="voucher" title="View journal voucher">Vch</button><span class="tag done" style="font-size:.62rem">auto</span></div>`:`<div class="row-actions"><button type="button" class="icon-btn" data-act="voucher" title="View journal voucher">Vch</button><button type="button" class="icon-btn" data-act="editTxn">Edit</button><button type="button" class="icon-btn danger" data-act="delTxn">Del</button></div>`}</td></tr>`;
   }).join("");
   $("#emptyTxn").style.display=txns.length?"none":"block";
   $("#tblTxn").style.display=txns.length?"":"none";
@@ -2303,16 +2341,100 @@ function applyPostingTag(txn,tag){
     if(v){v.amount=r2(v.amount+txn.amount);v.current=r2(v.current+txn.amount);txn.ref="Linked: "+v.id+" (top-up)";}
   }else if(act==="newinv"){
     const id=nextId(invs,"INV",1);
-    invs.push({id,name:(txn.desc||"Investment "+txn.date).slice(0,40),assetType:"Other",date:txn.date,amount:txn.amount,current:txn.amount,bank:txn.bank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
+    invs.push({id,name:(txn.desc||"Investment "+txn.date).slice(0,40),assetType:"Other",date:txn.date,amount:txn.amount,current:txn.amount,bank:txn.bank,coa:"",status:"Open",closedDate:"",closedValue:0,txnRef:""});
     txn.ref="Linked: "+id;created++;
   }else if(act==="newld"){
     const recvNew=target==="recv";
     const id=nextId(lends,"DEBT",1);
-    lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(txn.desc||"From posting").slice(0,30),purpose:"Posted "+txn.date,principal:txn.amount,rate:0,term:0,balance:txn.amount,issue:txn.date,due:"",status:"Open",closedDate:"",closeBank:"",txnRef:""});
+    lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(txn.desc||"From posting").slice(0,30),purpose:"Posted "+txn.date,principal:txn.amount,rate:0,term:0,balance:txn.amount,issue:txn.date,due:"",status:"Open",coa:"",closedDate:"",closeBank:"",txnRef:""});
     txn.ref="Linked: "+id+" ("+lends[lends.length-1].person+")";created++;
   }
   return created;
 }
+/* ============================================================
+   VOUCHER ENGINE \u2014 double-entry view of any transaction
+   Dr/Cr accounts resolve through the masters' Main-account tags,
+   falling back to fuzzy COA matching, so untagged data still works.
+============================================================ */
+const normStr=x=>String(x||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function coaByNumber(n){return coa.find(a=>a.number===String(n||"").trim());}
+function coaFuzzy(type,text){
+  const c=normStr(text);
+  if(!c)return null;
+  return coa.find(a=>a.type===type&&normStr(a.name)===c)
+    ||coa.find(a=>a.type===type&&(normStr(a.name).includes(c)||c.includes(normStr(a.name))))
+    ||coa.find(a=>a.type===type&&String(a.keywords||"").toLowerCase().split(",").some(k=>{k=normStr(k);return k&&c.includes(k);}));
+}
+function acctForBank(name){
+  const b=banks.find(x=>x.name===name);
+  if(b&&b.coa){const a=coaByNumber(b.coa);if(a)return a;}
+  return coaFuzzy("Asset",name)||{number:"\u2014",name:(name||"Bank")+" (bank)"};
+}
+function acctForCat(type,cat){
+  const c=String(cat||"").toLowerCase();
+  const hit=coa.find(a=>a.type===type&&a.name.toLowerCase()===c)
+    ||coa.find(a=>a.type===type&&(a.name.toLowerCase().includes(c)||c.includes(a.name.toLowerCase())))
+    ||coa.find(a=>a.type===type&&String(a.keywords||"").toLowerCase().split(",").some(k=>{k=k.trim();return k&&(k.length<=3?new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(c):c.includes(k));}));
+  return hit||coaByNumber(type==="Income"?"49999":"59999")||{number:"\u2014",name:cat||"Other"};
+}
+function acctForLend(r){
+  if(r.coa){const a=coaByNumber(r.coa);if(a)return a;}
+  const want=r.type==="Debt Receivable"?"Asset":"Liability";
+  const byPerson=coaFuzzy(want,r.person);
+  if(byPerson)return byPerson;
+  const tok=r.type==="Debt Receivable"?"receivable":(r.type==="Bank Loan Payable"?"bank loan":"debt");
+  return coa.find(a=>a.type===want&&String(a.category||"").toLowerCase().includes(tok))
+    ||{number:"\u2014",name:r.person+" ("+r.type+")"};
+}
+function acctForInv(v){
+  if(v.coa){const a=coaByNumber(v.coa);if(a)return a;}
+  return coaFuzzy("Asset",v.name)
+    ||coa.find(a=>a.type==="Asset"&&String(a.category||"").toLowerCase().includes("invest"))
+    ||{number:"\u2014",name:v.name+" (investment)"};
+}
+function voucherFor(t){
+  const lines=[];
+  let m;
+  if(t.type==="Transfer"){
+    lines.push({side:"Dr",a:acctForBank(t.toBank)},{side:"Cr",a:acctForBank(t.bank)});
+  }else{
+    let other=null;
+    const ref=t.ref||"";
+    if((t.loanRef||(m=/^(?:Payment|Auto-Posted|Linked):\s*((?:LOAN|DEBT)-\d+)/.exec(ref)))&&!/^Interest:/.test(ref)){
+      const id=t.loanRef||(m&&m[1]);
+      const r=lends.find(l=>l.id===id);
+      if(r)other=acctForLend(r);
+    }
+    if(!other&&(m=/^(?:Linked|Auto-Posted):\s*(INV-\d+)/.exec(ref))){
+      const v=invs.find(x=>x.id===m[1]);
+      if(v)other=acctForInv(v);
+    }
+    if(!other)other=acctForCat(t.type,t.cat);
+    const bankA=acctForBank(t.bank);
+    if(t.type==="Expense")lines.push({side:"Dr",a:other},{side:"Cr",a:bankA});
+    else lines.push({side:"Dr",a:bankA},{side:"Cr",a:other});
+  }
+  return {no:t.id,date:t.date,narration:[t.desc,t.ref].filter(Boolean).join(" \u00b7 ")||t.cat,amount:t.amount,lines};
+}
+function openVoucher(t){
+  const v=voucherFor(t);
+  $("#vchMeta").innerHTML=`<b>${esc(v.no)}</b> \u00b7 ${esc(v.date)} \u00b7 ${esc(t.type)}`;
+  $("#vchBody").innerHTML=`
+    <table class="vch-table">
+      <thead><tr><th>Account</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr></thead>
+      <tbody>${v.lines.map(l=>`<tr>
+        <td><span class="mono-id" style="display:inline;margin:0">${esc(l.a.number)}</span> ${esc(l.a.name)}</td>
+        <td class="num">${l.side==="Dr"?fmt(v.amount):""}</td>
+        <td class="num">${l.side==="Cr"?fmt(v.amount):""}</td></tr>`).join("")}
+      </tbody>
+      <tfoot><tr><td><b>Total</b></td><td class="num"><b>${fmt(v.amount)}</b></td><td class="num"><b>${fmt(v.amount)}</b></td></tr></tfoot>
+    </table>
+    <div class="vch-narr">Narration: ${esc(v.narration)}</div>`;
+  $("#voucherOverlay").style.display="flex";
+}
+$("#btnVchClose")&&$("#btnVchClose").addEventListener("click",()=>{$("#voucherOverlay").style.display="none";});
+$("#voucherOverlay")&&$("#voucherOverlay").addEventListener("click",e=>{if(e.target.id==="voucherOverlay")$("#voucherOverlay").style.display="none";});
+
 /* deleting a top-up puts the investment back where it was */
 function reverseInvTopup(t){
   const m=/Linked: (INV-\d+) \(top-up\)/.exec((t&&t.ref)||"");
@@ -2434,6 +2556,7 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
       r.type=type;r.person=$("#ldPerson").value.trim();r.purpose=$("#ldPurpose").value.trim();
       r.principal=principal;r.rate=rate;r.term=term;
       r.issue=$("#ldIssue").value||r.issue;r.due=$("#ldDue").value||"";
+      if($("#ldCoa"))r.coa=$("#ldCoa").value;
       // shift the outstanding balance by however much the net payable moved
       r.balance=r2(r.balance+(ldNetPayable(r)-oldNet));
       if(r.balance<0)r.balance=0;
@@ -2443,7 +2566,7 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   }
   const prefix=type==="Bank Loan Payable"?"LOAN":"DEBT";
   const id=nextId(lends,prefix,1);
-  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",closedDate:"",closeBank:"",txnRef:""};
+  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",coa:$("#ldCoa")?$("#ldCoa").value:"",closedDate:"",closeBank:"",txnRef:""};
   rec.balance=ldNetPayable(rec);   // liability starts at principal + interest
   lends.push(rec);
   // Optionally auto-post the cash movement when a debt is funded from a bank
@@ -2481,6 +2604,7 @@ function updateLdPreview(){
 function loadLDIntoForm(r){
   editingLD=r.id;
   $("#ldType").value=r.type;$("#ldPerson").value=r.person;$("#ldPurpose").value=r.purpose||"";
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"");
   $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
   $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
   if($("#ldFundWrap"))$("#ldFundWrap").style.display="none";   // funding only applies to new records
@@ -2525,7 +2649,7 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   const id=nextId(invs,"INV",1);
   const existing=$("#ivExisting")&&$("#ivExisting").checked;
   const bank=existing?"":$("#ivBank").value;
-  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,status:"Open",closedDate:"",closedValue:0,txnRef:""});
+  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,coa:$("#ivCoa")?$("#ivCoa").value:"",status:"Open",closedDate:"",closedValue:0,txnRef:""});
   // auto-post the cash leaving the bank \u2014 skipped for pre-existing holdings brought in as opening balances
   if(bank&&!existing)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
   e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
@@ -2540,6 +2664,7 @@ document.addEventListener("click",e=>{
   const i=+tr.dataset.i;
   const done=()=>{setDirty(true);renderAll();};
   switch(btn.dataset.act){
+    case "voucher":{const t=txns[i];if(t)openVoucher(t);break;}
     case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
     case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);reverseInvTopup(txns[i]);txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
@@ -2654,7 +2779,7 @@ $("#formBank")&&$("#formBank").addEventListener("submit",e=>{
   e.preventDefault();
   const name=$("#bName").value.trim();
   if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("Bank name already exists");return;}
-  const nb={id:nextId(banks,"ACC",1),name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),recDate:null,statement:null,notes:$("#bNotes").value.trim()};
+  const nb={id:nextId(banks,"ACC",1),name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),coa:$("#bCoa")?$("#bCoa").value:"",recDate:null,statement:null,notes:$("#bNotes").value.trim()};
   if(bankEditState){nb.id=bankEditState.id;if(bankEditState.opening===nb.opening){nb.statement=bankEditState.statement;nb.recDate=bankEditState.recDate;}bankEditState=null;}
   banks.push(nb);
   e.target.reset();$("#bOpen").value="0";
@@ -2665,7 +2790,7 @@ document.addEventListener("click",e=>{
   if(!btn)return;
   const i=+btn.closest("tr").dataset.i, b=banks[i];
   if(btn.dataset.bact==="edit"){
-    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
+    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions("Asset",b.coa||"");
     bankEditState={id:b.id,statement:b.statement,recDate:b.recDate,opening:b.opening};
     banks.splice(i,1);setDirty(true);renderAll();
     setSettingsTab&&setSettingsTab("secBanks");
@@ -2688,6 +2813,7 @@ $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   const t=$("#ldType").value;
   $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":"Person";
   $("#ldFundWrap").style.display=t==="Bank Loan Payable"?"none":"";
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",$("#ldCoa").value);
 });
 
 /* ---------- tab nav ---------- */

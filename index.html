@@ -293,12 +293,12 @@
   .auto-chip{background:var(--mint-dim);color:var(--mint);font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .6rem;white-space:nowrap}
   tr.dup-row td{background:var(--amber-dim)}
   tr.dup-row:hover td{background:var(--amber-dim)}
-  #tblImp{min-width:900px;table-layout:fixed}
+  #tblImp{min-width:960px;table-layout:fixed}
   #tblImp th.chk,#tblImp td.chk{width:44px}
   #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:142px}
   #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:160px}
   #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:118px}
-  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:112px}
+  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:168px}
   #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:150px}
   #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:120px}
   #tblImp .imp-chk{width:17px;height:17px;accent-color:var(--mint)}
@@ -720,7 +720,7 @@
       <div class="section-head"><h2 style="font-size:1rem">Transactions found</h2><span class="total" id="impSummary"></span></div>
       <div class="imp-legend"><span class="dup-chip">⚠ Same amount already in ledger</span><span class="auto-chip">✦ Auto-detected income</span></div>
       <div class="table-card">
-        <table id="tblImp"><thead><tr><th class="chk"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Type</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
+        <table id="tblImp"><thead><tr><th class="chk"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Nature</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="imp-actions">
         <button type="button" class="btn-accent" id="btnImpPost">Post selected to ledger</button>
@@ -1761,6 +1761,8 @@ function syncTxnLoan(){
     const pays=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");
     sel.innerHTML=o("","\u2014 choose \u2014")
       +'<optgroup label="New record">'+o("newld:recv","\u2795 Loan given \u2014 I lent money out")+o("newld:pay","\u2795 Loan taken \u2014 I borrowed")+"</optgroup>"
+      +(recvs.length?'<optgroup label="Lend more \u00b7 existing person">'+recvs.map(l=>o("addld:"+l.id,`${esc(l.person)} \u00b7 now ${fmt(l.balance)} due`)).join("")+"</optgroup>":"")
+      +(pays.length?'<optgroup label="Borrowed more \u00b7 existing">'+pays.map(l=>o("addld:"+l.id,`${esc(l.person)}`)).join("")+"</optgroup>":"")
       +(pays.length?'<optgroup label="Repay \u00b7 you owe">'+pays.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>":"")
       +(recvs.length?'<optgroup label="Receive back \u00b7 owed to you">'+recvs.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>"
         +'<optgroup label="Interest received">'+recvs.map(l=>o("intld:"+l.id,`Interest \u2014 ${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>":"");
@@ -2343,6 +2345,9 @@ function applyPostingTag(txn,tag){
     const id=nextId(invs,"INV",1);
     invs.push({id,name:(txn.desc||"Investment "+txn.date).slice(0,40),assetType:"Other",date:txn.date,amount:txn.amount,current:txn.amount,bank:txn.bank,coa:"",status:"Open",closedDate:"",closedValue:0,txnRef:""});
     txn.ref="Linked: "+id;created++;
+  }else if(act==="addld"&&target){
+    const r=lends.find(l=>l.id===target);
+    if(r){r.principal=r2(r.principal+txn.amount);r.balance=r2(r.balance+txn.amount);txn.ref="Linked: "+r.id+" (top-up)";}
   }else if(act==="newld"){
     const recvNew=target==="recv";
     const id=nextId(lends,"DEBT",1);
@@ -2435,6 +2440,15 @@ function openVoucher(t){
 $("#btnVchClose")&&$("#btnVchClose").addEventListener("click",()=>{$("#voucherOverlay").style.display="none";});
 $("#voucherOverlay")&&$("#voucherOverlay").addEventListener("click",e=>{if(e.target.id==="voucherOverlay")$("#voucherOverlay").style.display="none";});
 
+/* deleting a lend-more / borrow-more restores the record's principal and balance */
+function reverseLoanTopup(t){
+  const m=/Linked: ((?:LOAN|DEBT)-\d+) \(top-up\)/.exec((t&&t.ref)||"");
+  if(!m)return;
+  const r=lends.find(x=>x.id===m[1]);
+  if(!r)return;
+  r.principal=r2(Math.max(0,r.principal-t.amount));
+  r.balance=r2(Math.max(0,r.balance-t.amount));
+}
 /* deleting a top-up puts the investment back where it was */
 function reverseInvTopup(t){
   const m=/Linked: (INV-\d+) \(top-up\)/.exec((t&&t.ref)||"");
@@ -2472,6 +2486,10 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
       const r=lends.find(l=>l.id===target);
       const recvR=r&&r.type==="Debt Receivable";
       ttype=recvR?"Income":"Expense";cat=recvR?"Debt Settlement":"Loan Repayment";
+    }else if(act==="addld"){
+      const r=lends.find(l=>l.id===target);
+      const recvR=r&&r.type==="Debt Receivable";
+      ttype=recvR?"Expense":"Income";cat=recvR?"Debt Given":"Debt Taken";
     }else if(act==="intld"){ttype="Income";cat="Interest";}
     rec={date:$("#tDate").value||todayISO(),type:ttype,cat,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:"",loanRef:""};
   }else{
@@ -2666,7 +2684,7 @@ document.addEventListener("click",e=>{
   switch(btn.dataset.act){
     case "voucher":{const t=txns[i];if(t)openVoucher(t);break;}
     case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
-    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);reverseInvTopup(txns[i]);txns.splice(i,1);done();}break;
+    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);reverseInvTopup(txns[i]);reverseLoanTopup(txns[i]);txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;
@@ -3160,6 +3178,7 @@ function impTagOptions(t){
   const openInvs=invs.filter(v=>v.status!=="Closed");
   if(t.type==="Expense"){
     if(pays.length)h+='<optgroup label="Pay towards loan / debt">'+pays.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>";
+    if(recvs.length)h+='<optgroup label="Lend more \u00b7 existing">'+recvs.map(l=>o("addld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>";
     h+='<optgroup label="New records">'+o("newld:recv","\u2795 Money I lent out (new loan given)")+o("newinv","\u2795 New investment")+"</optgroup>";
     if(openInvs.length)h+='<optgroup label="Top-up investment">'+openInvs.map(v=>o("topinv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)}`)).join("")+"</optgroup>";
   }else{
@@ -3167,6 +3186,7 @@ function impTagOptions(t){
     if(recvs.length)h+='<optgroup label="Interest on loan given">'+recvs.map(l=>o("intld:"+l.id,`Interest \u2014 ${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>";
     if(openInvs.length)h+='<optgroup label="Dividend from investment">'+openInvs.map(v=>o("divinv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)}`)).join("")+"</optgroup>";
     h+='<optgroup label="New records">'+o("newld:pay","\u2795 Money I borrowed (new debt)")+"</optgroup>";
+    if(pays.length)h+='<optgroup label="Borrowed more \u00b7 existing">'+pays.map(l=>o("addld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>";
   }
   return h;
 }
@@ -3185,6 +3205,78 @@ function impTagLabel(tag){
   return "";
 }
 
+/* ============================================================
+   STATEMENT NATURES \u2014 your expense types, first-class per row.
+   Each nature knows its money direction, the category it implies,
+   and whether it needs a target (which investment / person / bank).
+============================================================ */
+const NATURES=[
+  {v:"exp",      l:"Expense",                dir:"dr"},
+  {v:"invest",   l:"Investment",             dir:"dr", target:"inv"},
+  {v:"insurance",l:"Insurance payment",      dir:"dr", cat:"Insurance"},
+  {v:"loangiven",l:"Loan given",             dir:"dr", target:"ldrecv_out"},
+  {v:"emi",      l:"Loan repayment / EMI",   dir:"dr", target:"ldpay", req:1},
+  {v:"transfer", l:"Own account transfer",   target:"bank", req:1},
+  {v:"salary",   l:"Income \u00b7 salary",  dir:"cr", cat:"Salary"},
+  {v:"inc",      l:"Income \u00b7 other",   dir:"cr"},
+  {v:"invinc",   l:"Interest / dividend",    dir:"cr", target:"invinc"},
+  {v:"loanreturn",l:"Loan return (received)",dir:"cr", target:"ldrecv_in", req:1},
+  {v:"loantaken",l:"Loan taken",             dir:"cr", target:"ldpay_new"},
+];
+function natureOptions(t){
+  const dirOut=t.dir!=="cr";
+  return NATURES.filter(n=>!n.dir||(n.dir==="dr")===dirOut)
+    .map(n=>`<option value="${n.v}"${n.v===t.nature?" selected":""}>${n.l}</option>`).join("");
+}
+function natureTargetOptions(t){
+  const n=NATURES.find(x=>x.v===t.nature);
+  if(!n||!n.target)return null;
+  const o=(v,l,sel)=>`<option value="${esc(v)}"${v===sel?" selected":""}>${l}</option>`;
+  const openInvs=invs.filter(v=>v.status!=="Closed");
+  const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable");
+  const pays=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");
+  switch(n.target){
+    case "inv":return o("newinv","\u2795 New investment",t.tag)+openInvs.map(v=>o("topinv:"+v.id,"Top-up "+esc(v.name)+" \u00b7 "+esc(v.id),t.tag)).join("");
+    case "ldrecv_out":return o("newld:recv","\u2795 New \u00b7 person from description",t.tag)+recvs.map(l=>o("addld:"+l.id,"Lend more \u2014 "+esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
+    case "ldrecv_in":return o("","\u2014 choose person \u2014",t.tag)+recvs.map(l=>o("payld:"+l.id,esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
+    case "ldpay":return o("","\u2014 choose loan \u2014",t.tag)+pays.map(l=>o("payld:"+l.id,esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
+    case "ldpay_new":return o("newld:pay","\u2795 New \u00b7 lender from description",t.tag)+pays.map(l=>o("addld:"+l.id,"Borrowed more \u2014 "+esc(l.person),t.tag)).join("");
+    case "invinc":return o("","General (no link)",t.tag)+openInvs.map(v=>o("divinv:"+v.id,"Dividend \u2014 "+esc(v.name),t.tag)).join("")+recvs.map(l=>o("intld:"+l.id,"Interest \u2014 "+esc(l.person),t.tag)).join("");
+    case "bank":return o("","\u2014 choose other account \u2014",t.transferBank)+banks.filter(b=>b.name!==importBank).map(b=>o(b.name,esc(b.name),t.transferBank)).join("");
+  }
+  return null;
+}
+function applyNatureDefaults(t){
+  const n=NATURES.find(x=>x.v===t.nature)||NATURES[0];
+  t.transferBank=t.nature==="transfer"?(t.transferBank||""):"";
+  if(t.nature!=="transfer")t.type=(n.dir==="cr"||(!n.dir&&t.dir==="cr"))?"Income":"Expense";
+  switch(t.nature){
+    case "invest":t.type="Expense";t.cat="Investment";t.tag=t.tag&&/^(newinv|topinv)/.test(t.tag)?t.tag:"newinv";break;
+    case "insurance":t.type="Expense";t.cat="Insurance";t.tag="";break;
+    case "loangiven":t.type="Expense";t.cat="Debt Given";t.tag=t.tag&&/^(newld:recv|addld)/.test(t.tag)?t.tag:"newld:recv";break;
+    case "emi":t.type="Expense";t.cat="Loan Repayment";if(!/^payld/.test(t.tag))t.tag="";break;
+    case "salary":t.type="Income";t.cat="Salary";t.tag="";break;
+    case "invinc":t.type="Income";if(!/^(divinv|intld)/.test(t.tag))t.tag="";t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";break;
+    case "loanreturn":t.type="Income";t.cat="Debt Settlement";if(!/^payld/.test(t.tag))t.tag="";break;
+    case "loantaken":t.type="Income";t.cat="Debt Taken";t.tag=t.tag&&/^(newld:pay|addld)/.test(t.tag)?t.tag:"newld:pay";break;
+    case "transfer":t.type="Transfer";t.cat="Transfer";t.tag="";break;
+    default:t.tag="";if(!t.cat)t.cat=(t.type==="Income"?lists.incomeCats[0]:lists.expenseCats[0])||"Other";
+  }
+}
+/* map the auto-detected account back to one of your natures */
+function natureFromDetection(match,type,desc){
+  if(match){
+    const c=(match.cat||"").toLowerCase();
+    if(/salary/.test(c))return "salary";
+    if(/interest|dividend/.test(c))return "invinc";
+    if(/insurance/.test(c))return "insurance";
+    if(/investment/.test(c))return "invest";
+    if(/debt given|lent/.test(c))return "loangiven";
+    if(/loan.*(repay|emi)/.test(c))return "emi";
+  }
+  return type==="Income"?"inc":"exp";
+}
+
 let impEditIdx=-1;
 function impMethodOptions(sel){
   const base=lists.payMethods.slice();
@@ -3200,8 +3292,8 @@ function renderImport(){
     <td data-l="Include" class="chk"><input type="checkbox" class="imp-chk"${t.include?" checked":""}></td>
     <td data-l="Date"><input type="date" class="imp-date" value="${esc(t.date)}"></td>
     <td data-l="Description" class="imp-desc-cell"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
-    <td data-l="Amount" class="num"><span class="${isIn?"pos":"neg"}">${isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
-    <td data-l="Type"><select class="imp-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></td>
+    <td data-l="Amount" class="num"><span class="${t.nature==="transfer"?"muted-amt":isIn?"pos":"neg"}">${t.nature==="transfer"?"\u21c4 ":isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
+    <td data-l="Nature"><select class="imp-nature">${natureOptions(t)}</select>${(()=>{const to=natureTargetOptions(t);return to?`<select class="imp-target" style="margin-top:.3rem">${to}</select>`:"";})()}</td>
     <td data-l="Category"><select class="imp-cat">${impCatOptions(t.type,t.cat)}</select></td>
     <td data-l="Note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button> ${t.tag?`<span class="tag iv" style="font-size:.64rem">${impTagLabel(t.tag)}</span>`:""}${t.dup?'<span class="dup-chip">\u26a0 duplicate?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
   </tr>`;
@@ -3267,7 +3359,12 @@ $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
   if(e.target.classList.contains("imp-chk"))t.include=e.target.checked;
   if(e.target.classList.contains("imp-date"))t.date=e.target.value||t.date;
   if(e.target.classList.contains("imp-desc"))t.desc=e.target.value.trim();
-  if(e.target.classList.contains("imp-type")){t.type=e.target.value;t.cat=(t.type==="Income"?lists.incomeCats:lists.expenseCats)[0]||"Other";renderImport();return;}
+  if(e.target.classList.contains("imp-nature")){t.nature=e.target.value;t.tag="";applyNatureDefaults(t);renderImport();return;}
+  if(e.target.classList.contains("imp-target")){
+    if(t.nature==="transfer")t.transferBank=e.target.value;
+    else{t.tag=e.target.value;if(t.nature==="invinc")t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";}
+    renderImport();return;
+  }
   if(e.target.classList.contains("imp-cat"))t.cat=e.target.value;
   const inc=importRows.filter(x=>x.include);
   const dups=importRows.filter(x=>x.dup).length;
@@ -3304,11 +3401,16 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
     importExisting=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
     importBank=bank;importFile=file.name;impEditIdx=-1;
     importRows=parsed.map(t=>{
-      const nature=impMatchCoa(t.desc)||impDetectNature(t.desc);
-      const type=nature?nature.type:(t.dir==="cr"?"Income":"Expense");
-      const cat=nature?nature.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
+      const match=impMatchCoa(t.desc)||impDetectNature(t.desc);
+      const type=match?match.type:(t.dir==="cr"?"Income":"Expense");
+      const cat=match?match.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
       const dup=importExisting.has(r2(t.amount));
-      return {date:t.date,desc:t.desc,amount:t.amount,type,cat,method:"Bank Import",auto:!!nature,dup,include:!dup};
+      const row={date:t.date,desc:t.desc,amount:t.amount,type,cat,dir:t.dir||(type==="Income"?"cr":"dr"),
+                 nature:natureFromDetection(match,type,t.desc),tag:"",transferBank:"",
+                 method:"Bank Import",auto:!!match,dup,include:!dup};
+      applyNatureDefaults(row);
+      if(match&&!NATURES.find(n=>n.v===row.nature).cat)row.cat=cat;   // keep the matched category for plain natures
+      return row;
     });
     status.innerHTML=`Read <b>${importRows.length}</b> transactions from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `+
       `Income/expense was worked out from the running balance where possible — check each row before posting.`;
@@ -3326,9 +3428,26 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
   const inc=importRows.filter(t=>t.include&&t.amount>0);
   if(!inc.length)return;
   const dups=inc.filter(t=>t.dup).length;
+  /* natures that point at a record must actually have one picked */
+  for(const t of inc){
+    const n=NATURES.find(x=>x.v===t.nature);
+    if(n&&n.req){
+      const missing=t.nature==="transfer"?!t.transferBank:!t.tag;
+      if(missing){toast(`"${(t.desc||"row").slice(0,28)}" needs a ${t.nature==="transfer"?"destination account":"target"} \u2014 pick one in the ${n.l} row`);return;}
+    }
+  }
   if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Post anyway?`))return;
   let created=0;
   inc.forEach(t=>{
+    if(t.nature==="transfer"){
+      /* own-account movement: one Transfer, no income/expense \u2014 stops double counting
+         when the other account's statement is uploaded later */
+      const outw=t.dir!=="cr";
+      txns.push({id:nextTxnId(),date:t.date,type:"Transfer",cat:"Transfer",desc:t.desc,amount:t.amount,
+                 bank:outw?importBank:t.transferBank,toBank:outw?t.transferBank:importBank,
+                 method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
+      return;
+    }
     const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
     created+=applyPostingTag(txn,t.tag);
     txns.push(txn);

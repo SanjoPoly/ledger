@@ -358,24 +358,25 @@
   .vch-card{width:min(680px,94vw);max-width:none;max-height:88vh;overflow-y:auto;overflow-x:hidden;padding:2rem}
   @media(max-width:640px){.vch-card{padding:1.3rem}}
   .vch-badge{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.18rem .6rem;border-radius:999px;border:1px solid;vertical-align:middle;margin-right:.15rem}
-  .vch-table{width:100%;border-collapse:collapse;font-size:.92rem;table-layout:fixed}
-  .vch-table th{text-align:left;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.5rem .45rem;border-bottom:1px solid var(--line-strong)}
-  .vch-table th.num,.vch-table td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .vch-table th:nth-child(1),.vch-table td.vch-side{width:42px}
-  .vch-table th.num,.vch-table td.num{width:120px}
-  .vch-table td{padding:.7rem .45rem;border-bottom:1px solid var(--line);vertical-align:top}
+  .vch-table{width:100%;border-collapse:collapse;font-size:.9rem;table-layout:fixed}
+  .vch-table th{text-align:left;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:.5rem .4rem;border-bottom:1px solid var(--line-strong)}
+  .vch-table th.num,.vch-table td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vch-table col.c-side{width:8%}
+  .vch-table col.c-acct{width:48%}
+  .vch-table col.c-num{width:22%}
+  .vch-table td{padding:.7rem .4rem;border-bottom:1px solid var(--line);vertical-align:top}
   .vch-side{font-size:.66rem;font-weight:700;color:var(--muted);padding-top:.85rem!important}
   .vch-acct{overflow:hidden}
-  .vch-num{display:block;font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.02em;margin-bottom:.1rem}
-  .vch-name{display:block;font-size:.98rem;color:var(--text);line-height:1.3;word-break:break-word}
+  .vch-num{display:block;font-family:var(--mono);font-size:.68rem;color:var(--muted);letter-spacing:.02em;margin-bottom:.1rem}
+  .vch-name{display:block;font-size:.95rem;color:var(--text);line-height:1.3;word-break:break-word}
   .vch-dr{color:var(--coral)}
   .vch-cr{color:var(--mint)}
-  .vch-table tfoot td{border-bottom:none;border-top:2px solid var(--line-strong);padding-top:.8rem;font-weight:700;font-size:1rem}
-  .vch-total-label{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-  .vch-detail{margin:1.4rem 0 0;display:flex;flex-direction:column;gap:.7rem}
-  .vch-detail div{display:grid;grid-template-columns:104px 1fr;gap:.7rem;align-items:baseline}
-  .vch-detail dt{font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
-  .vch-detail dd{margin:0;font-size:.9rem;color:var(--text);line-height:1.45;word-break:break-word}
+  .vch-table tfoot td{border-bottom:none;border-top:2px solid var(--line-strong);padding-top:.8rem;font-weight:700;font-size:.95rem}
+  .vch-total-label{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .vch-detail{margin:1.4rem 0 0;display:flex;flex-direction:column;gap:.75rem}
+  .vch-detail div{display:grid;grid-template-columns:96px 1fr;gap:.7rem;align-items:baseline}
+  .vch-detail dt{font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
+  .vch-detail dd{margin:0;font-size:.88rem;color:var(--text);line-height:1.45;word-break:break-word;overflow-wrap:anywhere}
   .vch-foot{margin:1.4rem 0 0;font-size:.74rem;color:var(--muted);text-align:center;font-style:italic}
 
   /* fixed geometry so columns stop fighting each other */
@@ -2500,19 +2501,24 @@ function openVoucher(t){
       <td class="num vch-dr">${l.side==="Dr"?fmt(v.amount):""}</td>
       <td class="num vch-cr">${l.side==="Cr"?fmt(v.amount):""}</td>
     </tr>`;
+  /* a statement import repeats the file name in both narration and reference;
+     show a short clean narration and skip the duplicate reference line */
+  const isImport=/^Import:/.test(t.ref||"");
+  const cleanNarr=(t.desc||"").trim()||(isImport?"Bank statement import":(t.cat||"\u2014"));
   $("#vchBody").innerHTML=`
     <table class="vch-table">
+      <colgroup><col class="c-side"><col class="c-acct"><col class="c-num"><col class="c-num"></colgroup>
       <thead><tr><th></th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
       <tbody>${dr.map(lineRow).join("")}${cr.map(lineRow).join("")}</tbody>
       <tfoot><tr><td></td><td class="vch-total-label">Total</td><td class="num">${fmt(v.amount)}</td><td class="num">${fmt(v.amount)}</td></tr></tfoot>
     </table>
     <dl class="vch-detail">
-      <div><dt>Narration</dt><dd>${esc(v.narration||"\u2014")}</dd></div>
+      <div><dt>Narration</dt><dd>${esc(cleanNarr)}</dd></div>
       ${t.bank?`<div><dt>${t.type==="Transfer"?"From":"Bank"}</dt><dd>${esc(t.bank)}</dd></div>`:""}
       ${t.type==="Transfer"&&t.toBank?`<div><dt>To</dt><dd>${esc(t.toBank)}</dd></div>`:""}
       ${t.method?`<div><dt>Method</dt><dd>${esc(t.method)}</dd></div>`:""}
       ${t.bankRef?`<div><dt>Bank ref</dt><dd class="mono-id" style="display:inline">${esc(t.bankRef)}</dd></div>`:""}
-      ${t.ref?`<div><dt>Reference</dt><dd>${esc(t.ref)}</dd></div>`:""}
+      <div><dt>Source</dt><dd>${isImport?"Bank statement upload":(t.ref?esc(t.ref):"Manual entry")}</dd></div>
     </dl>
     <p class="vch-foot">Debit equals credit \u2014 this entry balances.</p>`;
   $("#voucherOverlay").style.display="flex";

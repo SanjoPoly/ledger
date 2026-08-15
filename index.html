@@ -293,36 +293,40 @@
   .auto-chip{background:var(--mint-dim);color:var(--mint);font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .6rem;white-space:nowrap}
   tr.dup-row td{background:var(--amber-dim)}
   tr.dup-row:hover td{background:var(--amber-dim)}
-  #tblImp{min-width:1080px;table-layout:fixed}
-  #tblImp th.chk,#tblImp td.chk{width:44px}
-  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:140px}
-  #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:180px}
-  #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:120px}
-  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:186px}
-  #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:210px}
-  #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:118px}
-  #tblImp td{vertical-align:top}
-  #tblImp .imp-chk{width:17px;height:17px;accent-color:var(--mint);margin-top:.5rem}
-  #tblImp input[type="date"],#tblImp select,#tblImp .imp-desc{width:100%}
+  #tblImp{min-width:1040px;table-layout:fixed;font-size:.8rem}
+  #tblImp th{padding:.5rem .5rem;font-size:.6rem}
+  #tblImp td{padding:.4rem .5rem;vertical-align:middle}
+  #tblImp th.chk,#tblImp td.chk{width:38px;text-align:center}
+  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:118px}
+  #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:150px}
+  #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:104px}
+  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:172px}
+  #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:196px}
+  #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:104px}
+  #tblImp .imp-chk{width:16px;height:16px;accent-color:var(--mint);display:block;margin:0 auto;vertical-align:middle}
+  #tblImp input,#tblImp select{width:100%;font-size:.78rem;padding:.32rem .4rem;min-height:32px}
+  #tblImp input[type="date"]{padding:.28rem .3rem}
   /* stacked selects (nature+target, category+account) sit flush with a small gap */
   #tblImp .imp-nature,#tblImp .imp-target,#tblImp .imp-catgrp,#tblImp .imp-acct,#tblImp .imp-cat{display:block}
-  #tblImp .imp-target,#tblImp .imp-acct{margin-top:.35rem}
-  #tblImp .imp-catgrp{font-size:.78rem;color:var(--muted)}
-  #tblImp td.imp-note{white-space:normal}
-  #tblImp td.imp-note .icon-btn{margin-bottom:.3rem}
+  #tblImp .imp-target,#tblImp .imp-acct{margin-top:.3rem}
+  #tblImp .imp-catgrp{font-size:.72rem;color:var(--muted)}
+  #tblImp td.imp-note{white-space:normal;line-height:1.7}
+  #tblImp td.imp-note .icon-btn{padding:.28rem .6rem;font-size:.72rem}
+  tr.posted-row td{color:var(--muted);background:var(--wash);opacity:.72}
+  .posted-chip{font-size:.68rem;color:var(--muted);font-family:var(--mono)}
   .imp-actions{display:flex;gap:.6rem;margin-top:.9rem;align-items:center;flex-wrap:wrap}
-  .imp-actions .btn-accent{min-height:46px}
+  .imp-actions .btn-accent{min-height:44px}
   tr.hist-row td{background:var(--wash);padding:.7rem .9rem;height:auto;cursor:default}
   .hist-title{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.35rem}
   .hist-total{font-size:.78rem;color:var(--muted);margin-top:.45rem;font-family:var(--mono)}
   #tblInv tbody tr[data-i],.tbl-ld tbody tr[data-i]{cursor:pointer}
-  tr.imp-editor td{background:var(--wash);padding:.95rem 1rem;border-bottom:2px solid var(--line-strong)}
-  .imp-ed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;align-items:end}
-  .imp-ed-grid label{display:flex;flex-direction:column;gap:.32rem;font-size:.64rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
-  .imp-ed-grid input,.imp-ed-grid select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:9px;padding:.55rem .6rem;font-size:.86rem;color:var(--text);min-height:40px}
+  tr.imp-editor td{background:var(--wash);padding:.85rem 1rem;border-bottom:2px solid var(--line-strong)}
+  .imp-ed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;align-items:end}
+  .imp-ed-grid label{display:flex;flex-direction:column;gap:.3rem;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .imp-ed-grid input,.imp-ed-grid select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:8px;padding:.5rem .55rem;font-size:.84rem;color:var(--text);min-height:38px;width:100%}
   .imp-ed-actions{display:flex;gap:.5rem;align-items:end}
-  .imp-ed-actions .btn-accent{min-height:42px;padding:.5rem 1rem}
-  @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}.imp-ed-grid{grid-template-columns:1fr 1fr}}
+  .imp-ed-actions .btn-accent{min-height:40px;padding:.5rem 1rem}
+  @media(max-width:640px){#tblImp{min-width:0;table-layout:auto;font-size:.85rem}#tblImp th,#tblImp td{width:auto!important}.imp-ed-grid{grid-template-columns:1fr 1fr}}
   /* ---------- chart of accounts ---------- */
   #tblCoa{min-width:1040px;table-layout:fixed}
   #tblCoa th:nth-child(1),#tblCoa td:nth-child(1){width:96px}
@@ -731,7 +735,7 @@
         <table id="tblImp"><thead><tr><th class="chk"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Nature</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="imp-actions">
-        <button type="button" class="btn-accent" id="btnImpPost">Post selected to ledger</button>
+        <button type="button" class="btn-accent" id="btnImpPost">Process selected to transactions</button>
         <button type="button" class="icon-btn" id="btnImpClear" style="min-height:46px">Discard</button>
       </div>
     </div>
@@ -1501,6 +1505,7 @@ function parseWorkbook(buf,name){
       method:String(gv(r,"Payment Method","Method")||"").trim(),
       ref,
       coaAcct:String(gv(r,"COA Account")||"").trim(),
+      bankRef:String(gv(r,"Bank Reference","Bank Ref")||"").trim(),
       loanRef:pm?pm[1].toUpperCase():""
     });
   });
@@ -1626,14 +1631,14 @@ function buildWorkbook(){
   const wb=XLSX.utils.book_new();
 
   // Transactions
-  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account"];
+  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account","Bank Reference"];
   const txData=txns.slice().sort((a,b)=>(a.id>b.id?1:-1)).map(t=>[
     t.id,t.date,t.type,t.cat,t.desc,t.amount,
     t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank,
-    t.method,t.ref,t.coaAcct||""
+    t.method,t.ref,t.coaAcct||"",t.bankRef||""
   ]);
   const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, and Auto-Posted Closures",txHeaders,txData);
-  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12}];
+  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
@@ -3031,6 +3036,7 @@ $("#coaNum")&&$("#coaNum").addEventListener("input",()=>{
 let importRows=[];      // {date,desc,amount,type,cat,method,include,dup,auto}
 let importBank="", importFile="";
 let importExisting=new Set();   // amounts already on the selected bank's ledger
+let importRefs=new Set();        // bank reference numbers already posted for this bank
 
 /* pdf.js is loaded only when a PDF is actually chosen */
 let pdfjsReady=null;
@@ -3176,6 +3182,11 @@ function parseStatementText(lines){
       else if(/\b(?:neft|ach|imps|rtgs|upi|sal|salary|int)[ \.\-]?cr\b/i.test(r.text))dir="cr";
       else if(/\b(?:neft|ach|imps|rtgs|upi)[ \.\-]?dr\b/i.test(r.text))dir="dr";
     }
+    /* the bank's own transaction id (e.g. S7318245) is the most stable dedup key.
+       Grab it before it gets cleaned out of the narration. */
+    let bankRef="";
+    const rm=/\b([A-Z]{1,2}\d{6,})\b/.exec(r.text)||/\b(\d{9,})\b/.exec(r.text);
+    if(rm)bankRef=rm[1];
     /* narration = everything before the money columns, cleaned up */
     let desc=r.text.slice(0,cut);
     desc=desc.replace(/\b\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\b/g,"")   // value dates
@@ -3184,7 +3195,7 @@ function parseStatementText(lines){
              .replace(/\b(cr|dr|credit|debit|tfr|opnbal)\b/gi,"")
              .replace(/\b0+\b/g,"")
              .replace(/[|\u00b7]+/g," ").replace(/[\/\-]{2,}/g," ").replace(/\s+/g," ").replace(/^[\/\- ]+|[\/\- ]+$/g,"").trim().slice(0,80);
-    if(amount>0)out.push({date:r.date,desc:desc||"(no narration)",amount:r2(amount),balance,dir});
+    if(amount>0)out.push({date:r.date,desc:desc||"(no narration)",amount:r2(amount),balance,dir,bankRef});
   });
   /* third pass: running-balance deltas confirm or fix direction (statement may run either way) */
   const score=arr=>{let sc=0,prev=null;arr.forEach(t=>{if(t.balance!=null&&prev!=null){const d=r2(t.balance-prev);if(Math.abs(d-t.amount)<0.02||Math.abs(d+t.amount)<0.02)sc++;}if(t.balance!=null)prev=t.balance;});return sc;};
@@ -3365,13 +3376,23 @@ function renderImport(){
   const body=$("#tblImp tbody");if(!body)return;
   body.innerHTML=importRows.map((t,i)=>{
     const isIn=t.type==="Income";
+    if(t.posted){
+      /* already in the ledger (reference matched) \u2014 shown for confirmation, not editable */
+      return `<tr data-imp="${i}" class="posted-row">
+    <td class="chk">\u2713</td>
+    <td data-l="Date">${esc(t.date)}</td>
+    <td data-l="Description">${esc(t.desc)}</td>
+    <td data-l="Amount" class="num">${fmt(t.amount)}</td>
+    <td data-l="Nature" colspan="2"><span class="posted-chip">already in ledger \u00b7 ref ${esc(t.bankRef||"\u2014")}</span></td>
+    <td></td></tr>`;
+    }
     const row=`<tr data-imp="${i}" class="${t.dup?"dup-row":""}">
-    <td data-l="Include" class="chk"><input type="checkbox" class="imp-chk"${t.include?" checked":""}></td>
+    <td class="chk"><input type="checkbox" class="imp-chk"${t.include?" checked":""}></td>
     <td data-l="Date"><input type="date" class="imp-date" value="${esc(t.date)}"></td>
-    <td data-l="Description" class="imp-desc-cell"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
+    <td data-l="Description"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
     <td data-l="Amount" class="num"><span class="${t.nature==="transfer"?"muted-amt":isIn?"pos":"neg"}">${t.nature==="transfer"?"\u21c4 ":isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
     <td data-l="Nature"><select class="imp-nature">${natureOptions(t)}</select>${(()=>{const to=natureTargetOptions(t);return to?`<select class="imp-target">${to}</select>`:"";})()}</td>
-    <td data-l="Category">${(t.nature==="transfer")?'<span class="muted-amt" style="font-size:.78rem">\u21c4 transfer</span>':(t.tag?`<span class="tag iv" style="font-size:.64rem">${impTagLabel(t.tag)}</span>`:impHasCoa(t.type)?`<select class="imp-catgrp">${impCatGroupOptions(t)}</select><select class="imp-acct">${impAcctOptions(t,impCoaCategory(t))}</select>`:`<select class="imp-cat">${impCatOptions(t.type,t.cat)}</select>`)}</td>
+    <td data-l="Category">${(t.nature==="transfer")?'<span class="muted-amt" style="font-size:.76rem">\u21c4 transfer</span>':(t.tag?`<span class="tag iv" style="font-size:.62rem">${impTagLabel(t.tag)}</span>`:impHasCoa(t.type)?`<select class="imp-catgrp">${impCatGroupOptions(t)}</select><select class="imp-acct">${impAcctOptions(t,impCoaCategory(t))}</select>`:`<select class="imp-cat">${impCatOptions(t.type,t.cat)}</select>`)}</td>
     <td data-l="Note" class="imp-note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button>${t.dup?'<span class="dup-chip">\u26a0 dup?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
   </tr>`;
     /* expanded editor: same fields & COA cascade as the Add screen */
@@ -3391,13 +3412,16 @@ function renderImport(){
     return row+ed;
   }).join("");
   const inc=importRows.filter(t=>t.include);
-  const dups=importRows.filter(t=>t.dup).length;
-  $("#impSummary").textContent=`${importRows.length} found \u00b7 ${inc.length} selected \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`;
-  $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
+  const dups=importRows.filter(t=>t.dup&&!t.posted).length;
+  const posted=importRows.filter(t=>t.posted).length;
+  const pending=importRows.filter(t=>!t.posted).length;
+  $("#impSummary").textContent=`${pending} to review \u00b7 ${inc.length} selected`+(posted?` \u00b7 ${posted} already in ledger`:"")+(dups?` \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`:"");
+  $("#btnImpPost").textContent=`Process ${inc.length} line${inc.length===1?"":"s"} to transactions`;
   $("#btnImpPost").disabled=!inc.length;
 }
 /* row editor open/close/apply */
 $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
+  const prow=e.target.closest("tr.posted-row");if(prow)return;   // posted lines are read-only
   if(e.target.classList.contains("imp-edit")){
     const tr=e.target.closest("tr[data-imp]");if(!tr)return;
     const i=+tr.dataset.imp;
@@ -3475,8 +3499,9 @@ $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
   if(e.target.classList.contains("imp-cat")){t.cat=e.target.value;t.coaAcct="";}
   const inc=importRows.filter(x=>x.include);
   const dups=importRows.filter(x=>x.dup).length;
-  $("#impSummary").textContent=`${importRows.length} found \u00b7 ${inc.length} selected \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`;
-  $("#btnImpPost").textContent=`Post ${inc.length} transaction${inc.length===1?"":"s"} to ledger`;
+  const pending=importRows.filter(x=>!x.posted).length;
+  $("#impSummary").textContent=`${pending} to review \u00b7 ${inc.length} selected`+(dups?` \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`:"");
+  $("#btnImpPost").textContent=`Process ${inc.length} line${inc.length===1?"":"s"} to transactions`;
   $("#btnImpPost").disabled=!inc.length;
 });
 
@@ -3504,17 +3529,22 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
       $("#impEmpty").style.display="block";
       return;
     }
-    /* duplicate check: same amount already on this bank's ledger */
+    /* dedup: the bank's own reference number is the reliable key. We also keep the
+       amount-set as a soft signal for rows the bank didn't give a reference for. */
+    importRefs=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>t.bankRef).filter(Boolean));
     importExisting=new Set(txns.filter(t=>t.bank===bank||t.toBank===bank).map(t=>r2(t.amount)));
     importBank=bank;importFile=file.name;impEditIdx=-1;
+    let already=0;
     importRows=parsed.map(t=>{
       const match=impMatchCoa(t.desc)||impDetectNature(t.desc);
       const type=match?match.type:(t.dir==="cr"?"Income":"Expense");
       const cat=match?match.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
-      const dup=importExisting.has(r2(t.amount));
-      const row={date:t.date,desc:t.desc,amount:t.amount,type,cat,coaAcct:"",dir:t.dir||(type==="Income"?"cr":"dr"),
+      const posted=!!(t.bankRef&&importRefs.has(t.bankRef));   // this exact line is already in the ledger
+      if(posted)already++;
+      const dup=!posted&&importExisting.has(r2(t.amount));      // same amount, no matching ref → maybe a dup
+      const row={date:t.date,desc:t.desc,amount:t.amount,type,cat,coaAcct:"",bankRef:t.bankRef||"",dir:t.dir||(type==="Income"?"cr":"dr"),
                  nature:natureFromDetection(match,type,t.desc),tag:"",transferBank:"",
-                 method:"Bank Import",auto:!!match,dup,include:!dup};
+                 method:"Bank Import",auto:!!match,posted,dup,include:!posted&&!dup};
       applyNatureDefaults(row);
       if(match&&!NATURES.find(n=>n.v===row.nature).cat)row.cat=cat;   // keep the matched category for plain natures
       /* firm-link the row to a COA account by its resolved name, so it posts to the right account */
@@ -3522,8 +3552,10 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
       if(acct)row.coaAcct=acct.number;
       return row;
     });
-    status.innerHTML=`Read <b>${importRows.length}</b> transactions from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `+
-      `Income/expense was worked out from the running balance where possible — check each row before posting.`;
+    const fresh=importRows.filter(r=>!r.posted).length;
+    status.innerHTML=`Read <b>${importRows.length}</b> lines from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `
+      +(already?`<b>${already}</b> already posted (shown greyed, reference matched). `:"")
+      +`Set the account on the ${fresh} remaining line${fresh===1?"":"s"} and process them.`;
     $("#impReview").style.display="";
     renderImport();
   }catch(err){
@@ -3546,7 +3578,7 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
       if(missing){toast(`"${(t.desc||"row").slice(0,28)}" needs a ${t.nature==="transfer"?"destination account":"target"} \u2014 pick one in the ${n.l} row`);return;}
     }
   }
-  if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Post anyway?`))return;
+  if(dups&&!confirm(`${dups} selected row${dups===1?" is":"s are"} flagged as possible duplicates. Process anyway?`))return;
   let created=0;
   inc.forEach(t=>{
     if(t.nature==="transfer"){
@@ -3555,22 +3587,33 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
       const outw=t.dir!=="cr";
       txns.push({id:nextTxnId(),date:t.date,type:"Transfer",cat:"Transfer",desc:t.desc,amount:t.amount,
                  bank:outw?importBank:t.transferBank,toBank:outw?t.transferBank:importBank,
-                 method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
+                 bankRef:t.bankRef||"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
+      if(t.bankRef)importRefs.add(t.bankRef);
       return;
     }
-    const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,coaAcct:t.coaAcct||"",desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
+    const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,coaAcct:t.coaAcct||"",desc:t.desc,amount:t.amount,bank:importBank,toBank:"",bankRef:t.bankRef||"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
     created+=applyPostingTag(txn,t.tag);
     txns.push(txn);
+    if(t.bankRef)importRefs.add(t.bankRef);
     if(txn.loanRef)applyLoanPayment(txn);       // part payments reduce the balance and can auto-close
   });
-  toast(`${inc.length} transaction${inc.length===1?"":"s"} posted to ${importBank}`+(created?` \u00b7 ${created} new record${created===1?"":"s"} created`:""));
-  importRows=[];importBank="";importFile="";
-  $("#impReview").style.display="none";$("#impStatus").style.display="none";
-  if($("#impFile"))$("#impFile").value="";
+  const n=inc.length;
+  /* processed lines leave the review; mark them posted so they can't be re-selected */
+  const postedSet=new Set(inc);
+  importRows=importRows.filter(r=>!postedSet.has(r));
+  importExisting=new Set(txns.filter(t=>t.bank===importBank||t.toBank===importBank).map(t=>r2(t.amount)));
+  toast(`${n} line${n===1?"":"s"} processed to ${importBank}`+(created?` \u00b7 ${created} new record${created===1?"":"s"} created`:""));
   setDirty(true);renderAll();
+  if(importRows.length){
+    renderImport();
+  }else{
+    importBank="";importFile="";
+    $("#impReview").style.display="none";$("#impStatus").style.display="none";
+    if($("#impFile"))$("#impFile").value="";
+  }
 });
 $("#btnImpClear")&&$("#btnImpClear").addEventListener("click",()=>{
-  importRows=[];importBank="";importFile="";impEditIdx=-1;importExisting=new Set();
+  importRows=[];importBank="";importFile="";impEditIdx=-1;importExisting=new Set();importRefs=new Set();
   $("#impReview").style.display="none";$("#impStatus").style.display="none";$("#impEmpty").style.display="none";
   if($("#impFile"))$("#impFile").value="";
 });

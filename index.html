@@ -370,6 +370,10 @@
   .fin-head-line{font-weight:800;font-size:.9rem;margin:.3rem 0 .1rem}
   .fin-head-line.pos{color:var(--mint)} .fin-head-line.neg{color:var(--coral)}
   .mini-select{background:var(--wash);border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;font-size:.72rem;color:var(--text);text-transform:none;letter-spacing:0}
+  .dash-periodbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.6rem .85rem}
+  .dash-period-label{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .dash-periodbar .mini-select{font-size:.82rem;padding:.4rem .7rem;min-width:150px}
+  .dash-period-hint{font-size:.74rem;color:var(--muted);margin-left:auto}
   /* ---------- voucher ---------- */
   .vch-card{width:min(760px,94vw)!important;max-width:none!important;max-height:88vh;overflow-y:auto;overflow-x:hidden;padding:2rem}
   @media(max-width:640px){.vch-card{padding:1.2rem}}
@@ -590,6 +594,11 @@
 
   <!-- ============ DASHBOARD ============ -->
   <section class="panel active" id="panel-home">
+    <div class="dash-periodbar">
+      <span class="dash-period-label">Overview period</span>
+      <select id="dashPeriod" class="mini-select"></select>
+      <span class="dash-period-hint" id="dashPeriodHint"></span>
+    </div>
     <div class="kpis">
       <div class="kpi bank"><div class="label">Cash across banks</div><div class="value" id="kCash">—</div><div class="sub" id="kCashSub"></div></div>
       <div class="kpi income"><div class="label">Income · this month</div><div class="value" id="kIncome">—</div><div class="sub" id="kIncomeSub"></div></div>
@@ -619,7 +628,7 @@
     </div>
     <div class="charts">
       <div class="chart-card"><h3>Assets &amp; liabilities <small>statement \u00b7 as of today</small></h3><div id="stBalance" class="fin-st"></div></div>
-      <div class="chart-card"><h3>Income &amp; expense <small>statement \u00b7 <select id="stPeriod" class="mini-select"></select></small></h3><div id="stPL" class="fin-st"></div></div>
+      <div class="chart-card"><h3>Income &amp; expense <small>statement \u00b7 <span id="stPeriodLabel">all time</span></small></h3><div id="stPL" class="fin-st"></div></div>
     </div>
   </section>
 
@@ -1914,25 +1923,35 @@ function renderStatements(){
     +sec("Loans & borrowings",payRows,"neg")
     +`<div class="fin-row fin-total"><span>Total liabilities</span><span class="neg">${fmt(lT)}</span></div>`
     +`<div class="fin-row fin-total fin-net"><span>Net worth (equity)</span><span class="${aT-lT>=0?"pos":"neg"}">${fmt(r2(aT-lT))}</span></div>`;
-  /* ----- income & expense statement for the chosen period ----- */
-  const sel=$("#stPeriod");
-  const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
-  const cur=sel.dataset.init?sel.value:"";   // default to All time; user can pick a month
-  sel.dataset.init=1;
-  sel.innerHTML='<option value=""'+(cur===""?" selected":"")+'>All time</option>'
-    +months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===cur?" selected":""}>${l}</option>`;}).join("");
-  const pl=plGroups(sel.value);
+  /* ----- income & expense statement follows the overview period ----- */
+  const dpk=(typeof dashPeriodKey==="function")?dashPeriodKey():"";
+  const periodLabel=dpk?new Date(dpk+"-01").toLocaleString(undefined,{month:"short",year:"numeric"}):"all time";
+  const lbl=$("#stPeriodLabel");if(lbl)lbl.textContent=periodLabel;
+  const pl=plGroups(dpk);
   const grp=(g,cls)=>`<div class="fin-sec"><span>${esc(g.cat)}</span><span>${fmt(g.total)}</span></div>`
     +g.accounts.map(a=>`<div class="fin-row fin-sub"><span>${esc(a.name)}</span><span class="${cls}">${fmt(a.amt)}</span></div>`).join("");
   const net=r2(pl.income.total-pl.expense.total);
   $("#stPL").innerHTML=
     `<div class="fin-head-line pos">Income \u00b7 ${fmt(pl.income.total)}</div>`+(pl.income.list.map(g=>grp(g,"pos")).join("")||'<div class="empty-mini">No income in this period.</div>')
     +`<div class="fin-head-line neg" style="margin-top:.75rem">Expenses \u00b7 ${fmt(pl.expense.total)}</div>`+(pl.expense.list.map(g=>grp(g,"neg")).join("")||'<div class="empty-mini">No expenses in this period.</div>')
-    +`<div class="fin-row fin-total fin-net"><span>Net ${sel.value?"for the period":"overall"}</span><span class="${net>=0?"pos":"neg"}">${net>=0?"+":""}${fmt(net)}</span></div>`;
+    +`<div class="fin-row fin-total fin-net"><span>Net ${dpk?"for the period":"overall"}</span><span class="${net>=0?"pos":"neg"}">${net>=0?"+":""}${fmt(net)}</span></div>`;
 }
-$("#stPeriod")&&$("#stPeriod").addEventListener("change",renderStatements);
+
+function dashPeriodKey(){const s=$("#dashPeriod");return s?s.value:"";}
+function populateDashPeriod(){
+  const sel=$("#dashPeriod");if(!sel)return;
+  const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
+  const cur=sel.dataset.init?sel.value:"";     // default: All time
+  sel.dataset.init=1;
+  sel.innerHTML='<option value=""'+(cur===""?" selected":"")+'>All time</option>'
+    +months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===cur?" selected":""}>${esc(l)}</option>`;}).join("");
+  const hint=$("#dashPeriodHint");
+  if(hint)hint.textContent=cur?"Spending chart & income/expense scoped to this month":"Showing all-time figures";
+}
+$("#dashPeriod")&&$("#dashPeriod").addEventListener("change",()=>{renderDash();});
 
 function renderDash(){
+  populateDashPeriod();
   const mk=thisMonthKey();
   const incM=txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
   const expM=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
@@ -1972,10 +1991,13 @@ function drawCharts(){
     return;
   }
   const cs=getComputedStyle(document.documentElement);
-  Chart.defaults.color=(cs.getPropertyValue("--muted")||"#8B95AE").trim();
+  /* legend/axis text uses the main text colour (not the low-contrast muted grey)
+     so labels stay clearly readable in both light and dark themes */
+  Chart.defaults.color=(cs.getPropertyValue("--text")||"#E9EEF8").trim();
   Chart.defaults.borderColor=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.07)").trim();
   Chart.defaults.font.family="'Inter',sans-serif";
   const cBorder=(cs.getPropertyValue("--bg-2")||"#0E1526").trim();
+  const gridCol=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.09)").trim();
   const legendSide=window.innerWidth<700?"bottom":"right";
 
   const months=lastMonths(6);
@@ -1989,10 +2011,11 @@ function drawCharts(){
       plugins:{legend:{position:"top",labels:{usePointStyle:true,pointStyle:"circle",boxWidth:7}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y)}`}}},
       scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true}}}});
 
-  const mk=thisMonthKey();
-  let scoped=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk);
-  $("#chExpScope").textContent="this month";
-  if(!scoped.length){scoped=txns.filter(t=>t.type==="Expense");$("#chExpScope").textContent="all time";}
+  const dp=dashPeriodKey();
+  let scoped,scopeLabel;
+  if(dp){scoped=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===dp);scopeLabel=new Date(dp+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});}
+  else{scoped=txns.filter(t=>t.type==="Expense");scopeLabel="all time";}
+  $("#chExpScope").textContent=scopeLabel;
   const byCat={};scoped.forEach(t=>byCat[t.cat||"Other"]=(byCat[t.cat||"Other"]||0)+t.amount);
   const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   killChart("expCat");

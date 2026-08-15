@@ -587,7 +587,8 @@
     <form class="add-card" id="formTxn">
       <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
       <div class="f"><label for="tType">Type</label><select id="tType"><option>Income</option><option>Expense</option><option>Transfer</option><option>Investment</option><option value="Loan / Debt">Loan / debt</option></select></div>
-      <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Category / Source</label><select id="tCat"></select></div>
+      <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Account category</label><select id="tCatGrp"></select></div>
+      <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
       <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f" id="tLoanWrap"><label for="tLoan" id="tLoanLabel">Apply to loan / debt <i>(optional)</i></label><select id="tLoan"><option value="">— none —</option></select></div>
@@ -1492,6 +1493,7 @@ function parseWorkbook(buf,name){
       toBank,
       method:String(gv(r,"Payment Method","Method")||"").trim(),
       ref,
+      coaAcct:String(gv(r,"COA Account")||"").trim(),
       loanRef:pm?pm[1].toUpperCase():""
     });
   });
@@ -1617,14 +1619,14 @@ function buildWorkbook(){
   const wb=XLSX.utils.book_new();
 
   // Transactions
-  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref"];
+  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account"];
   const txData=txns.slice().sort((a,b)=>(a.id>b.id?1:-1)).map(t=>[
     t.id,t.date,t.type,t.cat,t.desc,t.amount,
     t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank,
-    t.method,t.ref
+    t.method,t.ref,t.coaAcct||""
   ]);
   const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, and Auto-Posted Closures",txHeaders,txData);
-  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24}];
+  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12}];
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
@@ -1704,38 +1706,65 @@ function refreshSelects(){
 /* posting categories come from the COA when one exists:
    Income \u2192 4xxxx accounts, Expense \u2192 5xxxx accounts, grouped by Account Category.
    With no COA loaded, the old Lists still apply.                             */
-function txnCatOptions(type,cur){
-  const accts=coa.filter(a=>a.type===type&&a.name)
-    .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
-  if(!accts.length){
-    const src=type==="Income"?lists.incomeCats:lists.expenseCats;
-    return src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
-  }
-  const byCat={};
-  accts.forEach(a=>{(byCat[a.category||"Other"]=byCat[a.category||"Other"]||[]).push(a.name);});
-  return Object.entries(byCat).map(([c,names])=>
-    `<optgroup label="${esc(c)}">`+names.map(n=>`<option${n===cur?" selected":""}>${esc(n)}</option>`).join("")+"</optgroup>").join("");
+/* Add-screen categories come straight from the COA and cascade:
+   Type (Income/Expense) -> its 4xxxx/5xxxx accounts, grouped by Account Category;
+   pick a Category, then the Account within it. The posting stores the account NUMBER
+   (t.coaAcct) so it firmly hits that COA account in vouchers and the statements.     */
+function txnCatsFor(type){
+  return [...new Set(coa.filter(a=>a.type===type&&a.category).map(a=>a.category))].sort();
 }
+function txnAcctsFor(type,cat){
+  return coa.filter(a=>a.type===type&&a.category===cat&&a.name)
+    .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+}
+function coaHasType(type){return coa.some(a=>a.type===type&&a.name);}
 function syncTxnCat(){
   const type=$("#tType")?$("#tType").value:"Income";
-  const cat=$("#tCat");
-  if(!cat)return;
-  const cur=cat.value;
-  const catWrap=$("#tCatWrap"),payWrap=$("#tPayWrap"),toWrap=$("#tBankToWrap");
+  const grpWrap=$("#tCatGrpWrap"),catWrap=$("#tCatWrap"),payWrap=$("#tPayWrap"),toWrap=$("#tBankToWrap");
+  if(!catWrap)return;
   if(type==="Transfer"){
-    catWrap.style.display="none";payWrap.style.display="none";toWrap.style.display="";
+    grpWrap.style.display="none";catWrap.style.display="none";payWrap.style.display="none";toWrap.style.display="";
     $("#tBankLabel").textContent="From account";
   }else if(type==="Investment"||type==="Loan / Debt"){
-    /* category is decided by the tag, so hide it */
-    catWrap.style.display="none";payWrap.style.display="";toWrap.style.display="none";
+    /* the tag decides the account, so hide the category pickers */
+    grpWrap.style.display="none";catWrap.style.display="none";payWrap.style.display="";toWrap.style.display="none";
     $("#tBankLabel").textContent="Bank / Account";
   }else{
-    catWrap.style.display="";payWrap.style.display="";toWrap.style.display="none";
+    payWrap.style.display="";toWrap.style.display="none";
     $("#tBankLabel").textContent="Bank / Account";
-    $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
-    cat.innerHTML=txnCatOptions(type,cur);
+    if(coaHasType(type)){
+      /* COA present: two linked dropdowns */
+      grpWrap.style.display="";catWrap.style.display="";
+      $("#tCatGrpLabel").textContent=type==="Income"?"Income category":"Expense category";
+      $("#tCatLabel").textContent=type==="Income"?"Income account (source)":"Expense account";
+      const cats=txnCatsFor(type);
+      const grp=$("#tCatGrp");
+      const wantGrp=cats.includes(grp.value)?grp.value:cats[0]||"";
+      grp.innerHTML=cats.map(c=>`<option${c===wantGrp?" selected":""}>${esc(c)}</option>`).join("");
+      syncTxnAcct();
+    }else{
+      /* no COA loaded: fall back to the old flat Lists categories */
+      grpWrap.style.display="none";catWrap.style.display="";
+      $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
+      const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+      const cur=$("#tCat").value;
+      $("#tCat").innerHTML=src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
+    }
   }
   syncTxnLoan();
+}
+function syncTxnAcct(){
+  const type=$("#tType")?$("#tType").value:"Income";
+  const cat=$("#tCatGrp")?$("#tCatGrp").value:"";
+  const sel=$("#tCat");if(!sel)return;
+  const accts=txnAcctsFor(type,cat);
+  const cur=sel.value;
+  sel.innerHTML=accts.map(a=>`<option value="${esc(a.name)}" data-num="${esc(a.number)}"${a.name===cur?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+}
+/* the account currently chosen in the form, as a COA number (or "") */
+function txnFormAcctNumber(){
+  const sel=$("#tCat");if(!sel||!sel.selectedOptions.length)return "";
+  return sel.selectedOptions[0].getAttribute("data-num")||"";
 }
 /* The tag box adapts to the posting type:
    Income/Expense — optional link to an open loan/debt (part payments)
@@ -1795,19 +1824,25 @@ function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function plGroups(mk){
   const inP=t=>!mk||monthKeyOf(t.date)===mk;
   const build=type=>{
-    const sums={};
-    txns.filter(t=>t.type===type&&inP(t)).forEach(t=>{const c=t.cat||"Other";sums[c]=r2((sums[c]||0)+t.amount);});
-    const groups={};
-    Object.entries(sums).forEach(([cat,amt])=>{
-      const c=cat.toLowerCase();
-      /* map the transaction category to a COA account: exact name first,
-         then name containment either way, then the account's own keywords */
-      const acct=coa.find(a=>a.type===type&&a.name.toLowerCase()===c)
-        ||coa.find(a=>a.type===type&&(a.name.toLowerCase().includes(c)||c.includes(a.name.toLowerCase())))
-        ||coa.find(a=>a.type===type&&String(a.keywords||"").toLowerCase().split(",").some(k=>{k=k.trim();return k&&(k.length<=3?new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(c):c.includes(k));}));
-      const g=acct?(acct.category||"Other"):"Other";
-      (groups[g]=groups[g]||[]).push({name:cat,amt});
+    /* roll each transaction up to its COA account: the number stored at posting
+       time wins; older rows fall back to matching the category text by name/keywords */
+    const acctSums={};   // key -> {name, category, amt}
+    txns.filter(t=>t.type===type&&inP(t)).forEach(t=>{
+      let acct=t.coaAcct?coaByNumber(t.coaAcct):null;
+      if(!acct){
+        const c=(t.cat||"").toLowerCase();
+        acct=coa.find(a=>a.type===type&&a.name.toLowerCase()===c)
+          ||coa.find(a=>a.type===type&&(a.name.toLowerCase().includes(c)||c.includes(a.name.toLowerCase())))
+          ||coa.find(a=>a.type===type&&String(a.keywords||"").toLowerCase().split(",").some(k=>{k=k.trim();return k&&(k.length<=3?new RegExp("\\b"+k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").test(c):c.includes(k));}));
+      }
+      const name=acct?acct.name:(t.cat||"Other");
+      const category=acct?(acct.category||"Other"):"Other";
+      const key=acct?acct.number:name;
+      if(!acctSums[key])acctSums[key]={name,category,amt:0};
+      acctSums[key].amt=r2(acctSums[key].amt+t.amount);
     });
+    const groups={};
+    Object.values(acctSums).forEach(a=>{(groups[a.category]=groups[a.category]||[]).push({name:a.name,amt:a.amt});});
     const list=Object.entries(groups)
       .map(([g,accounts])=>({cat:g,accounts:accounts.sort((a,b)=>b.amt-a.amt),total:r2(accounts.reduce((sm,x)=>sm+x.amt,0))}))
       .sort((a,b)=>b.total-a.total);
@@ -2414,6 +2449,7 @@ function voucherFor(t){
       const v=invs.find(x=>x.id===m[1]);
       if(v)other=acctForInv(v);
     }
+    if(!other&&t.coaAcct){const a=coaByNumber(t.coaAcct);if(a)other=a;}   // firm link chosen at posting
     if(!other)other=acctForCat(t.type,t.cat);
     const bankA=acctForBank(t.bank);
     if(t.type==="Expense")lines.push({side:"Dr",a:other},{side:"Cr",a:bankA});
@@ -2461,6 +2497,7 @@ function reverseInvTopup(t){
 
 /* ---------- forms ---------- */
 $("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
+$("#tCatGrp")&&$("#tCatGrp").addEventListener("change",syncTxnAcct);
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
   const type=$("#tType").value;
@@ -2494,7 +2531,7 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     rec={date:$("#tDate").value||todayISO(),type:ttype,cat,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:"",loanRef:""};
   }else{
     const lrec=selVal?lends.find(l=>l.id===selVal):null;
-    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,
+    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,coaAcct:txnFormAcctNumber(),desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,
          ref:lrec?("Payment: "+lrec.id+" ("+lrec.person+")"):"",loanRef:lrec?lrec.id:""};
   }
   if(editingTxn){
@@ -2502,7 +2539,7 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     const t=txns.find(x=>x.id===editingTxn);
     if(t){
       reverseLoanPayment(t);                       // undo the old effect first
-      t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.desc=rec.desc;t.amount=rec.amount;
+      t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.coaAcct=rec.coaAcct!==undefined?rec.coaAcct:t.coaAcct;t.desc=rec.desc;t.amount=rec.amount;
       t.bank=rec.bank;t.toBank=rec.toBank;t.method=rec.method;t.ref=rec.ref;t.loanRef=rec.loanRef;
       applyLoanPayment(t);                         // then apply the new one
     }
@@ -2530,6 +2567,11 @@ function loadTxnIntoForm(t){
     if($("#tBank"))$("#tBank").value=t.bank||"";
     if($("#tBankTo"))$("#tBankTo").value=t.toBank||"";
   }else{
+    /* restore the COA category that owns this account, then the account itself */
+    if($("#tCatGrp")&&$("#tCatGrpWrap").style.display!=="none"){
+      const acct=t.coaAcct?coaByNumber(t.coaAcct):coa.find(a=>a.type===t.type&&a.name===t.cat);
+      if(acct&&acct.category){$("#tCatGrp").value=acct.category;syncTxnAcct();}
+    }
     if($("#tCat"))$("#tCat").value=t.cat||"";
     if($("#tBank"))$("#tBank").value=t.bank||"";
     if($("#tPay"))$("#tPay").value=t.method||"";
@@ -3155,10 +3197,19 @@ function parseStatementText(lines){
 
 /* ---------- review table ---------- */
 function impCatOptions(type,sel){
-  const names=coa.filter(a=>a.type===type).map(a=>a.name);
-  const src=names.length?names:(type==="Income"?lists.incomeCats:lists.expenseCats);
-  const pre=sel&&!src.includes(sel)?`<option selected>${esc(sel)}</option>`:"";
-  return pre+txnCatOptions(type,sel);
+  const accts=coa.filter(a=>a.type===type&&a.name)
+    .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  if(!accts.length){
+    const src=type==="Income"?lists.incomeCats:lists.expenseCats;
+    const pre=sel&&!src.includes(sel)?`<option selected>${esc(sel)}</option>`:"";
+    return pre+src.map(v=>`<option${v===sel?" selected":""}>${esc(v)}</option>`).join("");
+  }
+  const names=accts.map(a=>a.name);
+  const pre=sel&&!names.includes(sel)?`<option selected>${esc(sel)}</option>`:"";
+  const byCat={};
+  accts.forEach(a=>{(byCat[a.category||"Other"]=byCat[a.category||"Other"]||[]).push(a.name);});
+  return pre+Object.entries(byCat).map(([c,ns])=>
+    `<optgroup label="${esc(c)}">`+ns.map(n=>`<option${n===sel?" selected":""}>${esc(n)}</option>`).join("")+"</optgroup>").join("");
 }
 /* ---------- statement tagging: link a line to loans/debts/investments ----------
    Tag values encode action:target —

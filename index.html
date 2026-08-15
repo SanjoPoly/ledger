@@ -355,12 +355,27 @@
   .fin-head-line.pos{color:var(--mint)} .fin-head-line.neg{color:var(--coral)}
   .mini-select{background:var(--wash);border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;font-size:.72rem;color:var(--text);text-transform:none;letter-spacing:0}
   /* ---------- voucher ---------- */
-  .vch-table{width:100%;border-collapse:collapse;font-size:.85rem}
-  .vch-table th{text-align:left;font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:.45rem .5rem;border-bottom:1px solid var(--line-strong)}
-  .vch-table td{padding:.5rem;border-bottom:1px solid var(--line)}
-  .vch-table td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-  .vch-table tfoot td{border-bottom:none;border-top:2px solid var(--line-strong)}
-  .vch-narr{font-size:.78rem;color:var(--muted);margin-top:.7rem;line-height:1.4}
+  .vch-card{max-width:480px;width:100%;max-height:90vh;overflow-y:auto;overflow-x:hidden}
+  .vch-badge{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .5rem;border-radius:999px;border:1px solid;vertical-align:middle;margin-right:.15rem}
+  .vch-table{width:100%;border-collapse:collapse;font-size:.82rem;table-layout:fixed}
+  .vch-table th{text-align:left;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.4rem .35rem;border-bottom:1px solid var(--line-strong)}
+  .vch-table th.num,.vch-table td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .vch-table th:nth-child(1),.vch-table td.vch-side{width:34px}
+  .vch-table th.num,.vch-table td.num{width:84px}
+  .vch-table td{padding:.5rem .35rem;border-bottom:1px solid var(--line);vertical-align:top}
+  .vch-side{font-size:.62rem;font-weight:700;color:var(--muted);padding-top:.62rem!important}
+  .vch-acct{overflow:hidden}
+  .vch-num{display:block;font-family:var(--mono);font-size:.64rem;color:var(--muted);letter-spacing:.02em}
+  .vch-name{display:block;font-size:.86rem;color:var(--text);line-height:1.25;word-break:break-word}
+  .vch-dr{color:var(--coral)}
+  .vch-cr{color:var(--mint)}
+  .vch-table tfoot td{border-bottom:none;border-top:2px solid var(--line-strong);padding-top:.6rem;font-weight:700}
+  .vch-total-label{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .vch-detail{margin:1rem 0 0;display:flex;flex-direction:column;gap:.55rem}
+  .vch-detail div{display:grid;grid-template-columns:88px 1fr;gap:.6rem;align-items:baseline}
+  .vch-detail dt{font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0}
+  .vch-detail dd{margin:0;font-size:.82rem;color:var(--text);line-height:1.4;word-break:break-word}
+  .vch-foot{margin:1rem 0 0;font-size:.7rem;color:var(--muted);text-align:center;font-style:italic}
 
   /* fixed geometry so columns stop fighting each other */
   .tbl-ld{min-width:1150px;table-layout:fixed}
@@ -889,11 +904,11 @@
 </div>
 
 <div id="voucherOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
-  <div class="auth-card" style="max-width:520px;max-height:90vh;overflow:auto">
-    <h2 style="font-size:1.25rem;margin-bottom:.15rem">Journal voucher</h2>
-    <p class="sub" id="vchMeta" style="margin-bottom:.8rem"></p>
+  <div class="auth-card vch-card">
+    <h2 style="font-size:1.15rem;margin-bottom:.4rem">Journal voucher</h2>
+    <p class="sub" id="vchMeta" style="margin-bottom:1rem"></p>
     <div id="vchBody"></div>
-    <div style="display:flex;gap:.6rem;margin-top:1rem">
+    <div style="display:flex;gap:.6rem;margin-top:1.2rem">
       <button class="btn ghost" id="btnVchClose" style="flex:1">Close</button>
     </div>
   </div>
@@ -2474,19 +2489,38 @@ function voucherFor(t){
 }
 function openVoucher(t){
   const v=voucherFor(t);
-  $("#vchMeta").innerHTML=`<b>${esc(v.no)}</b> \u00b7 ${esc(v.date)} \u00b7 ${esc(t.type)}`;
+  const typeColor=t.type==="Income"?"var(--mint)":t.type==="Expense"?"var(--coral)":t.type==="Transfer"?"var(--blue)":"var(--violet)";
+  $("#vchMeta").innerHTML=`<span class="vch-badge" style="background:${typeColor}1f;color:${typeColor};border-color:${typeColor}55">${esc(t.type)}</span> <b class="mono-id" style="display:inline;margin:0">${esc(v.no)}</b> \u00b7 ${esc(fmtDate(v.date))}`;
+  const dr=v.lines.filter(l=>l.side==="Dr");
+  const cr=v.lines.filter(l=>l.side==="Cr");
+  const lineRow=(l)=>`<tr>
+      <td class="vch-side">${l.side}</td>
+      <td class="vch-acct"><span class="vch-num">${esc(l.a.number)}</span><span class="vch-name">${esc(l.a.name)}</span></td>
+      <td class="num vch-dr">${l.side==="Dr"?fmt(v.amount):""}</td>
+      <td class="num vch-cr">${l.side==="Cr"?fmt(v.amount):""}</td>
+    </tr>`;
   $("#vchBody").innerHTML=`
     <table class="vch-table">
-      <thead><tr><th>Account</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th></tr></thead>
-      <tbody>${v.lines.map(l=>`<tr>
-        <td><span class="mono-id" style="display:inline;margin:0">${esc(l.a.number)}</span> ${esc(l.a.name)}</td>
-        <td class="num">${l.side==="Dr"?fmt(v.amount):""}</td>
-        <td class="num">${l.side==="Cr"?fmt(v.amount):""}</td></tr>`).join("")}
-      </tbody>
-      <tfoot><tr><td><b>Total</b></td><td class="num"><b>${fmt(v.amount)}</b></td><td class="num"><b>${fmt(v.amount)}</b></td></tr></tfoot>
+      <thead><tr><th></th><th>Account</th><th class="num">Debit</th><th class="num">Credit</th></tr></thead>
+      <tbody>${dr.map(lineRow).join("")}${cr.map(lineRow).join("")}</tbody>
+      <tfoot><tr><td></td><td class="vch-total-label">Total</td><td class="num">${fmt(v.amount)}</td><td class="num">${fmt(v.amount)}</td></tr></tfoot>
     </table>
-    <div class="vch-narr">Narration: ${esc(v.narration)}</div>`;
+    <dl class="vch-detail">
+      <div><dt>Narration</dt><dd>${esc(v.narration||"\u2014")}</dd></div>
+      ${t.bank?`<div><dt>${t.type==="Transfer"?"From":"Bank"}</dt><dd>${esc(t.bank)}</dd></div>`:""}
+      ${t.type==="Transfer"&&t.toBank?`<div><dt>To</dt><dd>${esc(t.toBank)}</dd></div>`:""}
+      ${t.method?`<div><dt>Method</dt><dd>${esc(t.method)}</dd></div>`:""}
+      ${t.bankRef?`<div><dt>Bank ref</dt><dd class="mono-id" style="display:inline">${esc(t.bankRef)}</dd></div>`:""}
+      ${t.ref?`<div><dt>Reference</dt><dd>${esc(t.ref)}</dd></div>`:""}
+    </dl>
+    <p class="vch-foot">Debit equals credit \u2014 this entry balances.</p>`;
   $("#voucherOverlay").style.display="flex";
+}
+/* pretty date for the voucher header */
+function fmtDate(d){
+  if(!d)return "\u2014";
+  const dt=new Date(d+"T00:00:00");
+  return isNaN(dt)?d:dt.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
 }
 $("#btnVchClose")&&$("#btnVchClose").addEventListener("click",()=>{$("#voucherOverlay").style.display="none";});
 $("#voucherOverlay")&&$("#voucherOverlay").addEventListener("click",e=>{if(e.target.id==="voucherOverlay")$("#voucherOverlay").style.display="none";});

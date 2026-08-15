@@ -293,26 +293,33 @@
   .auto-chip{background:var(--mint-dim);color:var(--mint);font-size:.7rem;font-weight:600;border-radius:999px;padding:.2rem .6rem;white-space:nowrap}
   tr.dup-row td{background:var(--amber-dim)}
   tr.dup-row:hover td{background:var(--amber-dim)}
-  #tblImp{min-width:960px;table-layout:fixed}
+  #tblImp{min-width:1080px;table-layout:fixed}
   #tblImp th.chk,#tblImp td.chk{width:44px}
-  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:142px}
-  #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:160px}
-  #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:118px}
-  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:168px}
-  #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:150px}
-  #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:120px}
-  #tblImp .imp-chk{width:17px;height:17px;accent-color:var(--mint)}
+  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:140px}
+  #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:180px}
+  #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:120px}
+  #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:186px}
+  #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:210px}
+  #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:118px}
+  #tblImp td{vertical-align:top}
+  #tblImp .imp-chk{width:17px;height:17px;accent-color:var(--mint);margin-top:.5rem}
   #tblImp input[type="date"],#tblImp select,#tblImp .imp-desc{width:100%}
+  /* stacked selects (nature+target, category+account) sit flush with a small gap */
+  #tblImp .imp-nature,#tblImp .imp-target,#tblImp .imp-catgrp,#tblImp .imp-acct,#tblImp .imp-cat{display:block}
+  #tblImp .imp-target,#tblImp .imp-acct{margin-top:.35rem}
+  #tblImp .imp-catgrp{font-size:.78rem;color:var(--muted)}
+  #tblImp td.imp-note{white-space:normal}
+  #tblImp td.imp-note .icon-btn{margin-bottom:.3rem}
   .imp-actions{display:flex;gap:.6rem;margin-top:.9rem;align-items:center;flex-wrap:wrap}
   .imp-actions .btn-accent{min-height:46px}
   tr.hist-row td{background:var(--wash);padding:.7rem .9rem;height:auto;cursor:default}
   .hist-title{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.35rem}
   .hist-total{font-size:.78rem;color:var(--muted);margin-top:.45rem;font-family:var(--mono)}
   #tblInv tbody tr[data-i],.tbl-ld tbody tr[data-i]{cursor:pointer}
-  tr.imp-editor td{background:var(--wash);padding:.85rem .9rem}
-  .imp-ed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.65rem;align-items:end}
-  .imp-ed-grid label{display:flex;flex-direction:column;gap:.3rem;font-size:.65rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
-  .imp-ed-grid input,.imp-ed-grid select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:9px;padding:.55rem .6rem;font-size:.86rem;color:var(--text)}
+  tr.imp-editor td{background:var(--wash);padding:.95rem 1rem;border-bottom:2px solid var(--line-strong)}
+  .imp-ed-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;align-items:end}
+  .imp-ed-grid label{display:flex;flex-direction:column;gap:.32rem;font-size:.64rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .imp-ed-grid input,.imp-ed-grid select{background:var(--wash-strong);border:1px solid var(--line-strong);border-radius:9px;padding:.55rem .6rem;font-size:.86rem;color:var(--text);min-height:40px}
   .imp-ed-actions{display:flex;gap:.5rem;align-items:end}
   .imp-ed-actions .btn-accent{min-height:42px;padding:.5rem 1rem}
   @media(max-width:640px){#tblImp{min-width:0;table-layout:auto}#tblImp th,#tblImp td{width:auto!important}.imp-ed-grid{grid-template-columns:1fr 1fr}}
@@ -3211,6 +3218,25 @@ function impCatOptions(type,sel){
   return pre+Object.entries(byCat).map(([c,ns])=>
     `<optgroup label="${esc(c)}">`+ns.map(n=>`<option${n===sel?" selected":""}>${esc(n)}</option>`).join("")+"</optgroup>").join("");
 }
+/* COA cascade for a statement row: same Category -> Account model as the Add screen.
+   The account list is grouped by category and carries the number in data-num so we
+   can store t.coaAcct on the row exactly like a manual posting.                     */
+function impCoaCategory(t){
+  // resolve the row's current category to a COA account category
+  const acct=t.coaAcct?coaByNumber(t.coaAcct):coa.find(a=>a.type===t.type&&a.name===t.cat);
+  return acct?(acct.category||""):"";
+}
+function impCatGroupOptions(t){
+  const cats=[...new Set(coa.filter(a=>a.type===t.type&&a.category).map(a=>a.category))].sort();
+  const cur=impCoaCategory(t)||cats[0]||"";
+  return cats.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("");
+}
+function impAcctOptions(t,cat){
+  const accts=coa.filter(a=>a.type===t.type&&a.category===cat&&a.name)
+    .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  return accts.map(a=>`<option value="${esc(a.name)}" data-num="${esc(a.number)}"${a.name===t.cat?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+}
+function impHasCoa(type){return coa.some(a=>a.type===type&&a.name);}
 /* ---------- statement tagging: link a line to loans/debts/investments ----------
    Tag values encode action:target —
      payld:ID   payment against an open loan/debt (reduces its balance, auto-closes at zero)
@@ -3344,15 +3370,18 @@ function renderImport(){
     <td data-l="Date"><input type="date" class="imp-date" value="${esc(t.date)}"></td>
     <td data-l="Description" class="imp-desc-cell"><input type="text" class="imp-desc" value="${esc(t.desc)}"></td>
     <td data-l="Amount" class="num"><span class="${t.nature==="transfer"?"muted-amt":isIn?"pos":"neg"}">${t.nature==="transfer"?"\u21c4 ":isIn?"+":"\u2212"}${fmt(t.amount)}</span></td>
-    <td data-l="Nature"><select class="imp-nature">${natureOptions(t)}</select>${(()=>{const to=natureTargetOptions(t);return to?`<select class="imp-target" style="margin-top:.3rem">${to}</select>`:"";})()}</td>
-    <td data-l="Category"><select class="imp-cat">${impCatOptions(t.type,t.cat)}</select></td>
-    <td data-l="Note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button> ${t.tag?`<span class="tag iv" style="font-size:.64rem">${impTagLabel(t.tag)}</span>`:""}${t.dup?'<span class="dup-chip">\u26a0 duplicate?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
+    <td data-l="Nature"><select class="imp-nature">${natureOptions(t)}</select>${(()=>{const to=natureTargetOptions(t);return to?`<select class="imp-target">${to}</select>`:"";})()}</td>
+    <td data-l="Category">${(t.nature==="transfer")?'<span class="muted-amt" style="font-size:.78rem">\u21c4 transfer</span>':(t.tag?`<span class="tag iv" style="font-size:.64rem">${impTagLabel(t.tag)}</span>`:impHasCoa(t.type)?`<select class="imp-catgrp">${impCatGroupOptions(t)}</select><select class="imp-acct">${impAcctOptions(t,impCoaCategory(t))}</select>`:`<select class="imp-cat">${impCatOptions(t.type,t.cat)}</select>`)}</td>
+    <td data-l="Note" class="imp-note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button>${t.dup?'<span class="dup-chip">\u26a0 dup?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
   </tr>`;
-    /* expanded editor: the same fields as the transaction entry screen */
+    /* expanded editor: same fields & COA cascade as the Add screen */
+    const edCat=impHasCoa(t.type)&&!t.tag&&t.nature!=="transfer";
     const ed=impEditIdx===i?`<tr class="imp-editor"><td colspan="7"><div class="imp-ed-grid">
       <label>Date<input type="date" class="imp-e-date" value="${esc(t.date)}"></label>
       <label>Type<select class="imp-e-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></label>
-      <label>${isIn?"Source":"Category"}<select class="imp-e-cat">${impCatOptions(t.type,t.cat)}</select></label>
+      ${edCat?`<label>${isIn?"Income category":"Expense category"}<select class="imp-e-catgrp">${impCatGroupOptions(t)}</select></label>
+      <label>${isIn?"Income account":"Expense account"}<select class="imp-e-acct">${impAcctOptions(t,impCoaCategory(t))}</select></label>`
+      :`<label>${isIn?"Source":"Category"}<select class="imp-e-cat">${impCatOptions(t.type,t.cat)}</select></label>`}
       <label>Description<input type="text" class="imp-e-desc" value="${esc(t.desc)}"></label>
       <label>Amount<input type="number" class="imp-e-amt" min="0" step="0.01" value="${t.amount}"></label>
       <label>Payment method<select class="imp-e-method">${impMethodOptions(t.method||"Bank Import")}</select></label>
@@ -3381,7 +3410,13 @@ $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
     const t=importRows[impEditIdx];if(!t)return;
     t.date=ed.querySelector(".imp-e-date").value||t.date;
     t.type=ed.querySelector(".imp-e-type").value;
-    t.cat=ed.querySelector(".imp-e-cat").value;
+    const acctSel=ed.querySelector(".imp-e-acct");
+    if(acctSel){
+      t.cat=acctSel.value;
+      t.coaAcct=acctSel.selectedOptions.length?acctSel.selectedOptions[0].getAttribute("data-num")||"":"";
+    }else if(ed.querySelector(".imp-e-cat")){
+      t.cat=ed.querySelector(".imp-e-cat").value;t.coaAcct="";
+    }
     t.desc=ed.querySelector(".imp-e-desc").value.trim()||t.desc;
     const amt=num(ed.querySelector(".imp-e-amt").value);
     if(amt>0)t.amount=r2(amt);
@@ -3395,28 +3430,49 @@ $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
     else if(t.tag==="newld:recv"){t.type="Expense";t.cat="Debt Given";}
     else if(t.tag==="newld:pay"){t.type="Income";t.cat="Debt Taken";}
     else if(act==="payld"){t.cat=t.type==="Income"?"Debt Settlement":"Loan Repayment";}
+    if(t.tag)t.coaAcct="";     // a linked tag resolves its own account
     t.dup=importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
     impEditIdx=-1;renderImport();
   }
 });
 $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
+  // editor: type change rebuilds the category/account cascade
   if(e.target.classList.contains("imp-e-type")){
-    const ed=e.target.closest("tr.imp-editor");
-    if(ed)ed.querySelector(".imp-e-cat").innerHTML=impCatOptions(e.target.value,null);
+    const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
+    const t=importRows[impEditIdx];t.type=e.target.value;t.coaAcct="";
+    renderImport();return;
+  }
+  // editor: category group change refreshes its account list
+  if(e.target.classList.contains("imp-e-catgrp")){
+    const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
+    const t=importRows[impEditIdx];
+    ed.querySelector(".imp-e-acct").innerHTML=impAcctOptions(t,e.target.value);
     return;
   }
   const tr=e.target.closest("tr[data-imp]");if(!tr)return;
   const t=importRows[+tr.dataset.imp];if(!t)return;
+  // row: category group change refreshes the account list beside it
+  if(e.target.classList.contains("imp-catgrp")){
+    tr.querySelector(".imp-acct").innerHTML=impAcctOptions(t,e.target.value);
+    const a=tr.querySelector(".imp-acct");
+    if(a&&a.selectedOptions.length){t.cat=a.value;t.coaAcct=a.selectedOptions[0].getAttribute("data-num")||"";}
+    return;
+  }
+  if(e.target.classList.contains("imp-acct")){
+    t.cat=e.target.value;
+    t.coaAcct=e.target.selectedOptions.length?e.target.selectedOptions[0].getAttribute("data-num")||"":"";
+    return;
+  }
   if(e.target.classList.contains("imp-chk"))t.include=e.target.checked;
   if(e.target.classList.contains("imp-date"))t.date=e.target.value||t.date;
   if(e.target.classList.contains("imp-desc"))t.desc=e.target.value.trim();
-  if(e.target.classList.contains("imp-nature")){t.nature=e.target.value;t.tag="";applyNatureDefaults(t);renderImport();return;}
+  if(e.target.classList.contains("imp-nature")){t.nature=e.target.value;t.tag="";t.coaAcct="";applyNatureDefaults(t);renderImport();return;}
   if(e.target.classList.contains("imp-target")){
     if(t.nature==="transfer")t.transferBank=e.target.value;
     else{t.tag=e.target.value;if(t.nature==="invinc")t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";}
     renderImport();return;
   }
-  if(e.target.classList.contains("imp-cat"))t.cat=e.target.value;
+  if(e.target.classList.contains("imp-cat")){t.cat=e.target.value;t.coaAcct="";}
   const inc=importRows.filter(x=>x.include);
   const dups=importRows.filter(x=>x.dup).length;
   $("#impSummary").textContent=`${importRows.length} found \u00b7 ${inc.length} selected \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`;
@@ -3456,11 +3512,14 @@ $("#btnImpParse")&&$("#btnImpParse").addEventListener("click",async()=>{
       const type=match?match.type:(t.dir==="cr"?"Income":"Expense");
       const cat=match?match.cat:(type==="Income"?(lists.incomeCats[0]||"Other"):(lists.expenseCats[0]||"Other"));
       const dup=importExisting.has(r2(t.amount));
-      const row={date:t.date,desc:t.desc,amount:t.amount,type,cat,dir:t.dir||(type==="Income"?"cr":"dr"),
+      const row={date:t.date,desc:t.desc,amount:t.amount,type,cat,coaAcct:"",dir:t.dir||(type==="Income"?"cr":"dr"),
                  nature:natureFromDetection(match,type,t.desc),tag:"",transferBank:"",
                  method:"Bank Import",auto:!!match,dup,include:!dup};
       applyNatureDefaults(row);
       if(match&&!NATURES.find(n=>n.v===row.nature).cat)row.cat=cat;   // keep the matched category for plain natures
+      /* firm-link the row to a COA account by its resolved name, so it posts to the right account */
+      const acct=coa.find(a=>a.type===row.type&&a.name===row.cat);
+      if(acct)row.coaAcct=acct.number;
       return row;
     });
     status.innerHTML=`Read <b>${importRows.length}</b> transactions from <b>${esc(file.name)}</b> for <b>${esc(bank)}</b>. `+
@@ -3499,7 +3558,7 @@ $("#btnImpPost")&&$("#btnImpPost").addEventListener("click",()=>{
                  method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""});
       return;
     }
-    const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
+    const txn={id:nextTxnId(),date:t.date,type:t.type,cat:t.cat,coaAcct:t.coaAcct||"",desc:t.desc,amount:t.amount,bank:importBank,toBank:"",method:t.method||"Bank Import",ref:"Import: "+importFile,loanRef:""};
     created+=applyPostingTag(txn,t.tag);
     txns.push(txn);
     if(txn.loanRef)applyLoanPayment(txn);       // part payments reduce the balance and can auto-close

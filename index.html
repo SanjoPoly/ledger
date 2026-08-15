@@ -296,15 +296,15 @@
   #tblImp{min-width:1040px;table-layout:fixed;font-size:.8rem}
   #tblImp th{padding:.5rem .5rem;font-size:.6rem}
   #tblImp td{padding:.4rem .5rem;vertical-align:middle}
-  #tblImp th.chk,#tblImp td.chk{width:38px;text-align:center}
+  #tblImp th.chk,#tblImp td.chk{width:34px;text-align:center;padding-left:.25rem;padding-right:.25rem}
   #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:118px}
   #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:150px}
   #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:104px}
   #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:172px}
   #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:196px}
   #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:104px}
-  #tblImp .imp-chk{width:16px;height:16px;accent-color:var(--mint);display:block;margin:0 auto;vertical-align:middle}
-  #tblImp input,#tblImp select{width:100%;font-size:.78rem;padding:.32rem .4rem;min-height:32px}
+  #tblImp .imp-chk{width:15px;height:15px;min-height:0;accent-color:var(--mint);display:inline-block;margin:0;padding:0;vertical-align:middle;cursor:pointer;flex:none}
+  #tblImp input:not(.imp-chk),#tblImp select{width:100%;font-size:.78rem;padding:.32rem .4rem;min-height:32px;box-sizing:border-box}
   #tblImp input[type="date"]{padding:.28rem .3rem}
   /* stacked selects (nature+target, category+account) sit flush with a small gap */
   #tblImp .imp-nature,#tblImp .imp-target,#tblImp .imp-catgrp,#tblImp .imp-acct,#tblImp .imp-cat{display:block}
@@ -3395,18 +3395,21 @@ function renderImport(){
     <td data-l="Category">${(t.nature==="transfer")?'<span class="muted-amt" style="font-size:.76rem">\u21c4 transfer</span>':(t.tag?`<span class="tag iv" style="font-size:.62rem">${impTagLabel(t.tag)}</span>`:impHasCoa(t.type)?`<select class="imp-catgrp">${impCatGroupOptions(t)}</select><select class="imp-acct">${impAcctOptions(t,impCoaCategory(t))}</select>`:`<select class="imp-cat">${impCatOptions(t.type,t.cat)}</select>`)}</td>
     <td data-l="Note" class="imp-note"><button type="button" class="icon-btn imp-edit">${impEditIdx===i?"Close":"Edit"}</button>${t.dup?'<span class="dup-chip">\u26a0 dup?</span>':""}${t.auto?'<span class="auto-chip">\u2726 auto</span>':""}</td>
   </tr>`;
-    /* expanded editor: same fields & COA cascade as the Add screen */
+    /* expanded editor: mirrors the Add screen — Nature drives the full type set
+       (expense, investment, loan given, transfer, income, interest/dividend, etc.),
+       then the COA category/account cascade for plain income/expense rows.        */
     const edCat=impHasCoa(t.type)&&!t.tag&&t.nature!=="transfer";
+    const edTargetOpts=natureTargetOptions(t);
     const ed=impEditIdx===i?`<tr class="imp-editor"><td colspan="7"><div class="imp-ed-grid">
       <label>Date<input type="date" class="imp-e-date" value="${esc(t.date)}"></label>
-      <label>Type<select class="imp-e-type"><option${isIn?" selected":""}>Income</option><option${t.type==="Expense"?" selected":""}>Expense</option></select></label>
+      <label>Nature<select class="imp-e-nature">${natureOptions(t)}</select></label>
+      ${edTargetOpts?`<label>${t.nature==="transfer"?"Destination account":"Target"}<select class="imp-e-target">${edTargetOpts}</select></label>`:""}
       ${edCat?`<label>${isIn?"Income category":"Expense category"}<select class="imp-e-catgrp">${impCatGroupOptions(t)}</select></label>
       <label>${isIn?"Income account":"Expense account"}<select class="imp-e-acct">${impAcctOptions(t,impCoaCategory(t))}</select></label>`
-      :`<label>${isIn?"Source":"Category"}<select class="imp-e-cat">${impCatOptions(t.type,t.cat)}</select></label>`}
+      :(!t.tag&&t.nature!=="transfer"?`<label>${isIn?"Source":"Category"}<select class="imp-e-cat">${impCatOptions(t.type,t.cat)}</select></label>`:"")}
       <label>Description<input type="text" class="imp-e-desc" value="${esc(t.desc)}"></label>
       <label>Amount<input type="number" class="imp-e-amt" min="0" step="0.01" value="${t.amount}"></label>
       <label>Payment method<select class="imp-e-method">${impMethodOptions(t.method||"Bank Import")}</select></label>
-      <label>Tag to loan / investment<select class="imp-e-tag">${impTagOptions(t)}</select></label>
       <div class="imp-ed-actions"><button type="button" class="btn-accent imp-apply">Apply</button><button type="button" class="icon-btn imp-cancel">Close</button></div>
     </div></td></tr>`:"";
     return row+ed;
@@ -3433,38 +3436,47 @@ $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
     const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
     const t=importRows[impEditIdx];if(!t)return;
     t.date=ed.querySelector(".imp-e-date").value||t.date;
-    t.type=ed.querySelector(".imp-e-type").value;
+    /* nature drives the type/category defaults, same as choosing it in the row */
+    const natSel=ed.querySelector(".imp-e-nature");
+    if(natSel)t.nature=natSel.value;
+    const tgtSel=ed.querySelector(".imp-e-target");
+    if(tgtSel){
+      if(t.nature==="transfer")t.transferBank=tgtSel.value;
+      else t.tag=tgtSel.value;
+    }
+    applyNatureDefaults(t);
+    /* for plain income/expense natures, take the COA category/account chosen */
     const acctSel=ed.querySelector(".imp-e-acct");
-    if(acctSel){
+    if(acctSel&&!t.tag&&t.nature!=="transfer"){
       t.cat=acctSel.value;
       t.coaAcct=acctSel.selectedOptions.length?acctSel.selectedOptions[0].getAttribute("data-num")||"":"";
-    }else if(ed.querySelector(".imp-e-cat")){
+    }else if(ed.querySelector(".imp-e-cat")&&!t.tag&&t.nature!=="transfer"){
       t.cat=ed.querySelector(".imp-e-cat").value;t.coaAcct="";
     }
     t.desc=ed.querySelector(".imp-e-desc").value.trim()||t.desc;
     const amt=num(ed.querySelector(".imp-e-amt").value);
     if(amt>0)t.amount=r2(amt);
     t.method=ed.querySelector(".imp-e-method").value;
-    t.tag=ed.querySelector(".imp-e-tag")?ed.querySelector(".imp-e-tag").value:"";
-    /* a tag settles what the line IS, so line up type & category with it */
-    const act=(t.tag||"").split(":")[0];
-    if(act==="divinv"){t.type="Income";t.cat="Dividends / Profit";}
-    else if(act==="intld"){t.type="Income";t.cat="Interest";}
-    else if(act==="newinv"||act==="topinv"){t.type="Expense";t.cat="Investment";}
-    else if(t.tag==="newld:recv"){t.type="Expense";t.cat="Debt Given";}
-    else if(t.tag==="newld:pay"){t.type="Income";t.cat="Debt Taken";}
-    else if(act==="payld"){t.cat=t.type==="Income"?"Debt Settlement":"Loan Repayment";}
     if(t.tag)t.coaAcct="";     // a linked tag resolves its own account
-    t.dup=importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
+    /* interest/dividend nature: category follows the specific target chosen */
+    if(t.nature==="invinc")t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";
+    t.dup=!t.posted&&importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
     impEditIdx=-1;renderImport();
   }
 });
 $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{
-  // editor: type change rebuilds the category/account cascade
-  if(e.target.classList.contains("imp-e-type")){
+  // editor: nature change re-applies defaults and rebuilds the cascade
+  if(e.target.classList.contains("imp-e-nature")){
     const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
-    const t=importRows[impEditIdx];t.type=e.target.value;t.coaAcct="";
+    const t=importRows[impEditIdx];t.nature=e.target.value;t.tag="";t.coaAcct="";applyNatureDefaults(t);
     renderImport();return;
+  }
+  // editor: target (loan/investment/bank) change
+  if(e.target.classList.contains("imp-e-target")){
+    const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
+    const t=importRows[impEditIdx];
+    if(t.nature==="transfer")t.transferBank=e.target.value;else t.tag=e.target.value;
+    return;
   }
   // editor: category group change refreshes its account list
   if(e.target.classList.contains("imp-e-catgrp")){

@@ -162,6 +162,16 @@
     #secProfile{display:grid;grid-template-columns:1fr 1fr;gap:0 1rem}
     #secProfile .f:last-child{grid-column:1/-1}
   }
+  /* the bank table lives inside the settings modal — keep it within the card */
+  #tblBank{min-width:0;width:100%;table-layout:auto;font-size:.82rem}
+  #tblBank th,#tblBank td{white-space:nowrap;padding:.5rem .45rem}
+  #tblBank th:first-child,#tblBank td:first-child{white-space:normal;min-width:120px}
+  #tblBank td:last-child,#tblBank th:last-child{width:1%;text-align:right}
+  #tblBank .icon-btn{padding:.28rem .55rem;font-size:.72rem}
+  @media(max-width:620px) and (min-width:561px){
+    #tblBank th:nth-child(3),#tblBank td:nth-child(3){display:none}  /* Account# */
+    #tblBank th:nth-child(2),#tblBank td:nth-child(2){display:none}  /* Type */
+  }
   .set-tab{flex:1;min-width:max-content;border:none;background:none;color:var(--muted);border-radius:9px;padding:.55rem .8rem;font-size:.84rem;font-weight:600;white-space:nowrap;transition:all .15s}
   .set-tab:hover{color:var(--text)}
   .set-tab.active{background:var(--grad);color:#08111C}
@@ -789,7 +799,7 @@
 
 
 <div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
-  <div class="auth-card set-card" style="width:min(720px,94vw);max-width:none;max-height:90vh;overflow:auto">
+  <div class="auth-card set-card" style="width:min(820px,95vw);max-width:none;max-height:92vh;overflow:auto">
     <h2 style="font-size:1.35rem;margin-bottom:.5rem">Settings</h2>
     <p class="sub" id="settingsSub">Everything about your ledger, in one place.</p>
     <div class="auth-error" id="settingsError"></div>

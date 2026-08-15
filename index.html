@@ -317,6 +317,7 @@
   .posted-chip{font-size:.68rem;color:var(--muted);font-family:var(--mono)}
   .imp-actions{display:flex;gap:.6rem;margin-top:.9rem;align-items:center;flex-wrap:wrap}
   .imp-actions .btn-accent{min-height:44px}
+  .imp-hint{font-size:.72rem;color:var(--muted);flex:1;min-width:200px;line-height:1.5}
   tr.hist-row td{background:var(--wash);padding:.7rem .9rem;height:auto;cursor:default}
   .hist-title{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:.35rem}
   .hist-total{font-size:.78rem;color:var(--muted);margin-top:.45rem;font-family:var(--mono)}
@@ -738,6 +739,7 @@
       <div class="imp-actions">
         <button type="button" class="btn-accent" id="btnImpPost">Process selected to transactions</button>
         <button type="button" class="icon-btn" id="btnImpClear" style="min-height:46px">Discard</button>
+        <span class="imp-hint">Tick the lines you want, set each account, then press this to post them to the Transactions tab. <b>Edit → Apply</b> only saves changes to a line; it doesn't post.</span>
       </div>
     </div>
     <div class="empty" id="impEmpty" style="display:none">No transactions could be read from that file. If it's a scanned-image PDF, the text can't be extracted — try the TXT export from your bank instead.</div>
@@ -3411,7 +3413,7 @@ function renderImport(){
       <label>Description<input type="text" class="imp-e-desc" value="${esc(t.desc)}"></label>
       <label>Amount<input type="number" class="imp-e-amt" min="0" step="0.01" value="${t.amount}"></label>
       <label>Payment method<select class="imp-e-method">${impMethodOptions(t.method||"Bank Import")}</select></label>
-      <div class="imp-ed-actions"><button type="button" class="btn-accent imp-apply">Apply</button><button type="button" class="icon-btn imp-cancel">Close</button></div>
+      <div class="imp-ed-actions"><button type="button" class="btn-accent imp-apply">Save changes</button><button type="button" class="icon-btn imp-cancel">Cancel</button></div>
     </div></td></tr>`:"";
     return row+ed;
   }).join("");
@@ -3441,35 +3443,36 @@ $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
   }
   if(e.target.classList.contains("imp-cancel")){impEditIdx=-1;renderImport();return;}
   if(e.target.classList.contains("imp-apply")){
-    const ed=e.target.closest("tr.imp-editor");if(!ed||impEditIdx<0)return;
+    if(impEditIdx<0)return;
     const t=importRows[impEditIdx];if(!t)return;
-    t.date=ed.querySelector(".imp-e-date").value||t.date;
-    /* nature drives the type/category defaults, same as choosing it in the row */
-    const natSel=ed.querySelector(".imp-e-nature");
-    if(natSel)t.nature=natSel.value;
-    const tgtSel=ed.querySelector(".imp-e-target");
-    if(tgtSel){
-      if(t.nature==="transfer")t.transferBank=tgtSel.value;
-      else t.tag=tgtSel.value;
+    /* the editor row may have been re-rendered by a prior change event, so find it
+       fresh in the table rather than trusting the clicked button's ancestry */
+    const ed=$("#tblImp tr.imp-editor")||e.target.closest("tr.imp-editor");
+    if(ed){
+      const q=s=>ed.querySelector(s);
+      if(q(".imp-e-date"))t.date=q(".imp-e-date").value||t.date;
+      const natSel=q(".imp-e-nature");
+      if(natSel)t.nature=natSel.value;
+      const tgtSel=q(".imp-e-target");
+      if(tgtSel){ if(t.nature==="transfer")t.transferBank=tgtSel.value; else t.tag=tgtSel.value; }
+      applyNatureDefaults(t);
+      const acctSel=q(".imp-e-acct");
+      if(acctSel&&!t.tag&&t.nature!=="transfer"){
+        t.cat=acctSel.value;
+        t.coaAcct=acctSel.selectedOptions.length?acctSel.selectedOptions[0].getAttribute("data-num")||"":"";
+      }else if(q(".imp-e-cat")&&!t.tag&&t.nature!=="transfer"){
+        t.cat=q(".imp-e-cat").value;t.coaAcct="";
+      }
+      if(q(".imp-e-desc"))t.desc=q(".imp-e-desc").value.trim()||t.desc;
+      const amt=q(".imp-e-amt")?num(q(".imp-e-amt").value):0;
+      if(amt>0)t.amount=r2(amt);
+      if(q(".imp-e-method"))t.method=q(".imp-e-method").value;
+      if(t.tag)t.coaAcct="";
+      if(t.nature==="invinc")t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";
     }
-    applyNatureDefaults(t);
-    /* for plain income/expense natures, take the COA category/account chosen */
-    const acctSel=ed.querySelector(".imp-e-acct");
-    if(acctSel&&!t.tag&&t.nature!=="transfer"){
-      t.cat=acctSel.value;
-      t.coaAcct=acctSel.selectedOptions.length?acctSel.selectedOptions[0].getAttribute("data-num")||"":"";
-    }else if(ed.querySelector(".imp-e-cat")&&!t.tag&&t.nature!=="transfer"){
-      t.cat=ed.querySelector(".imp-e-cat").value;t.coaAcct="";
-    }
-    t.desc=ed.querySelector(".imp-e-desc").value.trim()||t.desc;
-    const amt=num(ed.querySelector(".imp-e-amt").value);
-    if(amt>0)t.amount=r2(amt);
-    t.method=ed.querySelector(".imp-e-method").value;
-    if(t.tag)t.coaAcct="";     // a linked tag resolves its own account
-    /* interest/dividend nature: category follows the specific target chosen */
-    if(t.nature==="invinc")t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";
-    t.dup=!t.posted&&importExisting.has(r2(t.amount));      // amount changed? re-check against the ledger
+    t.dup=!t.posted&&importExisting.has(r2(t.amount));
     impEditIdx=-1;renderImport();
+    toast("Row updated \u2014 tick it and press \u201cProcess selected to transactions\u201d to post");
   }
 });
 $("#tblImp")&&$("#tblImp").addEventListener("change",e=>{

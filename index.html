@@ -17,7 +17,7 @@
     --bg:#0B101E; --bg-2:#0E1526;
     --card:rgba(255,255,255,.035); --card-solid:#131B2F;
     --line:var(--wash-hover); --line-strong:rgba(255,255,255,.14);
-    --text:#E9EEF8; --muted:#8B95AE;
+    --text:#E9EEF8; --muted:#A3AEC9;
     --mint:#3DDCA3; --mint-dim:rgba(61,220,163,.14);
     --coral:#FF6E61; --coral-dim:rgba(255,110,97,.14);
     --violet:#8B7CFF; --violet-dim:rgba(139,124,255,.14);
@@ -611,11 +611,11 @@
     </div>
 
     <div class="charts">
-      <div class="chart-card"><h3>Cash flow <small>income vs expenses · last 6 months</small></h3><div class="chart-box"><canvas id="chCash"></canvas></div></div>
+      <div class="chart-card"><h3>Cash flow <small id="chCashScope">income vs expenses · last 6 months</small></h3><div class="chart-box"><canvas id="chCash"></canvas></div></div>
       <div class="chart-card"><h3>Spending by category <small id="chExpScope">this month</small></h3><div class="chart-box"><canvas id="chExpCat"></canvas></div></div>
     </div>
     <div class="charts">
-      <div class="chart-card"><h3>Bank balances <small>current, per account</small></h3><div class="chart-box"><canvas id="chBankBal"></canvas></div></div>
+      <div class="chart-card"><h3>Bank balances <small id="chBankBalScope">current, per account</small></h3><div class="chart-box"><canvas id="chBankBal"></canvas></div></div>
       <div class="chart-card"><h3>Investment gain / loss <small>by holding</small></h3><div class="chart-box"><canvas id="chInvGain"></canvas></div></div>
     </div>
     <div class="charts">
@@ -627,7 +627,7 @@
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
     </div>
     <div class="charts">
-      <div class="chart-card"><h3>Assets &amp; liabilities <small>statement \u00b7 as of today</small></h3><div id="stBalance" class="fin-st"></div></div>
+      <div class="chart-card"><h3>Assets &amp; liabilities <small>statement \u00b7 <span id="stBalScope">as of today</span></small></h3><div id="stBalance" class="fin-st"></div></div>
       <div class="chart-card"><h3>Income &amp; expense <small>statement \u00b7 <span id="stPeriodLabel">all time</span></small></h3><div id="stPL" class="fin-st"></div></div>
     </div>
   </section>
@@ -1870,7 +1870,7 @@ function renderAll(){
 /* ---------- dashboard ---------- */
 const monthKeyOf=d=>(d||"").slice(0,7);
 const thisMonthKey=()=>new Date().toISOString().slice(0,7);
-function lastMonths(n){const out=[],d=new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
+function lastMonths(n,endMk){const out=[],d=endMk?new Date(endMk+"-01T00:00:00"):new Date();for(let i=n-1;i>=0;i--){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(x.toISOString().slice(0,7));}return out;}
 function killChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
 /* P&L grouped through the COA: each transaction category maps to its account,
@@ -1906,13 +1906,17 @@ function plGroups(mk){
 }
 function renderStatements(){
   const bs=$("#stBalance");if(!bs)return;
-  /* ----- assets & liabilities (from the live registers) ----- */
-  const bankRows=banks.map(b=>({name:b.name,amt:bankBalance(b.name)}));
-  const invRows=invs.filter(v=>v.status!=="Closed").map(v=>({name:v.name+" \u00b7 "+v.id,amt:v.current}));
-  const recvRows=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable").map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
-  const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable").map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
+  const asOf=(typeof dashAsOf==="function")?dashAsOf():"";
+  const beforeAsOf=d=>!asOf||(d||"")<=asOf;
+  /* ----- assets & liabilities as of the selected period (or now) ----- */
+  const bankRows=banks.map(b=>({name:b.name,amt:bankBalance(b.name,asOf)}));
+  const invRows=invs.filter(v=>v.status!=="Closed"&&beforeAsOf(v.date)).map(v=>({name:v.name+" \u00b7 "+v.id,amt:v.current}));
+  const recvRows=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
+  const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
   const aT=r2([...bankRows,...invRows,...recvRows].reduce((sm,x)=>sm+x.amt,0));
   const lT=r2(payRows.reduce((sm,x)=>sm+x.amt,0));
+  const stBalScope=$("#stBalScope");
+  if(stBalScope)stBalScope.textContent=asOf?("as of "+new Date(dashPeriodKey()+"-01").toLocaleString(undefined,{month:"short",year:"numeric"})+" end"):"as of today";
   const sec=(title,rows,cls)=>rows.length
     ?`<div class="fin-sec"><span>${title}</span><span>${fmt(r2(rows.reduce((sm,x)=>sm+x.amt,0)))}</span></div>`
       +rows.map(x=>`<div class="fin-row fin-sub"><span>${esc(x.name)}</span><span class="${cls||""}">${fmt(x.amt)}</span></div>`).join("")
@@ -1938,6 +1942,15 @@ function renderStatements(){
 }
 
 function dashPeriodKey(){const s=$("#dashPeriod");return s?s.value:"";}
+/* the selected month as an "as of" date (last day of that month), or "" for all-time.
+   used so balances/charts reflect the position at the end of the chosen month.        */
+function dashAsOf(){
+  const mk=dashPeriodKey();
+  if(!mk)return "";
+  const [y,m]=mk.split("-").map(Number);
+  const last=new Date(y,m,0).getDate();   // day 0 of next month = last day of this month
+  return `${mk}-${String(last).padStart(2,"0")}`;
+}
 function populateDashPeriod(){
   const sel=$("#dashPeriod");if(!sel)return;
   const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
@@ -2000,8 +2013,9 @@ function drawCharts(){
   const gridCol=(cs.getPropertyValue("--chart-grid")||"rgba(255,255,255,.09)").trim();
   const legendSide=window.innerWidth<700?"bottom":"right";
 
-  const months=lastMonths(6);
+  const months=lastMonths(6,dashPeriodKey()||null);
   const labels=months.map(m=>new Date(m+"-01").toLocaleString(undefined,{month:"short"}));
+  const cfScope=$("#chCashScope");if(cfScope)cfScope.textContent=dashPeriodKey()?("6 months to "+new Date(dashPeriodKey()+"-01").toLocaleString(undefined,{month:"short",year:"numeric"})):"income vs expenses \u00b7 last 6 months";
   killChart("cash");
   charts.cash=new Chart($("#chCash"),{type:"bar",
     data:{labels,datasets:[
@@ -2026,19 +2040,24 @@ function drawCharts(){
 
   killChart("bankBal");
   if($("#chBankBal")){
-    const bb=banks.map(b=>({name:b.name,bal:bankBalance(b.name)}));
+    const asOf=dashAsOf();
+    const bb=banks.map(b=>({name:b.name,bal:bankBalance(b.name,asOf)}));
+    const bbScope=$("#chBankBalScope");if(bbScope)bbScope.textContent=asOf?("as of "+new Date(dp+"-01").toLocaleString(undefined,{month:"short",year:"numeric"})):"current, per account";
     charts.bankBal=new Chart($("#chBankBal"),{type:"bar",
       data:{labels:bb.map(x=>x.name),datasets:[{label:"Balance",data:bb.map(x=>x.bal),backgroundColor:bb.map((x,i)=>x.bal<0?"#FF6E61":PALETTE[i%PALETTE.length]),borderRadius:6,maxBarThickness:40}]},
       options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.parsed.x)}`}}},scales:{x:{ticks:{callback:v=>fmtShort(v)},beginAtZero:true},y:{grid:{display:false}}}}});
   }
   killChart("invGain");
   if($("#chInvGain")){
-    const g=invs.filter(v=>v.status!=="Closed").map(v=>({name:v.name,g:v.current-v.amount})).filter(x=>x.g!==0).sort((a,b)=>Math.abs(b.g)-Math.abs(a.g)).slice(0,8);
+    const asOf=dashAsOf();
+    const invScope=v=>v.status!=="Closed"&&(!asOf||(v.date||"")<=asOf);
+    const g=invs.filter(invScope).map(v=>({name:v.name,g:v.current-v.amount})).filter(x=>x.g!==0).sort((a,b)=>Math.abs(b.g)-Math.abs(a.g)).slice(0,8);
     charts.invGain=new Chart($("#chInvGain"),{type:"bar",
       data:{labels:g.map(x=>x.name),datasets:[{label:"Gain / loss",data:g.map(x=>x.g),backgroundColor:g.map(x=>x.g>=0?"#3DDCA3":"#FF6E61"),borderRadius:6,maxBarThickness:34}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.y>=0?"+":""}${fmt(c.parsed.y)}`}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{callback:v=>fmtShort(v)}}}}});
   }
-  const byType={};invs.filter(v=>v.status!=="Closed").forEach(v=>byType[v.assetType]=(byType[v.assetType]||0)+v.current);
+  const _asOfInv=dashAsOf();
+  const byType={};invs.filter(v=>v.status!=="Closed"&&(!_asOfInv||(v.date||"")<=_asOfInv)).forEach(v=>byType[v.assetType]=(byType[v.assetType]||0)+v.current);
   const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
   const typeTotal=types.reduce((s,t)=>s+t[1],0)||1;
   killChart("invAlloc");

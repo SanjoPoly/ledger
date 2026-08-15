@@ -157,6 +157,11 @@
   /* settings tabs */
   .set-tabs{display:flex;gap:.35rem;margin-bottom:1.1rem;background:var(--wash);border:1px solid var(--line);border-radius:12px;padding:.3rem;overflow-x:auto;scrollbar-width:none}
   .set-tabs::-webkit-scrollbar{display:none}
+  /* use the wider settings card: lay profile fields out in two columns */
+  @media(min-width:560px){
+    #secProfile{display:grid;grid-template-columns:1fr 1fr;gap:0 1rem}
+    #secProfile .f:last-child{grid-column:1/-1}
+  }
   .set-tab{flex:1;min-width:max-content;border:none;background:none;color:var(--muted);border-radius:9px;padding:.55rem .8rem;font-size:.84rem;font-weight:600;white-space:nowrap;transition:all .15s}
   .set-tab:hover{color:var(--text)}
   .set-tab.active{background:var(--grad);color:#08111C}
@@ -297,8 +302,8 @@
   #tblImp{min-width:1040px;table-layout:fixed;font-size:.8rem}
   #tblImp th{padding:.5rem .5rem;font-size:.6rem}
   #tblImp td{padding:.4rem .5rem;vertical-align:middle}
-  #tblImp th.chk,#tblImp td.chk{width:34px;text-align:center;padding-left:.25rem;padding-right:.25rem}
-  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:118px}
+  #tblImp th.chk,#tblImp td.chk{width:40px;text-align:center;padding-left:.4rem;padding-right:.4rem}
+  #tblImp th:nth-child(2),#tblImp td:nth-child(2){width:128px;padding-left:.5rem}
   #tblImp th:nth-child(3),#tblImp td:nth-child(3){width:auto;min-width:150px}
   #tblImp th:nth-child(4),#tblImp td:nth-child(4){width:104px}
   #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:172px}
@@ -307,6 +312,7 @@
   #tblImp .imp-chk{width:15px;height:15px;min-height:0;accent-color:var(--mint);display:inline-block;margin:0;padding:0;vertical-align:middle;cursor:pointer;flex:none}
   #tblImp input:not(.imp-chk),#tblImp select{width:100%;font-size:.78rem;padding:.32rem .4rem;min-height:32px;box-sizing:border-box}
   #tblImp input[type="date"]{padding:.28rem .3rem}
+  #tblImp input:focus-visible{outline-offset:0}   /* keep focus ring inside the cell */
   /* stacked selects (nature+target, category+account) sit flush with a small gap */
   #tblImp .imp-nature,#tblImp .imp-target,#tblImp .imp-catgrp,#tblImp .imp-acct,#tblImp .imp-cat{display:block}
   #tblImp .imp-target,#tblImp .imp-acct{margin-top:.3rem}
@@ -379,30 +385,26 @@
   .vch-detail dd{margin:0;font-size:.88rem;color:var(--text);line-height:1.45;word-break:break-word;overflow-wrap:anywhere}
   .vch-foot{margin:1.4rem 0 0;font-size:.74rem;color:var(--muted);text-align:center;font-style:italic}
 
-  /* fixed geometry so columns stop fighting each other */
-  .tbl-ld{min-width:1150px;table-layout:fixed}
-  .tbl-ld th:nth-child(1),.tbl-ld td:nth-child(1){width:104px}
-  .tbl-ld th:nth-child(2),.tbl-ld td:nth-child(2){width:auto;min-width:150px}
-  .tbl-ld th:nth-child(3),.tbl-ld td:nth-child(3){width:128px}
-  .tbl-ld th:nth-child(4),.tbl-ld td:nth-child(4){width:122px}
-  .tbl-ld th:nth-child(5),.tbl-ld td:nth-child(5){width:138px}
-  .tbl-ld th:nth-child(6),.tbl-ld td:nth-child(6){width:128px}
-  .tbl-ld th:nth-child(7),.tbl-ld td:nth-child(7){width:138px}
-  .tbl-ld th:nth-child(8),.tbl-ld td:nth-child(8){width:82px}
-  .tbl-ld th:nth-child(9),.tbl-ld td:nth-child(9){width:152px}
-  /* keep the action buttons reachable while the table scrolls sideways */
+  /* loan tables fit their container — no sideways scroll */
+  .tbl-ld{width:100%;table-layout:auto}
+  .tbl-ld th,.tbl-ld td{white-space:nowrap}
+  .tbl-ld th:nth-child(2),.tbl-ld td:nth-child(2){white-space:normal;min-width:130px}
+  .tbl-ld th.acts,.tbl-ld td.acts{width:1%;white-space:nowrap;text-align:right}
+  /* progressively hide the least essential columns so the rest always fit.
+     priority kept: Record, Person, Balance due, Status, Actions.            */
   @media(min-width:641px){
-    .tbl-ld td.acts,.tbl-ld th.acts,#tblCoa td.acts,#tblCoa th.acts{position:sticky;right:0;background:var(--card);box-shadow:-10px 0 10px -10px rgba(0,0,0,.35)}
+    .tbl-ld td.acts,.tbl-ld th.acts,#tblCoa td.acts,#tblCoa th.acts{position:sticky;right:0;background:var(--card);box-shadow:-10px 0 10px -10px rgba(0,0,0,.15)}
     .tbl-ld tbody tr:hover td.acts,#tblCoa tbody tr:hover td.acts{background:var(--row-hover)}
   }
-  /* drop the least essential columns before the layout gets cramped */
-  @media(max-width:1180px) and (min-width:641px){
-    .tbl-ld{min-width:1030px}
-    .tbl-ld th:nth-child(6),.tbl-ld td:nth-child(6){display:none}
+  @media(max-width:1080px) and (min-width:641px){
+    .tbl-ld th:nth-child(5),.tbl-ld td:nth-child(5){display:none}  /* Net payable */
   }
-  @media(max-width:1000px) and (min-width:641px){
-    .tbl-ld{min-width:900px}
-    .tbl-ld th:nth-child(3),.tbl-ld td:nth-child(3){display:none}
+  @media(max-width:980px) and (min-width:641px){
+    .tbl-ld th:nth-child(4),.tbl-ld td:nth-child(4){display:none}  /* EMI / rate */
+  }
+  @media(max-width:860px) and (min-width:641px){
+    .tbl-ld th:nth-child(3),.tbl-ld td:nth-child(3){display:none}  /* Principal */
+    .tbl-ld th:nth-child(6),.tbl-ld td:nth-child(6){display:none}  /* Paid */
   }
   .bank-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:1rem}
   .bank-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.75rem;position:relative;overflow:hidden}
@@ -718,13 +720,13 @@
     <form class="add-card" id="formInv">
       <div class="f"><label for="ivName">Asset name</label><input type="text" id="ivName" placeholder="e.g. APY Pension" required></div>
       <div class="f"><label for="ivType">Asset type</label><select id="ivType"></select></div>
-      <div class="f"><label for="ivDate">Invested date</label><input type="date" id="ivDate" required></div>
-      <div class="f"><label for="ivAmt">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+      <div class="f"><label for="ivDate" id="ivDateLabel">Invested date</label><input type="date" id="ivDate" required></div>
+      <div class="f"><label for="ivAmt" id="ivAmtLabel">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
       <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
       <div class="f"><label for="ivCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ivCoa"></select></div>
-      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing investment \u2014 opening balance only, no bank posting</label></div>
-      <div class="f"><button type="submit">+ Add investment</button></div>
+      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing holding \u2014 enter opening balance (no bank posting)</label></div>
+      <div class="f"><button type="submit" id="ivSubmitBtn">+ Add investment</button></div>
     </form>
     <div class="toolbar">
       <input type="search" id="searchInv" placeholder="Search asset…">
@@ -787,8 +789,8 @@
 
 
 <div id="settingsOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
-  <div class="auth-card" style="max-width:480px;max-height:90vh;overflow:auto">
-    <h2 style="font-size:1.25rem;margin-bottom:.5rem">Settings</h2>
+  <div class="auth-card set-card" style="width:min(720px,94vw);max-width:none;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.35rem;margin-bottom:.5rem">Settings</h2>
     <p class="sub" id="settingsSub">Everything about your ledger, in one place.</p>
     <div class="auth-error" id="settingsError"></div>
 
@@ -1587,6 +1589,7 @@ function parseWorkbook(buf,name){
       current:curRaw===""?amount:num(curRaw),
       bank:String(gv(r,"Linked Bank","Bank")||"").trim(),
       coa:String(gv(r,"Main Account")||"").trim(),
+      opening:/^(1|y|yes|true|opening)/i.test(String(gv(r,"Opening Balance","Opening")||"").trim())?1:0,
       status:String(gv(r,"Status")||"Open").trim()||"Open",
       closedDate:normDate(gv(r,"Closed Date")),
       closedValue:num(gv(r,"Closed Value")),
@@ -1682,10 +1685,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
 
   // Investments
-  const ivHeaders=["Inv ID","Asset Name","Asset Type","Invested Date","Amount Invested","Current Value","Unrealized Gain/Loss","Linked Bank","Status","Closed Date","Closed Value","Auto-Posted Txn Ref","Main Account"];
-  const ivData=invs.map(r=>[r.id,r.name,r.assetType,r.date,r.amount,r.current,r2(r.current-r.amount),r.bank,r.status,r.closedDate||"",r.status==="Closed"?(r.closedValue||0):"",r.txnRef||"",r.coa||""]);
+  const ivHeaders=["Inv ID","Asset Name","Asset Type","Invested Date","Amount Invested","Current Value","Unrealized Gain/Loss","Linked Bank","Status","Closed Date","Closed Value","Auto-Posted Txn Ref","Main Account","Opening Balance"];
+  const ivData=invs.map(r=>[r.id,r.name,r.assetType,r.date,r.amount,r.current,r2(r.current-r.amount),r.bank,r.status,r.closedDate||"",r.status==="Closed"?(r.closedValue||0):"",r.txnRef||"",r.coa||"",r.opening?"Yes":""]);
   const wsI=bannerSheet("Investment Portfolio Tracker","Monitor portfolio valuation and real-time gains/losses",ivHeaders,ivData);
-  wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18}];
+  wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsI,"Investments");
 
   // Chart of Accounts — preserved on every save so hand-added accounts survive
@@ -1904,7 +1907,7 @@ function renderStatements(){
   /* ----- income & expense statement for the chosen period ----- */
   const sel=$("#stPeriod");
   const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
-  const cur=sel.dataset.init?sel.value:(months.includes(thisMonthKey())?thisMonthKey():"");
+  const cur=sel.dataset.init?sel.value:"";   // default to All time; user can pick a month
   sel.dataset.init=1;
   sel.innerHTML='<option value=""'+(cur===""?" selected":"")+'>All time</option>'
     +months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===cur?" selected":""}>${l}</option>`;}).join("");
@@ -2355,7 +2358,7 @@ function renderInv(){
       <td data-l="Inv ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(r.id)}</td>
       <td data-l="Asset"><strong>${esc(r.name)}</strong>${closed&&r.txnRef?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(r.txnRef)}</span>`:""}</td>
       <td data-l="Type"><span class="tag iv">${esc(r.assetType)}</span></td>
-      <td data-l="Bank">${bankTag(r.bank)}</td>
+      <td data-l="Bank">${r.opening?'<span class="tag done" style="font-size:.62rem">opening bal</span>':bankTag(r.bank)}</td>
       <td data-l="Invested" class="num">${fmt(r.amount)}</td>
       <td data-l="Current" class="num">${closed?'<span class="tag done">Closed ✓</span>':fmt(r.current)}</td>
       <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
@@ -2756,20 +2759,31 @@ $("#tblInv")&&$("#tblInv").addEventListener("click",e=>{
   });
 });
 $("#ivExisting")&&$("#ivExisting").addEventListener("change",()=>{
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display=$("#ivExisting").checked?"none":"";
+  const on=$("#ivExisting").checked;
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display=on?"none":"";
+  /* speak in opening-balance terms for a holding you already own */
+  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent=on?"Opening balance (invested cost)":"Amount invested";
+  if($("#ivDateLabel"))$("#ivDateLabel").textContent=on?"As-of date":"Invested date";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=on?"+ Add opening balance":"+ Add investment";
 });
 $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
   const amount=num($("#ivAmt").value);
-  if(amount<=0){toast("Enter the amount invested");return;}
-  const id=nextId(invs,"INV",1);
   const existing=$("#ivExisting")&&$("#ivExisting").checked;
+  if(amount<=0){toast(existing?"Enter the opening balance":"Enter the amount invested");return;}
+  const id=nextId(invs,"INV",1);
   const bank=existing?"":$("#ivBank").value;
-  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,coa:$("#ivCoa")?$("#ivCoa").value:"",status:"Open",closedDate:"",closedValue:0,txnRef:""});
+  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,coa:$("#ivCoa")?$("#ivCoa").value:"",opening:existing?1:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
   // auto-post the cash leaving the bank \u2014 skipped for pre-existing holdings brought in as opening balances
   if(bank&&!existing)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
-  e.target.reset();$("#ivDate").value=todayISO();setDirty(true);renderAll();
-  toast("Investment added");
+  e.target.reset();$("#ivDate").value=todayISO();
+  /* restore default labels after the form resets the checkbox */
+  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent="Amount invested";
+  if($("#ivDateLabel"))$("#ivDateLabel").textContent="Invested date";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Add investment";
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display="";
+  setDirty(true);renderAll();
+  toast(existing?"Opening balance recorded":"Investment added");
 });
 
 /* ---------- row actions (delete txn, close/reopen) ---------- */

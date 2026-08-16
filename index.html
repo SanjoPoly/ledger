@@ -319,7 +319,7 @@
   #tblImp th:nth-child(5),#tblImp td:nth-child(5){width:172px}
   #tblImp th:nth-child(6),#tblImp td:nth-child(6){width:196px}
   #tblImp th:nth-child(7),#tblImp td:nth-child(7){width:104px}
-  #tblImp .imp-chk{width:15px;height:15px;min-height:0;accent-color:var(--mint);display:inline-block;margin:0;padding:0;vertical-align:middle;cursor:pointer;flex:none}
+  #tblImp .imp-chk,#impSelectAll{width:15px;height:15px;min-height:0;accent-color:var(--mint);display:inline-block;margin:0;padding:0;vertical-align:middle;cursor:pointer;flex:none}
   #tblImp input:not(.imp-chk),#tblImp select{width:100%;font-size:.78rem;padding:.32rem .4rem;min-height:32px;box-sizing:border-box}
   #tblImp input[type="date"]{padding:.28rem .3rem}
   #tblImp input:focus-visible{outline-offset:0}   /* keep focus ring inside the cell */
@@ -745,7 +745,7 @@
       <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
       <div class="f"><label for="ivCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ivCoa"></select></div>
       <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing holding \u2014 enter opening balance (no bank posting)</label></div>
-      <div class="f"><button type="submit" id="ivSubmitBtn">+ Add investment</button></div>
+      <div class="f"><button type="submit" id="ivSubmitBtn">+ Add investment</button><button type="button" id="btnCancelInv" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
       <input type="search" id="searchInv" placeholder="Search asset…">
@@ -772,7 +772,7 @@
       <div class="section-head"><h2 style="font-size:1rem">Transactions found</h2><span class="total" id="impSummary"></span></div>
       <div class="imp-legend"><span class="dup-chip">⚠ Same amount already in ledger</span><span class="auto-chip">✦ Auto-detected income</span></div>
       <div class="table-card">
-        <table id="tblImp"><thead><tr><th class="chk"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Nature</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
+        <table id="tblImp"><thead><tr><th class="chk"><input type="checkbox" id="impSelectAll" title="Select all reviewable lines"></th><th>Date</th><th>Description</th><th style="text-align:right">Amount</th><th>Nature</th><th>Category</th><th>Note</th></tr></thead><tbody></tbody></table>
       </div>
       <div class="imp-actions">
         <button type="button" class="btn-accent" id="btnImpPost">Process selected to transactions</button>
@@ -1453,6 +1453,7 @@ $("#btnDownloadCfg").addEventListener("click",async()=>{
 let txns=[];      // {id,date,type,cat,desc,amount,bank,method,ref}
 let editingTxn=null;  // Txn ID currently being edited in the posting form
 let editingLD=null;   // Loan/debt Record ID currently being edited
+let editingInv=null;  // Investment ID currently being edited
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
@@ -2415,7 +2416,7 @@ function renderInv(){
       <td data-l="Current" class="num">${closed?'<span class="tag done">Closed ✓</span>':fmt(r.current)}</td>
       <td data-l="Gain / loss" class="num"><span class="${cls}">${g>=0?"+":"−"}${fmt(Math.abs(g))}</span></td>
       <td data-l="Status">${closed?`<span style="font-size:.75rem;color:var(--muted)">${esc(r.closedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenInv">Reopen</button>`:`<button type="button" class="icon-btn" data-act="closeInv" title="Redeem / close">Close</button><button type="button" class="icon-btn danger" data-act="delInv">Delete</button>`}</div></td></tr>`+hist;
+      <td data-l=""><div class="row-actions">${closed?`<button type="button" class="icon-btn" data-act="reopenInv">Reopen</button>`:`<button type="button" class="icon-btn" data-act="editInv">Edit</button><button type="button" class="icon-btn" data-act="closeInv" title="Redeem / close">Close</button><button type="button" class="icon-btn danger" data-act="delInv">Del</button>`}</div></td></tr>`+hist;
   }).join("");
   $("#emptyInv").style.display=invs.length?"none":"block";
   $("#tblInv").style.display=invs.length?"":"none";
@@ -2823,6 +2824,23 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   const amount=num($("#ivAmt").value);
   const existing=$("#ivExisting")&&$("#ivExisting").checked;
   if(amount<=0){toast(existing?"Enter the opening balance":"Enter the amount invested");return;}
+  if(editingInv){
+    /* update the existing holding in place; funding/bank posting is left as-is
+       (editing details doesn't re-post cash — use delete+add if the funding changed) */
+    const r=invs.find(v=>v.id===editingInv);
+    if(r){
+      r.name=$("#ivName").value.trim();
+      r.assetType=$("#ivType").value;
+      r.date=$("#ivDate").value||r.date;
+      r.amount=amount;
+      r.current=$("#ivCur").value===""?amount:num($("#ivCur").value);
+      r.coa=$("#ivCoa")?$("#ivCoa").value:r.coa;
+    }
+    cancelEditInv();
+    setDirty(true);renderAll();
+    toast("Investment updated");
+    return;
+  }
   const id=nextId(invs,"INV",1);
   const bank=existing?"":$("#ivBank").value;
   invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,coa:$("#ivCoa")?$("#ivCoa").value:"",opening:existing?1:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
@@ -2837,6 +2855,36 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   setDirty(true);renderAll();
   toast(existing?"Opening balance recorded":"Investment added");
 });
+function loadInvIntoForm(r){
+  editingInv=r.id;
+  $("#ivName").value=r.name;
+  $("#ivType").value=r.assetType;
+  $("#ivDate").value=r.date||todayISO();
+  $("#ivAmt").value=r.amount;
+  $("#ivCur").value=r.current;
+  if($("#ivCoa"))$("#ivCoa").innerHTML=coaAcctOptions("Asset",r.coa||"");
+  /* editing details only \u2014 hide bank funding & the existing-holding toggle */
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display="none";
+  if($("#ivExisting")){$("#ivExisting").checked=false;$("#ivExisting").closest(".f").style.display="none";}
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="\u2713 Update investment";
+  if($("#btnCancelInv"))$("#btnCancelInv").style.display="";
+  $("#formInv").classList.add("editing");
+  window.scrollTo(0,0);
+  toast("Editing "+r.id+" \u2014 change the fields and press Update");
+}
+function cancelEditInv(){
+  editingInv=null;
+  const f=$("#formInv");if(f){f.reset();f.classList.remove("editing");}
+  $("#ivDate").value=todayISO();
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display="";
+  if($("#ivExisting")&&$("#ivExisting").closest(".f"))$("#ivExisting").closest(".f").style.display="";
+  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent="Amount invested";
+  if($("#ivDateLabel"))$("#ivDateLabel").textContent="Invested date";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Add investment";
+  if($("#btnCancelInv"))$("#btnCancelInv").style.display="none";
+}
+$("#btnCancelInv")&&$("#btnCancelInv").addEventListener("click",cancelEditInv);
+
 
 /* ---------- row actions (delete txn, close/reopen) ---------- */
 document.addEventListener("click",e=>{
@@ -2850,6 +2898,7 @@ document.addEventListener("click",e=>{
     case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
     case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);reverseInvTopup(txns[i]);reverseLoanTopup(txns[i]);txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
+    case "editInv":{const r=invs[i];if(r)loadInvIntoForm(r);break;}
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;
     case "editLD":{const r=lends[i];if(r)loadLDIntoForm(r);break;}
@@ -3531,7 +3580,23 @@ function renderImport(){
   $("#impSummary").textContent=`${pending} to review \u00b7 ${inc.length} selected`+(posted?` \u00b7 ${posted} already in ledger`:"")+(dups?` \u00b7 ${dups} possible duplicate${dups===1?"":"s"}`:"");
   $("#btnImpPost").textContent=`Process ${inc.length} line${inc.length===1?"":"s"} to transactions`;
   $("#btnImpPost").disabled=!inc.length;
+  /* keep the header select-all in sync: checked when every reviewable line is ticked,
+     indeterminate when only some are */
+  const sa=$("#impSelectAll");
+  if(sa){
+    const reviewable=importRows.filter(t=>!t.posted);
+    const sel=reviewable.filter(t=>t.include).length;
+    sa.checked=reviewable.length>0&&sel===reviewable.length;
+    sa.indeterminate=sel>0&&sel<reviewable.length;
+    sa.disabled=!reviewable.length;
+  }
 }
+/* select-all: tick or untick every reviewable (not already-posted) line */
+$("#impSelectAll")&&$("#impSelectAll").addEventListener("change",e=>{
+  const on=e.target.checked;
+  importRows.forEach(t=>{if(!t.posted)t.include=on;});
+  renderImport();
+});
 /* row editor open/close/apply */
 $("#tblImp")&&$("#tblImp").addEventListener("click",e=>{
   const prow=e.target.closest("tr.posted-row");if(prow)return;   // posted lines are read-only

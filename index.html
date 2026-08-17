@@ -376,7 +376,7 @@
   .dash-period-hint{font-size:.74rem;color:var(--muted);margin-left:auto}
   /* ---------- voucher ---------- */
   .vch-card{width:min(760px,94vw)!important;max-width:none!important;max-height:88vh;overflow-y:auto;overflow-x:hidden;padding:2rem}
-  @media(max-width:640px){.vch-card{padding:1.2rem}}
+  @media(max-width:640px){.vch-card{padding:1.15rem;width:94vw!important}}
   .vch-badge{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.18rem .6rem;border-radius:999px;border:1px solid;vertical-align:middle;margin-right:.15rem}
   .vch-table{width:100%;border-collapse:collapse;font-size:.9rem;table-layout:fixed}
   .vch-table th{text-align:left;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:.5rem .35rem;border-bottom:1px solid var(--line-strong)}
@@ -456,6 +456,22 @@
     td input,td select{max-width:62%}
     .row-actions{justify-content:flex-end}
     .toolbar .sum{margin-left:0;width:100%}
+    /* the voucher table must stay a real table on mobile, not stacked cards */
+    .vch-table{display:table!important;width:100%!important;min-width:0!important;table-layout:fixed!important;font-size:.82rem}
+    .vch-table thead{display:table-header-group!important}
+    .vch-table tbody{display:table-row-group!important}
+    .vch-table tfoot{display:table-footer-group!important}
+    .vch-table tr{display:table-row!important;background:none!important;border:none!important;margin:0!important;padding:0!important;border-radius:0!important}
+    .vch-table td,.vch-table th{display:table-cell!important;border-bottom:1px solid var(--line)!important;padding:.55rem .3rem!important}
+    .vch-table td::before,.vch-table th::before{content:none!important;display:none!important}
+    .vch-table td.num,.vch-table th.num{text-align:right!important}
+    .vch-table tfoot td{border-bottom:none!important;border-top:2px solid var(--line-strong)!important}
+    .vch-table col.c-side{width:9%}
+    .vch-table col.c-acct{width:43%}
+    .vch-table col.c-num{width:24%}
+    .vch-card .vch-num{font-size:.62rem}
+    .vch-card .vch-name{font-size:.82rem}
+    .vch-detail div{grid-template-columns:84px 1fr!important}
     /* undo the desktop grid so the mobile cards lay out freely */
     .tbl-ld{min-width:0;table-layout:auto}
     .tbl-ld th,.tbl-ld td{width:auto!important}
@@ -627,8 +643,8 @@
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
     </div>
     <div class="charts">
-      <div class="chart-card"><h3>Assets &amp; liabilities <small>statement \u00b7 <span id="stBalScope">as of today</span></small></h3><div id="stBalance" class="fin-st"></div></div>
-      <div class="chart-card"><h3>Income &amp; expense <small>statement \u00b7 <span id="stPeriodLabel">all time</span></small></h3><div id="stPL" class="fin-st"></div></div>
+      <div class="chart-card"><h3>Assets &amp; liabilities <small>statement · <span id="stBalScope">as of today</span></small></h3><div id="stBalance" class="fin-st"></div></div>
+      <div class="chart-card"><h3>Income &amp; expense <small>statement · <span id="stPeriodLabel">all time</span></small></h3><div id="stPL" class="fin-st"></div></div>
     </div>
   </section>
 
@@ -712,7 +728,7 @@
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
       <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
       <div class="f" id="ldFundWrap"><label for="ldFundBank" id="ldFundLabel">Funded from bank <i>(optional)</i></label><select id="ldFundBank"></select></div>
-      <div class="f"><label for="ldCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ldCoa"></select></div>
+      <div class="f"><label for="ldCoa">Main account <i>(COA · auto if blank)</i></label><select id="ldCoa"></select></div>
       <div class="f"><button type="submit">+ Add record</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <div id="ldCalcPreview" class="calc-preview" style="display:none"></div>
     </form>
@@ -721,12 +737,12 @@
             <select id="filterLDStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
       <span class="sum" id="ldFilteredSum"></span>
     </div>
-    <div class="section-head" style="margin-top:.4rem"><h2 style="font-size:1rem">Loans given \u00b7 owed to you</h2><span class="total" id="ldGivenHead"></span></div>
+    <div class="section-head" style="margin-top:.4rem"><h2 style="font-size:1rem">Loans given · owed to you</h2><span class="total" id="ldGivenHead"></span></div>
     <div class="table-card">
       <table id="tblLDGiven" class="tbl-ld"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyLDG" style="display:none">No money lent out right now.</div>
     </div>
-    <div class="section-head" style="margin-top:1.3rem"><h2 style="font-size:1rem">Loans taken \u00b7 you owe</h2><span class="total" id="ldTakenHead"></span></div>
+    <div class="section-head" style="margin-top:1.3rem"><h2 style="font-size:1rem">Loans taken · you owe</h2><span class="total" id="ldTakenHead"></span></div>
     <div class="table-card">
       <table id="tblLDTaken" class="tbl-ld"><thead><tr><th>Record</th><th>Person / Lender</th><th style="text-align:right">Principal</th><th style="text-align:right">EMI / rate</th><th style="text-align:right">Net payable</th><th style="text-align:right">Paid</th><th style="text-align:right">Balance due</th><th>Status</th><th class="acts"></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyLDT" style="display:none">No borrowings or bank loans right now.</div>
@@ -743,8 +759,8 @@
       <div class="f"><label for="ivAmt" id="ivAmtLabel">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
       <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
-      <div class="f"><label for="ivCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="ivCoa"></select></div>
-      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing holding \u2014 enter opening balance (no bank posting)</label></div>
+      <div class="f"><label for="ivCoa">Main account <i>(COA · auto if blank)</i></label><select id="ivCoa"></select></div>
+      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing holding — enter opening balance (no bank posting)</label></div>
       <div class="f"><button type="submit" id="ivSubmitBtn">+ Add investment</button><button type="button" id="btnCancelInv" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
@@ -786,7 +802,7 @@
   <section class="panel" id="panel-coa">
     <div class="section-head"><h2>Chart of accounts</h2><span class="total" id="coaHead"></span></div>
     <form class="add-card" id="formCoa">
-      <div class="f"><label for="coaNum">Account number <i>(5 digits \u00b7 1 Asset \u00b7 2 Liability \u00b7 3 Equity \u00b7 4 Income \u00b7 5 Expense)</i></label><input type="text" id="coaNum" maxlength="5" inputmode="numeric" placeholder="e.g. 52003" required></div>
+      <div class="f"><label for="coaNum">Account number <i>(5 digits · 1 Asset · 2 Liability · 3 Equity · 4 Income · 5 Expense)</i></label><input type="text" id="coaNum" maxlength="5" inputmode="numeric" placeholder="e.g. 52003" required></div>
       <div class="f"><label for="coaName">Name</label><input type="text" id="coaName" placeholder="e.g. Groceries" required></div>
       <div class="f"><label for="coaType">Account type</label><select id="coaType"><option>Asset</option><option>Liability</option><option>Equity</option><option>Income</option><option>Expense</option></select></div>
       <div class="f"><label for="coaCat">Account category <i>(filtered by type)</i></label><select id="coaCat"></select><input type="text" id="coaCatNew" placeholder="New category name" style="display:none;margin-top:.4rem"></div>
@@ -795,13 +811,13 @@
       <div class="f"><button type="submit">+ Add account</button><button type="button" id="btnCancelCoa" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
-      <input type="search" id="searchCoa" placeholder="Search number / name / keyword\u2026">
+      <input type="search" id="searchCoa" placeholder="Search number / name / keyword…">
       <select id="filterCoaType"><option value="">All types</option><option>Asset</option><option>Liability</option><option>Equity</option><option>Income</option><option>Expense</option></select>
       <span class="sum" id="coaFilteredSum"></span>
     </div>
     <div class="table-card">
       <table id="tblCoa"><thead><tr><th>Number</th><th>Name</th><th>Type</th><th>Category</th><th>Sub category</th><th>Keywords</th><th class="acts"></th></tr></thead><tbody></tbody></table>
-      <div class="empty" id="emptyCoa" style="display:none">No accounts yet \u2014 add your first account above.</div>
+      <div class="empty" id="emptyCoa" style="display:none">No accounts yet — add your first account above.</div>
     </div>
   </section>
 </main>
@@ -829,7 +845,7 @@
         <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
         <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
         <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
-        <div class="f"><label for="bCoa">Main account <i>(COA \u00b7 auto if blank)</i></label><select id="bCoa"></select></div>
+        <div class="f"><label for="bCoa">Main account <i>(COA · auto if blank)</i></label><select id="bCoa"></select></div>
         <div class="f wide" style="grid-column:1/-1"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
         <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add bank</button>
       </form>
@@ -2813,11 +2829,12 @@ $("#tblInv")&&$("#tblInv").addEventListener("click",e=>{
 });
 $("#ivExisting")&&$("#ivExisting").addEventListener("change",()=>{
   const on=$("#ivExisting").checked;
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display=on?"none":"";
+  /* while editing, the bank field stays hidden (edits never re-post cash) */
+  if($("#ivBankWrap"))$("#ivBankWrap").style.display=(on||editingInv)?"none":"";
   /* speak in opening-balance terms for a holding you already own */
   if($("#ivAmtLabel"))$("#ivAmtLabel").textContent=on?"Opening balance (invested cost)":"Amount invested";
   if($("#ivDateLabel"))$("#ivDateLabel").textContent=on?"As-of date":"Invested date";
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=on?"+ Add opening balance":"+ Add investment";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=editingInv?(on?"\u2713 Update opening balance":"\u2713 Update investment"):(on?"+ Add opening balance":"+ Add investment");
 });
 $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
@@ -2835,6 +2852,7 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
       r.amount=amount;
       r.current=$("#ivCur").value===""?amount:num($("#ivCur").value);
       r.coa=$("#ivCoa")?$("#ivCoa").value:r.coa;
+      r.opening=existing?1:0;   // mark/unmark as an opening-balance holding
     }
     cancelEditInv();
     setDirty(true);renderAll();
@@ -2863,10 +2881,15 @@ function loadInvIntoForm(r){
   $("#ivAmt").value=r.amount;
   $("#ivCur").value=r.current;
   if($("#ivCoa"))$("#ivCoa").innerHTML=coaAcctOptions("Asset",r.coa||"");
-  /* editing details only \u2014 hide bank funding & the existing-holding toggle */
+  /* editing details \u2014 no bank funding, but the opening-balance toggle stays available
+     so a holding can be marked (or unmarked) as an opening balance while editing */
   if($("#ivBankWrap"))$("#ivBankWrap").style.display="none";
-  if($("#ivExisting")){$("#ivExisting").checked=false;$("#ivExisting").closest(".f").style.display="none";}
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="\u2713 Update investment";
+  if($("#ivExisting")){
+    const wrap=$("#ivExisting").closest(".f");if(wrap)wrap.style.display="";
+    $("#ivExisting").checked=!!r.opening;
+    $("#ivExisting").dispatchEvent(new Event("change"));   // relabel amount->opening if ticked
+  }
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=r.opening?"\u2713 Update opening balance":"\u2713 Update investment";
   if($("#btnCancelInv"))$("#btnCancelInv").style.display="";
   $("#formInv").classList.add("editing");
   window.scrollTo(0,0);

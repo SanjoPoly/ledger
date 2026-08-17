@@ -370,6 +370,15 @@
   .fin-head-line{font-weight:800;font-size:.9rem;margin:.3rem 0 .1rem}
   .fin-head-line.pos{color:var(--mint)} .fin-head-line.neg{color:var(--coral)}
   .mini-select{background:var(--wash);border:1px solid var(--line);border-radius:8px;padding:.22rem .5rem;font-size:.72rem;color:var(--text);text-transform:none;letter-spacing:0}
+  /* journal Add-form sides */
+  .jrnl-side{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;align-items:end;position:relative;border:1px solid var(--line);border-radius:var(--r-md);padding:1.1rem .9rem .9rem;margin-top:.4rem;background:var(--wash)}
+  .jrnl-badge{position:absolute;top:-.7rem;left:.9rem;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.15rem .55rem;border-radius:999px;border:1px solid}
+  .jrnl-badge.dr{background:var(--mint-wash,rgba(61,220,163,.12));color:var(--mint);border-color:var(--mint)}
+  .jrnl-badge.cr{background:rgba(255,110,97,.12);color:var(--coral);border-color:var(--coral)}
+  .jrnl-preview-wrap{margin-top:.2rem}
+  .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
+  .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  @media(max-width:640px){.jrnl-side{grid-template-columns:1fr 1fr}}
   .dash-periodbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.6rem .85rem}
   .dash-period-label{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
   .dash-periodbar .mini-select{font-size:.82rem;padding:.4rem .7rem;min-width:150px}
@@ -653,16 +662,22 @@
     <div class="section-head"><h2>Post a transaction</h2><span class="total" id="addHead"></span></div>
     <form class="add-card" id="formTxn">
       <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
-      <div class="f"><label for="tType">Type</label><select id="tType"><option>Income</option><option>Expense</option><option>Transfer</option><option>Investment</option><option value="Loan / Debt">Loan / debt</option></select></div>
-      <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Account category</label><select id="tCatGrp"></select></div>
-      <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
+      <div class="jrnl-side"><span class="jrnl-badge dr">Account (Dr)</span>
+        <div class="f"><label for="tType" id="tTypeLabel">Account type</label><select id="tType"><option value="Asset">Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense" selected>Expense</option></select></div>
+        <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Category</label><select id="tCatGrp"></select></div>
+        <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
+      </div>
+      <div class="jrnl-side"><span class="jrnl-badge cr">Offset (Cr)</span>
+        <div class="f"><label for="tOffType">Offset type</label><select id="tOffType"><option value="Asset" selected>Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense">Expense</option></select></div>
+        <div class="f" id="tOffCatWrap"><label for="tOffCat">Offset category</label><select id="tOffCat"></select></div>
+        <div class="f" id="tOffAcctWrap"><label for="tOffAcct">Offset account</label><select id="tOffAcct"></select></div>
+      </div>
       <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f" id="tLoanWrap"><label for="tLoan" id="tLoanLabel">Apply to loan / debt <i>(optional)</i></label><select id="tLoan"><option value="">— none —</option></select></div>
-      <div class="f" id="tBankWrap"><label for="tBank" id="tBankLabel">Bank / Account</label><select id="tBank"></select></div>
-      <div class="f" id="tBankToWrap" style="display:none"><label for="tBankTo">To account</label><select id="tBankTo"></select></div>
-      <div class="f" id="tPayWrap"><label for="tPay">Payment method</label><select id="tPay"></select></div>
+      <div class="f"><label for="tPay">Payment method</label><select id="tPay"></select></div>
+      <div class="f jrnl-preview-wrap" style="grid-column:1/-1"><span class="jrnl-preview" id="tPreview"></span></div>
       <div class="f"><button type="submit">+ Add transaction</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+      <input type="hidden" id="tLoan" value=""><input type="hidden" id="tBank"><input type="hidden" id="tBankTo">
     </form>
     <div class="section-head" style="margin-top:1.4rem"><h2 style="font-size:1rem">Last 5 postings</h2></div>
     <div class="table-card" style="padding:.4rem 1rem"><div class="tx-list" id="addRecent"></div></div>
@@ -673,7 +688,7 @@
     <div class="section-head"><h2>Transactions</h2><span class="total" id="txnTotalHead"></span></div>
     <div class="toolbar">
       <input type="search" id="searchTxn" placeholder="Search description / category / ref…">
-      <select id="filterTxnType"><option value="">All types</option><option>Income</option><option>Expense</option><option>Transfer</option></select>
+      <select id="filterTxnType"><option value="">All types</option><option>Income</option><option>Expense</option><option>Transfer</option><option>Journal</option></select>
       <select id="filterTxnBank"><option value="">All accounts</option></select>
       <select id="filterTxnMonth"><option value="">All months</option></select>
       <span class="sum" id="txnFilteredSum"></span>
@@ -1489,12 +1504,16 @@ function nextId(arr,prefix,start){
 
 /* ---------- derived balances (single source of truth = txns) ---------- */
 function bankCredits(name,asOf){
+  const b=banks.find(x=>x.name===name);const bc=b?b.coa:"";
   return r2(txns.filter(t=>t.bank===name&&t.type==="Income"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
-    + txns.filter(t=>t.toBank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0));
+    + txns.filter(t=>t.toBank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
+    + (bc?txns.filter(t=>t.type==="Journal"&&t.coaAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0));  // Dr to this bank = balance up
 }
 function bankDebits(name,asOf){
+  const b=banks.find(x=>x.name===name);const bc=b?b.coa:"";
   return r2(txns.filter(t=>t.bank===name&&t.type==="Expense"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
-    + txns.filter(t=>t.bank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0));
+    + txns.filter(t=>t.bank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
+    + (bc?txns.filter(t=>t.type==="Journal"&&t.offsetAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0));  // Cr to this bank = balance down
 }
 function bankBalance(name,asOf){
   const b=banks.find(x=>x.name===name);
@@ -1563,6 +1582,7 @@ function parseWorkbook(buf,name){
       method:String(gv(r,"Payment Method","Method")||"").trim(),
       ref,
       coaAcct:String(gv(r,"COA Account")||"").trim(),
+      offsetAcct:String(gv(r,"Offset Account")||"").trim(),
       bankRef:String(gv(r,"Bank Reference","Bank Ref")||"").trim(),
       loanRef:pm?pm[1].toUpperCase():""
     });
@@ -1690,14 +1710,14 @@ function buildWorkbook(){
   const wb=XLSX.utils.book_new();
 
   // Transactions
-  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account","Bank Reference"];
+  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account","Offset Account","Bank Reference"];
   const txData=txns.slice().sort((a,b)=>(a.id>b.id?1:-1)).map(t=>[
     t.id,t.date,t.type,t.cat,t.desc,t.amount,
     t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank,
-    t.method,t.ref,t.coaAcct||"",t.bankRef||""
+    t.method,t.ref,t.coaAcct||"",t.offsetAcct||"",t.bankRef||""
   ]);
   const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, and Auto-Posted Closures",txHeaders,txData);
-  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12},{wch:14}];
+  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12},{wch:13},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
@@ -1765,6 +1785,7 @@ function refreshSelects(){
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
   // transaction category depends on type
   syncTxnCat();
+  syncOffCat();updateTxnPreview();
   const pay=$("#tPay");if(pay)pay.innerHTML=opts(lists.payMethods);
   const iv=$("#ivType");if(iv)iv.innerHTML=opts(lists.investTypes);
   // bank selects
@@ -1789,92 +1810,58 @@ function txnAcctsFor(type,cat){
     .slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
 }
 function coaHasType(type){return coa.some(a=>a.type===type&&a.name);}
+/* build a Category->Account cascade for any COA type into the given selects */
+function fillCoaCascade(type,catSel,acctSel){
+  if(!catSel||!acctSel)return;
+  const cats=txnCatsFor(type);
+  const wantCat=cats.includes(catSel.value)?catSel.value:cats[0]||"";
+  catSel.innerHTML=cats.length?cats.map(c=>`<option${c===wantCat?" selected":""}>${esc(c)}</option>`).join(""):'<option value="">— none —</option>';
+  const accts=txnAcctsFor(type,catSel.value||wantCat);
+  const curName=acctSel.value;
+  acctSel.innerHTML=accts.length?accts.map(a=>`<option value="${esc(a.name)}" data-num="${esc(a.number)}"${a.name===curName?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join(""):'<option value="">— none —</option>';
+}
+/* the Account (Dr) side */
 function syncTxnCat(){
-  const type=$("#tType")?$("#tType").value:"Income";
-  const grpWrap=$("#tCatGrpWrap"),catWrap=$("#tCatWrap"),payWrap=$("#tPayWrap"),toWrap=$("#tBankToWrap");
-  if(!catWrap)return;
-  if(type==="Transfer"){
-    grpWrap.style.display="none";catWrap.style.display="none";payWrap.style.display="none";toWrap.style.display="";
-    $("#tBankLabel").textContent="From account";
-  }else if(type==="Investment"||type==="Loan / Debt"){
-    /* the tag decides the account, so hide the category pickers */
-    grpWrap.style.display="none";catWrap.style.display="none";payWrap.style.display="";toWrap.style.display="none";
-    $("#tBankLabel").textContent="Bank / Account";
-  }else{
-    payWrap.style.display="";toWrap.style.display="none";
-    $("#tBankLabel").textContent="Bank / Account";
-    if(coaHasType(type)){
-      /* COA present: two linked dropdowns */
-      grpWrap.style.display="";catWrap.style.display="";
-      $("#tCatGrpLabel").textContent=type==="Income"?"Income category":"Expense category";
-      $("#tCatLabel").textContent=type==="Income"?"Income account (source)":"Expense account";
-      const cats=txnCatsFor(type);
-      const grp=$("#tCatGrp");
-      const wantGrp=cats.includes(grp.value)?grp.value:cats[0]||"";
-      grp.innerHTML=cats.map(c=>`<option${c===wantGrp?" selected":""}>${esc(c)}</option>`).join("");
-      syncTxnAcct();
-    }else{
-      /* no COA loaded: fall back to the old flat Lists categories */
-      grpWrap.style.display="none";catWrap.style.display="";
-      $("#tCatLabel").textContent=type==="Income"?"Source":"Category";
-      const src=type==="Income"?lists.incomeCats:lists.expenseCats;
-      const cur=$("#tCat").value;
-      $("#tCat").innerHTML=src.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join("");
-    }
-  }
-  syncTxnLoan();
+  fillCoaCascade($("#tType")?$("#tType").value:"Expense",$("#tCatGrp"),$("#tCat"));
+  updateTxnPreview();
 }
 function syncTxnAcct(){
-  const type=$("#tType")?$("#tType").value:"Income";
-  const cat=$("#tCatGrp")?$("#tCatGrp").value:"";
-  const sel=$("#tCat");if(!sel)return;
-  const accts=txnAcctsFor(type,cat);
-  const cur=sel.value;
-  sel.innerHTML=accts.map(a=>`<option value="${esc(a.name)}" data-num="${esc(a.number)}"${a.name===cur?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+  const type=$("#tType")?$("#tType").value:"Expense";
+  fillCoaCascade(type,$("#tCatGrp"),$("#tCat"));   // rebuild account list for the chosen category
+  updateTxnPreview();
 }
-/* the account currently chosen in the form, as a COA number (or "") */
-function txnFormAcctNumber(){
-  const sel=$("#tCat");if(!sel||!sel.selectedOptions.length)return "";
-  return sel.selectedOptions[0].getAttribute("data-num")||"";
+/* the Offset (Cr) side */
+function syncOffCat(){
+  fillCoaCascade($("#tOffType")?$("#tOffType").value:"Asset",$("#tOffCat"),$("#tOffAcct"));
+  updateTxnPreview();
+}
+function syncOffAcct(){
+  const type=$("#tOffType")?$("#tOffType").value:"Asset";
+  fillCoaCascade(type,$("#tOffCat"),$("#tOffAcct"));
+  updateTxnPreview();
+}
+/* selected COA number on a side */
+function selNum(id){const s=$("#"+id);return s&&s.selectedOptions.length?(s.selectedOptions[0].getAttribute("data-num")||""):"";}
+function txnFormAcctNumber(){return selNum("tCat");}
+function txnOffsetNumber(){return selNum("tOffAcct");}
+/* the bank whose main account (coa) is this number, if any */
+function bankForCoa(num){return num?banks.find(b=>b.coa===num):null;}
+/* live preview of the double entry that will post */
+function updateTxnPreview(){
+  const el=$("#tPreview");if(!el)return;
+  const dr=coaByNumber(txnFormAcctNumber()),cr=coaByNumber(txnOffsetNumber());
+  const amt=num($("#tAmt")?$("#tAmt").value:0);
+  const amtTxt=amt>0?fmt(amt):"amount";
+  if(!dr||!cr){el.textContent="Pick an account and an offset to see the entry.";return;}
+  el.innerHTML=`Will post &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(dr.name)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(cr.name)} &nbsp;\u00b7&nbsp; ${amtTxt}`
+    +((bankForCoa(dr.number)||bankForCoa(cr.number))?'':' &nbsp;<span style="color:var(--muted)">(no bank affected)</span>');
 }
 /* The tag box adapts to the posting type:
    Income/Expense — optional link to an open loan/debt (part payments)
    Investment — pick an existing holding to top up, or create a new one
    Loan / Debt — the choice decides the money direction and the record touched */
-function syncTxnLoan(){
-  const wrap=$("#tLoanWrap"), sel=$("#tLoan");
-  if(!wrap||!sel)return;
-  const type=$("#tType")?$("#tType").value:"Income";
-  const cur=sel.value;
-  const o=(v,l)=>`<option value="${v}"${v===cur?" selected":""}>${l}</option>`;
-  if(type==="Transfer"){wrap.style.display="none";sel.innerHTML='<option value="">\u2014 none \u2014</option>';return;}
-  if(type==="Investment"){
-    $("#tLoanLabel").innerHTML='Tag investment';
-    const open=invs.filter(v=>v.status!=="Closed");
-    sel.innerHTML=o("newinv","\u2795 New investment (name = description)")
-      +(open.length?'<optgroup label="Top-up existing">'+open.map(v=>o("topinv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 ${fmt(v.amount)} in`)).join("")+"</optgroup>":"");
-    wrap.style.display="";return;
-  }
-  if(type==="Loan / Debt"){
-    $("#tLoanLabel").innerHTML='Loan / debt <i>(decides direction)</i>';
-    const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable");
-    const pays=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable");
-    sel.innerHTML=o("","\u2014 choose \u2014")
-      +'<optgroup label="New record">'+o("newld:recv","\u2795 Loan given \u2014 I lent money out")+o("newld:pay","\u2795 Loan taken \u2014 I borrowed")+"</optgroup>"
-      +(recvs.length?'<optgroup label="Lend more \u00b7 existing person">'+recvs.map(l=>o("addld:"+l.id,`${esc(l.person)} \u00b7 now ${fmt(l.balance)} due`)).join("")+"</optgroup>":"")
-      +(pays.length?'<optgroup label="Borrowed more \u00b7 existing">'+pays.map(l=>o("addld:"+l.id,`${esc(l.person)}`)).join("")+"</optgroup>":"")
-      +(pays.length?'<optgroup label="Repay \u00b7 you owe">'+pays.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>":"")
-      +(recvs.length?'<optgroup label="Receive back \u00b7 owed to you">'+recvs.map(l=>o("payld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")+"</optgroup>"
-        +'<optgroup label="Interest received">'+recvs.map(l=>o("intld:"+l.id,`Interest \u2014 ${esc(l.person)} \u00b7 ${esc(l.id)}`)).join("")+"</optgroup>":"");
-    wrap.style.display="";return;
-  }
-  /* Income / Expense: optional part-payment link, as before */
-  const opts=type==="Expense"?ldPayable():ldReceivable();
-  $("#tLoanLabel").innerHTML=type==="Expense"?'Pay towards loan / debt <i>(optional)</i>':'Settle money owed to you <i>(optional)</i>';
-  wrap.style.display=opts.length?"":"none";
-  sel.innerHTML='<option value="">\u2014 none \u2014</option>'+opts.map(l=>
-    `<option value="${esc(l.id)}"${l.id===cur?" selected":""}>${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due</option>`).join("");
-}
+function syncTxnLoan(){ /* obsolete: the Add form is now a journal poster; loan/investment tagging lives on their own tabs */ }
+
 
 /* ---------- render all ---------- */
 function renderAll(){
@@ -1910,6 +1897,17 @@ function plGroups(mk){
       const category=acct?(acct.category||"Other"):"Other";
       const key=acct?acct.number:name;
       if(!acctSums[key])acctSums[key]={name,category,amt:0};
+      acctSums[key].amt=r2(acctSums[key].amt+t.amount);
+    });
+    /* manual journal entries also land in the P&L when a side hits this type:
+       an Income account on the Cr side is income; an Expense account on the Dr side is expense */
+    txns.filter(t=>t.type==="Journal"&&inP(t)).forEach(t=>{
+      const drA=coaByNumber(t.coaAcct),crA=coaByNumber(t.offsetAcct);
+      const hit=(type==="Expense"&&drA&&drA.type==="Expense")?drA
+               :(type==="Income"&&crA&&crA.type==="Income")?crA:null;
+      if(!hit)return;
+      const key=hit.number;
+      if(!acctSums[key])acctSums[key]={name:hit.name,category:hit.category||"Other",amt:0};
       acctSums[key].amt=r2(acctSums[key].amt+t.amount);
     });
     const groups={};
@@ -2539,6 +2537,13 @@ function acctForInv(v){
 function voucherFor(t){
   const lines=[];
   let m;
+  if(t.type==="Journal"){
+    /* explicit manual entry: Dr coaAcct / Cr offsetAcct */
+    const dr=coaByNumber(t.coaAcct)||{number:"\u2014",name:t.cat||"Account"};
+    const cr=coaByNumber(t.offsetAcct)||{number:"\u2014",name:"Offset"};
+    lines.push({side:"Dr",a:dr},{side:"Cr",a:cr});
+    return {no:t.id,date:t.date,narration:[t.desc,t.ref].filter(Boolean).join(" \u00b7 ")||t.cat,amount:t.amount,lines};
+  }
   if(t.type==="Transfer"){
     lines.push({side:"Dr",a:acctForBank(t.toBank)},{side:"Cr",a:acctForBank(t.bank)});
   }else{
@@ -2626,92 +2631,78 @@ function reverseInvTopup(t){
 /* ---------- forms ---------- */
 $("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
 $("#tCatGrp")&&$("#tCatGrp").addEventListener("change",syncTxnAcct);
+$("#tCat")&&$("#tCat").addEventListener("change",updateTxnPreview);
+$("#tOffType")&&$("#tOffType").addEventListener("change",syncOffCat);
+$("#tOffCat")&&$("#tOffCat").addEventListener("change",syncOffAcct);
+$("#tOffAcct")&&$("#tOffAcct").addEventListener("change",updateTxnPreview);
+$("#tAmt")&&$("#tAmt").addEventListener("input",updateTxnPreview);
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
-  const type=$("#tType").value;
   const amount=num($("#tAmt").value);
   if(amount<=0){toast("Enter an amount");return;}
-  const selVal=$("#tLoan")?$("#tLoan").value:"";
-  let rec,tag="";
-  if(type==="Transfer"){
-    const from=$("#tBank").value,to=$("#tBankTo").value;
-    if(from===to){toast("From and To accounts must differ");return;}
-    rec={date:$("#tDate").value||todayISO(),type:"Transfer",cat:"Transfer",desc:$("#tDesc").value.trim(),amount,bank:from,toBank:to,method:"",ref:"",loanRef:""};
-  }else if(type==="Investment"){
-    tag=selVal||"newinv";
-    rec={date:$("#tDate").value||todayISO(),type:"Expense",cat:"Investment",desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:"",loanRef:""};
-  }else if(type==="Loan / Debt"){
-    if(!selVal){toast("Pick \u2795 new or an existing record in the loan/debt box");return;}
-    tag=selVal;
-    const [act,target]=tag.split(":");
-    let ttype="Expense",cat="Loan Repayment";
-    if(tag==="newld:recv"){ttype="Expense";cat="Debt Given";}
-    else if(tag==="newld:pay"){ttype="Income";cat="Debt Taken";}
-    else if(act==="payld"){
-      const r=lends.find(l=>l.id===target);
-      const recvR=r&&r.type==="Debt Receivable";
-      ttype=recvR?"Income":"Expense";cat=recvR?"Debt Settlement":"Loan Repayment";
-    }else if(act==="addld"){
-      const r=lends.find(l=>l.id===target);
-      const recvR=r&&r.type==="Debt Receivable";
-      ttype=recvR?"Expense":"Income";cat=recvR?"Debt Given":"Debt Taken";
-    }else if(act==="intld"){ttype="Income";cat="Interest";}
-    rec={date:$("#tDate").value||todayISO(),type:ttype,cat,desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,ref:"",loanRef:""};
+  const drNum=txnFormAcctNumber(),crNum=txnOffsetNumber();
+  const drA=coaByNumber(drNum),crA=coaByNumber(crNum);
+  if(!drA||!crA){toast("Pick an account and an offset account");return;}
+  if(drNum===crNum){toast("Account and offset must differ");return;}
+  const drBank=bankForCoa(drNum),crBank=bankForCoa(crNum);
+  const date=$("#tDate").value||todayISO(),desc=$("#tDesc").value.trim(),method=$("#tPay").value;
+  let rec;
+  /* map the double entry onto the tested transaction types where it fits;
+     anything non-standard posts as a generic Journal that the voucher/P&L/bank
+     logic understands. bank balances move only when a bank is on a side.       */
+  if(crBank&&drA.type==="Expense"){
+    // money out of a bank to an expense  (Dr expense / Cr bank)
+    rec={date,type:"Expense",cat:drA.name,coaAcct:drNum,desc,amount,bank:crBank.name,toBank:"",method,ref:"",loanRef:""};
+  }else if(drBank&&crA.type==="Income"){
+    // money into a bank from an income source (Dr bank / Cr income)
+    rec={date,type:"Income",cat:crA.name,coaAcct:crNum,desc,amount,bank:drBank.name,toBank:"",method,ref:"",loanRef:""};
+  }else if(drBank&&crBank){
+    // bank to bank (Dr destination / Cr source)
+    rec={date,type:"Transfer",cat:"Transfer",desc,amount,bank:crBank.name,toBank:drBank.name,method,ref:"",loanRef:""};
   }else{
-    const lrec=selVal?lends.find(l=>l.id===selVal):null;
-    rec={date:$("#tDate").value||todayISO(),type,cat:$("#tCat").value,coaAcct:txnFormAcctNumber(),desc:$("#tDesc").value.trim(),amount,bank:$("#tBank").value,toBank:"",method:$("#tPay").value,
-         ref:lrec?("Payment: "+lrec.id+" ("+lrec.person+")"):"",loanRef:lrec?lrec.id:""};
+    // generic journal: store both sides; bankBalance handles any bank involved
+    rec={date,type:"Journal",cat:drA.name,coaAcct:drNum,offsetAcct:crNum,desc,amount,bank:"",toBank:"",method,ref:"",loanRef:""};
   }
   if(editingTxn){
-    if(type==="Investment"||type==="Loan / Debt"){toast("When editing, keep the type as Income or Expense \u2014 tags only apply to new postings");return;}
     const t=txns.find(x=>x.id===editingTxn);
     if(t){
-      reverseLoanPayment(t);                       // undo the old effect first
-      t.date=rec.date;t.type=rec.type;t.cat=rec.cat;t.coaAcct=rec.coaAcct!==undefined?rec.coaAcct:t.coaAcct;t.desc=rec.desc;t.amount=rec.amount;
-      t.bank=rec.bank;t.toBank=rec.toBank;t.method=rec.method;t.ref=rec.ref;t.loanRef=rec.loanRef;
-      applyLoanPayment(t);                         // then apply the new one
+      reverseLoanPayment(t);
+      Object.assign(t,{date:rec.date,type:rec.type,cat:rec.cat,coaAcct:rec.coaAcct||"",offsetAcct:rec.offsetAcct||"",desc:rec.desc,amount:rec.amount,bank:rec.bank,toBank:rec.toBank,method:rec.method,ref:rec.ref,loanRef:rec.loanRef});
+      applyLoanPayment(t);
     }
     cancelEditTxn();
     setDirty(true);renderAll();toast("Transaction updated");
   }else{
     rec.id=nextTxnId();
-    const created=tag?applyPostingTag(rec,tag):0;
     txns.push(rec);
-    applyLoanPayment(rec);                         // no-op unless a loanRef was set
-    e.target.reset();$("#tDate").value=todayISO();syncTxnCat();setDirty(true);renderAll();
-    const linked=rec.loanRef?lends.find(l=>l.id===rec.loanRef):null;
-    toast(created?`Posted \u2014 new record created (${rec.ref.replace("Linked: ","")})`
-         :linked?`Posted \u2014 ${linked.person} now ${fmt(linked.balance)} due`
-         :type+" added");
+    e.target.reset();$("#tDate").value=todayISO();
+    $("#tType").value="Expense";$("#tOffType").value="Asset";
+    syncTxnCat();syncOffCat();updateTxnPreview();
+    setDirty(true);renderAll();
+    toast(`Posted \u00b7 Dr ${drA.name} / Cr ${crA.name}`);
   }
 });
 function loadTxnIntoForm(t){
   editingTxn=t.id;
-  $("#tType").value=t.type;syncTxnCat();
   $("#tDate").value=t.date||todayISO();
   $("#tDesc").value=t.desc||"";
   $("#tAmt").value=t.amount||"";
-  if(t.type==="Transfer"){
-    if($("#tBank"))$("#tBank").value=t.bank||"";
-    if($("#tBankTo"))$("#tBankTo").value=t.toBank||"";
-  }else{
-    /* restore the COA category that owns this account, then the account itself */
-    if($("#tCatGrp")&&$("#tCatGrpWrap").style.display!=="none"){
-      const acct=t.coaAcct?coaByNumber(t.coaAcct):coa.find(a=>a.type===t.type&&a.name===t.cat);
-      if(acct&&acct.category){$("#tCatGrp").value=acct.category;syncTxnAcct();}
-    }
-    if($("#tCat"))$("#tCat").value=t.cat||"";
-    if($("#tBank"))$("#tBank").value=t.bank||"";
-    if($("#tPay"))$("#tPay").value=t.method||"";
-    if($("#tLoan")&&t.loanRef){
-      // the record may already be closed and filtered out — re-add it so it stays selectable
-      if(!Array.from($("#tLoan").options).some(o=>o.value===t.loanRef)){
-        const r=lends.find(l=>l.id===t.loanRef);
-        if(r){$("#tLoan").insertAdjacentHTML("beforeend",`<option value="${esc(r.id)}">${esc(r.person)} · ${esc(r.id)}</option>`);$("#tLoanWrap").style.display="";}
-      }
-      $("#tLoan").value=t.loanRef;
-    }
-  }
+  if($("#tPay"))$("#tPay").value=t.method||"";
+  /* reconstruct both sides from the transaction's own voucher, so any type
+     (Income/Expense/Transfer/Journal) loads back into the account+offset pickers */
+  const v=voucherFor(t);
+  const dr=v.lines.find(l=>l.side==="Dr"),cr=v.lines.find(l=>l.side==="Cr");
+  const setSide=(typeSel,catSel,acctSel,acctNum)=>{
+    const a=coaByNumber(acctNum);
+    if(!a)return;
+    $(typeSel).value=a.type;
+    if(typeSel==="#tType")syncTxnCat();else syncOffCat();
+    if(a.category){$(catSel).value=a.category;if(typeSel==="#tType")syncTxnAcct();else syncOffAcct();}
+    if($(acctSel))$(acctSel).value=a.name;
+  };
+  if(dr&&dr.a&&dr.a.number!=="\u2014")setSide("#tType","#tCatGrp","#tCat",dr.a.number);
+  if(cr&&cr.a&&cr.a.number!=="\u2014")setSide("#tOffType","#tOffCat","#tOffAcct",cr.a.number);
+  updateTxnPreview();
   // switch the submit button into "update" mode + reveal cancel
   const submitBtn=$("#formTxn button[type=submit]");
   if(submitBtn)submitBtn.textContent="✓ Update transaction";
@@ -2724,7 +2715,10 @@ function loadTxnIntoForm(t){
 function cancelEditTxn(){
   editingTxn=null;
   const form=$("#formTxn");if(form){form.reset();form.classList.remove("editing");}
-  $("#tDate").value=todayISO();syncTxnCat();
+  $("#tDate").value=todayISO();
+  if($("#tType"))$("#tType").value="Expense";
+  if($("#tOffType"))$("#tOffType").value="Asset";
+  syncTxnCat();syncOffCat();updateTxnPreview();
   const submitBtn=$("#formTxn button[type=submit]");
   if(submitBtn)submitBtn.textContent="+ Add transaction";
   if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="none";

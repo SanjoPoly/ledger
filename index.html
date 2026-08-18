@@ -666,11 +666,13 @@
         <div class="f"><label for="tType" id="tTypeLabel">Account type</label><select id="tType"><option value="Asset">Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense" selected>Expense</option></select></div>
         <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Category</label><select id="tCatGrp"></select></div>
         <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
+        <div class="f" id="tRecWrap" style="display:none;grid-column:1/-1"><label for="tRec" id="tRecLabel">Which record</label><select id="tRec"></select></div>
       </div>
       <div class="jrnl-side"><span class="jrnl-badge cr">Offset (Cr)</span>
         <div class="f"><label for="tOffType">Offset type</label><select id="tOffType"><option value="Asset" selected>Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense">Expense</option></select></div>
         <div class="f" id="tOffCatWrap"><label for="tOffCat">Offset category</label><select id="tOffCat"></select></div>
         <div class="f" id="tOffAcctWrap"><label for="tOffAcct">Offset account</label><select id="tOffAcct"></select></div>
+        <div class="f" id="tOffRecWrap" style="display:none;grid-column:1/-1"><label for="tOffRec" id="tOffRecLabel">Which record</label><select id="tOffRec"></select></div>
       </div>
       <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
@@ -1823,21 +1825,25 @@ function fillCoaCascade(type,catSel,acctSel){
 /* the Account (Dr) side */
 function syncTxnCat(){
   fillCoaCascade($("#tType")?$("#tType").value:"Expense",$("#tCatGrp"),$("#tCat"));
+  syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");
   updateTxnPreview();
 }
 function syncTxnAcct(){
   const type=$("#tType")?$("#tType").value:"Expense";
   fillCoaCascade(type,$("#tCatGrp"),$("#tCat"));   // rebuild account list for the chosen category
+  syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");
   updateTxnPreview();
 }
 /* the Offset (Cr) side */
 function syncOffCat(){
   fillCoaCascade($("#tOffType")?$("#tOffType").value:"Asset",$("#tOffCat"),$("#tOffAcct"));
+  syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");
   updateTxnPreview();
 }
 function syncOffAcct(){
   const type=$("#tOffType")?$("#tOffType").value:"Asset";
   fillCoaCascade(type,$("#tOffCat"),$("#tOffAcct"));
+  syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");
   updateTxnPreview();
 }
 /* selected COA number on a side */
@@ -1853,8 +1859,53 @@ function updateTxnPreview(){
   const amt=num($("#tAmt")?$("#tAmt").value:0);
   const amtTxt=amt>0?fmt(amt):"amount";
   if(!dr||!cr){el.textContent="Pick an account and an offset to see the entry.";return;}
-  el.innerHTML=`Will post &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(dr.name)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(cr.name)} &nbsp;\u00b7&nbsp; ${amtTxt}`
+  const drName=jrnlRecLabel("tRec",dr),crName=jrnlRecLabel("tOffRec",cr);
+  el.innerHTML=`Will post &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(drName)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(crName)} &nbsp;\u00b7&nbsp; ${amtTxt}`
     +((bankForCoa(dr.number)||bankForCoa(cr.number))?'':' &nbsp;<span style="color:var(--muted)">(no bank affected)</span>');
+}
+/* what kind of register does this COA account map to? */
+function recKindFor(acct){
+  if(!acct)return null;
+  const cat=(acct.category||"").toLowerCase();
+  if(bankForCoa(acct.number))return "bank";
+  if(acct.type==="Asset"&&/invest/.test(cat))return "inv";
+  if(acct.type==="Asset"&&/receivable/.test(cat))return "recv";
+  if(acct.type==="Liability"&&/(loan|debt|borrow|payable|credit card)/.test(cat))return "pay";
+  return null;
+}
+/* fill a record select for the account chosen on a side; returns true if a picker is shown */
+function syncRecPicker(acctSelId,wrapId,recSelId,labelId){
+  const acct=coaByNumber(selNum(acctSelId));
+  const kind=recKindFor(acct);
+  const wrap=$("#"+wrapId),sel=$("#"+recSelId),lbl=$("#"+labelId);
+  if(!wrap||!sel)return false;
+  if(!kind||kind==="bank"){wrap.style.display="none";sel.innerHTML="";return false;}
+  const cur=sel.value;
+  const o=(v,l)=>`<option value="${esc(v)}"${v===cur?" selected":""}>${l}</option>`;
+  if(kind==="inv"){
+    if(lbl)lbl.textContent="Which investment (optional)";
+    const open=invs.filter(v=>v.status!=="Closed");
+    sel.innerHTML=o("","\u2014 none / general \u2014")+o("newinv","\u2795 New investment (name = description)")
+      +open.map(v=>o("inv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 ${fmt(v.current)}`)).join("");
+  }else{
+    if(lbl)lbl.textContent="Which person / loan (optional)";
+    const rel=lends.filter(l=>l.status!=="Closed"&&(kind==="recv"?l.type==="Debt Receivable":l.type!=="Debt Receivable"));
+    sel.innerHTML=o("","\u2014 none / general \u2014")+o(kind==="recv"?"newld:recv":"newld:pay","\u2795 New "+(kind==="recv"?"person I lent to":"debt I owe")+" (name = description)")
+      +rel.map(l=>o("ld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("");
+  }
+  wrap.style.display="";
+  return true;
+}
+function jrnlRecLabel(recSelId,acct){
+  const sel=$("#"+recSelId);
+  if(sel&&sel.value&&sel.style.display!=="none"){
+    const v=sel.value;
+    if(v.startsWith("inv:")){const iv=invs.find(x=>x.id===v.slice(4));if(iv)return acct.name+" \u2192 "+iv.name;}
+    if(v.startsWith("ld:")){const l=lends.find(x=>x.id===v.slice(3));if(l)return acct.name+" \u2192 "+l.person;}
+    if(v.startsWith("newinv"))return acct.name+" \u2192 new holding";
+    if(v.startsWith("newld"))return acct.name+" \u2192 new record";
+  }
+  return acct.name;
 }
 /* The tag box adapts to the posting type:
    Income/Expense — optional link to an open loan/debt (part payments)
@@ -2631,10 +2682,12 @@ function reverseInvTopup(t){
 /* ---------- forms ---------- */
 $("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
 $("#tCatGrp")&&$("#tCatGrp").addEventListener("change",syncTxnAcct);
-$("#tCat")&&$("#tCat").addEventListener("change",updateTxnPreview);
+$("#tCat")&&$("#tCat").addEventListener("change",()=>{syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");updateTxnPreview();});
 $("#tOffType")&&$("#tOffType").addEventListener("change",syncOffCat);
 $("#tOffCat")&&$("#tOffCat").addEventListener("change",syncOffAcct);
-$("#tOffAcct")&&$("#tOffAcct").addEventListener("change",updateTxnPreview);
+$("#tOffAcct")&&$("#tOffAcct").addEventListener("change",()=>{syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");updateTxnPreview();});
+$("#tRec")&&$("#tRec").addEventListener("change",updateTxnPreview);
+$("#tOffRec")&&$("#tOffRec").addEventListener("change",updateTxnPreview);
 $("#tAmt")&&$("#tAmt").addEventListener("input",updateTxnPreview);
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
@@ -2674,6 +2727,13 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     setDirty(true);renderAll();toast("Transaction updated");
   }else{
     rec.id=nextTxnId();
+    /* apply any record link chosen on a side (investment top-up/redeem, loan add/pay).
+       direction: a record on the Dr side gains value (asset up / liability down repaid);
+       on the Cr side it loses value (asset down / liability up borrowed).            */
+    const drLink=$("#tRec")&&$("#tRecWrap").style.display!=="none"?$("#tRec").value:"";
+    const crLink=$("#tOffRec")&&$("#tOffRecWrap").style.display!=="none"?$("#tOffRec").value:"";
+    applyJrnlRecord(rec,drLink,"dr",drA);
+    applyJrnlRecord(rec,crLink,"cr",crA);
     txns.push(rec);
     e.target.reset();$("#tDate").value=todayISO();
     $("#tType").value="Expense";$("#tOffType").value="Asset";
@@ -2682,6 +2742,37 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     toast(`Posted \u00b7 Dr ${drA.name} / Cr ${crA.name}`);
   }
 });
+/* apply an investment/loan record link to a freshly-built transaction.
+   side "dr": record gains value; side "cr": record loses value.               */
+function applyJrnlRecord(rec,link,side,acct){
+  if(!link)return;
+  const amt=rec.amount;
+  if(link.startsWith("inv:")){
+    const v=invs.find(x=>x.id===link.slice(4));if(!v)return;
+    if(side==="dr"){v.amount=r2(v.amount+amt);v.current=r2(v.current+amt);rec.ref="Linked: "+v.id+" (top-up)";}
+    else{v.current=r2(Math.max(0,v.current-amt));rec.ref="Linked: "+v.id+" (redeem)";}
+  }else if(link==="newinv"){
+    const id=nextId(invs,"INV",1);
+    invs.push({id,name:(rec.desc||"Investment "+rec.date).slice(0,40),assetType:"Other",date:rec.date,amount:amt,current:amt,bank:"",coa:acct?acct.number:"",opening:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
+    rec.ref="Linked: "+id;
+  }else if(link.startsWith("ld:")){
+    const l=lends.find(x=>x.id===link.slice(3));if(!l)return;
+    const recv=l.type==="Debt Receivable";
+    /* receivable (asset): Dr = lend more (up), Cr = received back (down)
+       payable   (liab):   Dr = repaid (down),  Cr = borrowed more (up)      */
+    let delta;
+    if(recv)delta=side==="dr"?amt:-amt; else delta=side==="dr"?-amt:amt;
+    l.balance=r2(Math.max(0,l.balance+delta));
+    if(delta>0)l.principal=r2(l.principal+delta);
+    if(l.balance<=0.004){l.status="Closed";l.closedDate=rec.date;}
+    rec.loanRef=l.id;rec.ref=(delta<0?"Payment: ":"Linked: ")+l.id+" ("+l.person+")";
+  }else if(link==="newld:recv"||link==="newld:pay"){
+    const recvNew=link==="newld:recv";
+    const id=nextId(lends,"DEBT",1);
+    lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(rec.desc||"From posting").slice(0,30),purpose:"Posted "+rec.date,principal:amt,rate:0,term:0,balance:amt,issue:rec.date,due:"",status:"Open",coa:acct?acct.number:"",closedDate:"",closeBank:"",txnRef:""});
+    rec.ref="Linked: "+id+" ("+lends[lends.length-1].person+")";
+  }
+}
 function loadTxnIntoForm(t){
   editingTxn=t.id;
   $("#tDate").value=t.date||todayISO();

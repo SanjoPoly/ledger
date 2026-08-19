@@ -2634,27 +2634,51 @@ let invDetailIdx=-1, ldDetailIdx=-1;
 /* every transaction that touched this investment, oldest first */
 function invTxnHistory(v){
   const idre=new RegExp("\\b"+v.id+"\\b");
-  return txns.filter(t=>t.ref&&idre.test(t.ref))
-    .map(t=>{
+  const rows=[];
+  txns.forEach(t=>{
+    /* legacy linked txns (ref carries the INV id) */
+    if(t.ref&&idre.test(t.ref)&&t.type!=="Voucher"){
       let kind="Invested";
       if(/^Dividend:/.test(t.ref))kind="Dividend";
       else if(/^Auto-Posted:/.test(t.ref))kind="Redeemed";
       else if(/\(top-up\)/.test(t.ref))kind="Top-up";
-      return {date:t.date,kind,amount:t.amount,inflow:t.type==="Income"};
-    }).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+      else if(/\(redeem\)/.test(t.ref))kind="Redeemed";
+      rows.push({date:t.date,id:t.id,kind,amount:t.amount,inflow:t.type==="Income",into:!/^Dividend:|redeem|Redeemed|Auto-Posted:/i.test(t.ref+kind)});
+    }
+    /* voucher lines that reference this investment as their sub-master */
+    if(t.type==="Voucher"&&t.lines){
+      t.lines.forEach(ln=>{
+        if(ln.kind!=="Investment"||ln.sub!=="inv:"+v.id)return;
+        const dr=num(ln.dr),cr=num(ln.cr);
+        rows.push({date:t.date,id:t.id,kind:dr>0?"Top-up":"Redeemed",amount:dr>0?dr:cr,inflow:false,into:dr>0,voucher:true});
+      });
+    }
+  });
+  return rows.sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.id>b.id?1:-1));
 }
 function invHistoryHtml(v){
   const h=invTxnHistory(v);
-  const rows=[{date:v.date,kind:"Opening / first invested",amount:v.amount- h.filter(x=>x.kind==="Top-up").reduce((s,x)=>s+x.amount,0),inflow:false,opening:true}]
-    .concat(h.filter(x=>!(x.kind==="Invested"&&x.date===v.date)));   // avoid doubling the funding line
+  const topups=h.filter(x=>x.kind==="Top-up").reduce((s,x)=>s+x.amount,0);
+  const redeems=h.filter(x=>x.kind==="Redeemed").reduce((s,x)=>s+x.amount,0);
+  const openingCost=r2(v.amount-topups+redeems);   // cost before any later top-ups/redemptions
+  const ledger=[{date:v.date,kind:v.opening?"Opening balance":"First invested",amount:openingCost,into:true,opening:true}]
+    .concat(h);
+  let bal=0;
+  const withBal=ledger.map(x=>{bal=r2(bal+(x.into?x.amount:-x.amount));return {...x,bal};});
   return `<tr class="hist-row"><td colspan="9" data-l="">
-    <div class="hist-title">${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 money in over time</div>
-    ${rows.map(x=>`<div class="stmt-row" style="grid-template-columns:88px 1fr 110px">
+    <div class="hist-title">${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 transactions</div>
+    <div class="stmt-row stmt-head" style="grid-template-columns:88px 1fr 96px 96px 110px">
+      <div class="stmt-date">Date</div><div class="stmt-detail">Detail</div>
+      <div class="stmt-amt">In</div><div class="stmt-amt">Out</div><div class="stmt-amt">Cost basis</div>
+    </div>
+    ${withBal.map(x=>`<div class="stmt-row" style="grid-template-columns:88px 1fr 96px 96px 110px">
       <div class="stmt-date">${esc((x.date||"").slice(0,10))}</div>
-      <div class="stmt-detail"><strong>${esc(x.kind)}</strong></div>
-      <div class="stmt-amt"><span class="${x.inflow?"pos":"muted-amt"}">${x.inflow?"+":""}${fmt(x.amount)}</span></div>
+      <div class="stmt-detail"><strong>${esc(x.kind)}</strong>${x.voucher?' <span class="tag" style="font-size:.58rem;background:var(--wash-strong);color:var(--muted)">voucher '+esc(x.id)+'</span>':''}</div>
+      <div class="stmt-amt"><span class="pos">${x.into?fmt(x.amount):""}</span></div>
+      <div class="stmt-amt"><span class="neg">${x.into?"":fmt(x.amount)}</span></div>
+      <div class="stmt-amt"><strong>${fmt(x.bal)}</strong></div>
     </div>`).join("")}
-    <div class="hist-total">Invested ${fmt(v.amount)} \u00b7 current ${fmt(v.current)} \u00b7 <span class="${v.current-v.amount>=0?"pos":"neg"}">${v.current-v.amount>=0?"+":""}${fmt(r2(v.current-v.amount))}</span></div>
+    <div class="hist-total">Invested cost ${fmt(v.amount)} \u00b7 current ${fmt(v.current)} \u00b7 <span class="${v.current-v.amount>=0?"pos":"neg"}">${v.current-v.amount>=0?"+":""}${fmt(r2(v.current-v.amount))} gain</span></div>
   </td></tr>`;
 }
 /* payments / interest / funding attached to a loan or debt */

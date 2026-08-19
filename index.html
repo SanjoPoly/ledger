@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -379,14 +379,16 @@
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
   /* multi-line voucher grid */
+  #formTxn{display:block!important}   /* the voucher form is block flow, not the add-card grid */
+  #formTxn>.f{max-width:340px}
   .vgrid-head{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem}
-  .vgrid-head .f{flex:1;min-width:150px}
+  .vgrid-head .f{flex:1;min-width:160px;max-width:none}
   .vlines{display:flex;flex-direction:column;gap:.7rem;margin:.6rem 0}
   .vline{border:1px solid var(--line);border-radius:var(--r-md);padding:.8rem;background:var(--wash);position:relative}
-  .vline-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr 1.4fr .9fr .9fr auto;gap:.6rem;align-items:end}
-  .vline-grid .f{margin:0}
-  .vline-grid label{font-size:.6rem}
-  .vline-grid select,.vline-grid input{font-size:.82rem;padding:.4rem .5rem}
+  .vline-grid{display:grid;grid-template-columns:1.1fr 1fr 1.2fr 1.6fr .9fr .9fr 40px;gap:.6rem;align-items:end}
+  .vline-grid .f{margin:0;min-width:0}
+  .vline-grid label{font-size:.6rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vline-grid select,.vline-grid input{font-size:.82rem;padding:.4rem .5rem;width:100%;box-sizing:border-box}
   .vline .greyed{opacity:.4;pointer-events:none}
   .vline-del{background:none;border:1px solid var(--line-strong);color:var(--coral);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem;line-height:1;padding:0;flex:none}
   .vline-del:hover{background:rgba(255,110,97,.1)}
@@ -401,9 +403,15 @@
   .vt-bal{padding:.3rem .7rem;border-radius:999px;font-size:.74rem;font-weight:700}
   .vt-bal.ok{background:rgba(61,220,163,.15);color:var(--mint)}
   .vt-bal.off{background:rgba(255,110,97,.15);color:var(--coral)}
-  @media(max-width:760px){
-    .vline-grid{grid-template-columns:1fr 1fr;gap:.5rem}
+  @media(max-width:900px){
+    .vline-grid{grid-template-columns:1fr 1fr 1fr;gap:.55rem}
+    .vline-grid .f:nth-child(4){grid-column:1/-1}   /* account picker full width */
     .vline-del{position:absolute;top:.6rem;right:.6rem}
+  }
+  @media(max-width:560px){
+    .vline-grid{grid-template-columns:1fr 1fr}
+    .vline-grid .f:nth-child(1){grid-column:1/-1}   /* line type full width */
+    #formTxn>.f{max-width:none}
   }
   .jrnl-required select{border-color:var(--mint)!important;box-shadow:0 0 0 2px rgba(61,220,163,.15)}
   .jrnl-required label{color:var(--mint)!important}

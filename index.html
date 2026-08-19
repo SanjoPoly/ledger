@@ -1887,12 +1887,16 @@ function syncRecPicker(acctSelId,wrapId,recSelId,labelId){
   const control=isControl(acct);
   const wrap=$("#"+wrapId),sel=$("#"+recSelId),lbl=$("#"+labelId);
   if(!wrap||!sel)return false;
-  /* a control account with no obvious register still needs a sub-master picker;
-     fall back to a sensible kind from the category so it can be posted            */
+  /* a control account always needs a sub-master picker; resolve a kind from the
+     category even when the account itself isn't tagged to a register             */
   let k=kind;
-  if(control&&(!k||k==="bank")){
+  if(control){
     const cat=(acct.category||"").toLowerCase();
-    k=/invest/.test(cat)?"inv":/receivable/.test(cat)?"recv":/(loan|debt|borrow|payable|credit)/.test(cat)?"pay":kind;
+    k=/invest/.test(cat)?"inv"
+     :/receivable/.test(cat)?"recv"
+     :/(loan|debt|borrow|payable|credit)/.test(cat)?"pay"
+     :/(cash|bank)/.test(cat)?"bank"
+     :kind||"bank";
   }
   if(!k||(k==="bank"&&!control)){wrap.style.display="none";sel.innerHTML="";return false;}
   const cur=sel.value;
@@ -3262,6 +3266,11 @@ $("#formCoa")&&$("#formCoa").addEventListener("submit",e=>{
   if(category==="__new"){category=$("#coaCatNew").value.trim();if(!category){toast("Type the new category name");return;}}
   if(sub==="__new"){sub=$("#coaSubNew").value.trim();if(!sub){toast("Type the new sub category name");return;}}
   const rec={number:numv,name,type:$("#coaType").value,category,sub,keywords:$("#coaKw").value.trim(),control:$("#coaControl")&&$("#coaControl").checked?1:0};
+  /* an individual bank/investment is already a subledger; flagging it control just
+     asks you to pick a sub-master that is itself \u2014 warn, but allow it            */
+  if(rec.control&&banks.some(b=>b.coa===numv)){
+    toast(`Heads up: "${name}" is a single bank, already a sub-master. Control accounts are best for group accounts like "Loans Given".`);
+  }
   if(editingCoa){
     const a=coa.find(x=>x.number===editingCoa);
     if(a)Object.assign(a,rec);

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -378,6 +378,33 @@
   .jrnl-preview-wrap{margin-top:.2rem}
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  /* multi-line voucher grid */
+  .vgrid-head{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem}
+  .vgrid-head .f{flex:1;min-width:150px}
+  .vlines{display:flex;flex-direction:column;gap:.7rem;margin:.6rem 0}
+  .vline{border:1px solid var(--line);border-radius:var(--r-md);padding:.8rem;background:var(--wash);position:relative}
+  .vline-grid{display:grid;grid-template-columns:1.1fr 1fr 1fr 1.4fr .9fr .9fr auto;gap:.6rem;align-items:end}
+  .vline-grid .f{margin:0}
+  .vline-grid label{font-size:.6rem}
+  .vline-grid select,.vline-grid input{font-size:.82rem;padding:.4rem .5rem}
+  .vline .greyed{opacity:.4;pointer-events:none}
+  .vline-del{background:none;border:1px solid var(--line-strong);color:var(--coral);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem;line-height:1;padding:0;flex:none}
+  .vline-del:hover{background:rgba(255,110,97,.1)}
+  .vline-name{font-size:.72rem;color:var(--muted);margin-top:.35rem;min-height:1em}
+  .vline.dr-line{border-left:3px solid var(--mint)}
+  .vline.cr-line{border-left:3px solid var(--coral)}
+  .btn-add-line{background:var(--wash);border:1px dashed var(--line-strong);color:var(--text);border-radius:var(--r-md);padding:.6rem 1rem;cursor:pointer;font-size:.85rem;font-weight:600}
+  .btn-add-line:hover{border-color:var(--mint);color:var(--mint)}
+  .vgrid-foot{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin:.6rem 0 1rem}
+  .vtotals{display:flex;gap:1.2rem;align-items:center;font-size:.85rem;font-variant-numeric:tabular-nums}
+  .vtotals b{font-family:var(--mono)}
+  .vt-bal{padding:.3rem .7rem;border-radius:999px;font-size:.74rem;font-weight:700}
+  .vt-bal.ok{background:rgba(61,220,163,.15);color:var(--mint)}
+  .vt-bal.off{background:rgba(255,110,97,.15);color:var(--coral)}
+  @media(max-width:760px){
+    .vline-grid{grid-template-columns:1fr 1fr;gap:.5rem}
+    .vline-del{position:absolute;top:.6rem;right:.6rem}
+  }
   .jrnl-required select{border-color:var(--mint)!important;box-shadow:0 0 0 2px rgba(61,220,163,.15)}
   .jrnl-required label{color:var(--mint)!important}
   @media(max-width:640px){.jrnl-side{grid-template-columns:1fr 1fr}}
@@ -661,26 +688,19 @@
 
   <!-- ============ ADD / POST ============ -->
   <section class="panel" id="panel-add">
-    <div class="section-head"><h2>Post a transaction</h2><span class="total" id="addHead"></span></div>
+    <div class="section-head"><h2>Post a journal voucher</h2><span class="total" id="addHead"></span></div>
     <form class="add-card" id="formTxn">
-      <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
-      <div class="jrnl-side"><span class="jrnl-badge dr">Account (Dr)</span>
-        <div class="f"><label for="tType" id="tTypeLabel">Account type</label><select id="tType"><option value="Asset">Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense" selected>Expense</option></select></div>
-        <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Category</label><select id="tCatGrp"></select></div>
-        <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
-        <div class="f" id="tRecWrap" style="display:none;grid-column:1/-1"><label for="tRec" id="tRecLabel">Subledger / entity</label><select id="tRec"></select></div>
+      <div class="vgrid-head">
+        <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
+        <div class="f" style="flex:2"><label for="tDesc">Description / narration</label><input type="text" id="tDesc" placeholder="e.g. Monthly loan EMI"></div>
+        <div class="f"><label for="tPay">Payment method</label><select id="tPay"></select></div>
       </div>
-      <div class="jrnl-side"><span class="jrnl-badge cr">Offset (Cr)</span>
-        <div class="f"><label for="tOffType">Offset type</label><select id="tOffType"><option value="Asset" selected>Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense">Expense</option></select></div>
-        <div class="f" id="tOffCatWrap"><label for="tOffCat">Offset category</label><select id="tOffCat"></select></div>
-        <div class="f" id="tOffAcctWrap"><label for="tOffAcct">Offset account</label><select id="tOffAcct"></select></div>
-        <div class="f" id="tOffRecWrap" style="display:none;grid-column:1/-1"><label for="tOffRec" id="tOffRecLabel">Offset subledger / entity</label><select id="tOffRec"></select></div>
+      <div class="vlines" id="vLines"></div>
+      <div class="vgrid-foot">
+        <button type="button" class="btn-add-line" id="btnAddLine">+ Add line</button>
+        <div class="vtotals" id="vTotals"></div>
       </div>
-      <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="tPay">Payment method</label><select id="tPay"></select></div>
-      <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
-      <div class="f jrnl-preview-wrap" style="grid-column:1/-1"><span class="jrnl-preview" id="tPreview"></span></div>
-      <div class="f"><button type="submit">+ Add transaction</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+      <div class="f" style="grid-column:1/-1"><button type="submit" id="btnPostVoucher">Post voucher</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <input type="hidden" id="tLoan" value=""><input type="hidden" id="tBank"><input type="hidden" id="tBankTo">
     </form>
     <div class="section-head" style="margin-top:1.4rem"><h2 style="font-size:1rem">Last 5 postings</h2></div>
@@ -1512,13 +1532,28 @@ function bankCredits(name,asOf){
   const b=banks.find(x=>x.name===name);const bc=b?b.coa:"";
   return r2(txns.filter(t=>t.bank===name&&t.type==="Income"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
     + txns.filter(t=>t.toBank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
-    + (bc?txns.filter(t=>t.type==="Journal"&&t.coaAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0));  // Dr to this bank = balance up
+    + (bc?txns.filter(t=>t.type==="Journal"&&t.coaAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0)
+    + voucherBankFlow(name,"dr",asOf));   // Dr to this bank in a voucher = balance up
 }
 function bankDebits(name,asOf){
   const b=banks.find(x=>x.name===name);const bc=b?b.coa:"";
   return r2(txns.filter(t=>t.bank===name&&t.type==="Expense"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
     + txns.filter(t=>t.bank===name&&t.type==="Transfer"&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0)
-    + (bc?txns.filter(t=>t.type==="Journal"&&t.offsetAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0));  // Cr to this bank = balance down
+    + (bc?txns.filter(t=>t.type==="Journal"&&t.offsetAcct===bc&&(!asOf||t.date<=asOf)).reduce((s,t)=>s+t.amount,0):0)
+    + voucherBankFlow(name,"cr",asOf));   // Cr to this bank in a voucher = balance down
+}
+/* sum of voucher lines that hit a given bank on the Dr or Cr side */
+function voucherBankFlow(name,side,asOf){
+  const b=banks.find(x=>x.name===name);if(!b)return 0;
+  let s=0;
+  txns.filter(t=>t.type==="Voucher"&&t.lines&&(!asOf||t.date<=asOf)).forEach(t=>{
+    t.lines.forEach(ln=>{
+      const hits=(ln.kind==="Bank"&&ln.sub==="bank:"+name)||(ln.acct&&ln.acct===b.coa);
+      if(!hits)return;
+      if(side==="dr")s+=num(ln.dr); else s+=num(ln.cr);
+    });
+  });
+  return r2(s);
 }
 function bankBalance(name,asOf){
   const b=banks.find(x=>x.name===name);
@@ -1588,6 +1623,7 @@ function parseWorkbook(buf,name){
       ref,
       coaAcct:String(gv(r,"COA Account")||"").trim(),
       offsetAcct:String(gv(r,"Offset Account")||"").trim(),
+      lines:(()=>{const raw=String(gv(r,"Voucher Lines")||"").trim();if(!raw)return null;try{const p=JSON.parse(raw);return Array.isArray(p)&&p.length?p:null;}catch(e){return null;}})(),
       bankRef:String(gv(r,"Bank Reference","Bank Ref")||"").trim(),
       loanRef:pm?pm[1].toUpperCase():""
     });
@@ -1716,14 +1752,14 @@ function buildWorkbook(){
   const wb=XLSX.utils.book_new();
 
   // Transactions
-  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account","Offset Account","Bank Reference"];
+  const txHeaders=["Txn ID","Date","Txn Type","Category / Source","Description","Amount (INR)","Bank / Account","Payment Method","Linked Entity Ref","COA Account","Offset Account","Voucher Lines","Bank Reference"];
   const txData=txns.slice().sort((a,b)=>(a.id>b.id?1:-1)).map(t=>[
     t.id,t.date,t.type,t.cat,t.desc,t.amount,
     t.type==="Transfer"?(t.bank+" → "+t.toBank):t.bank,
-    t.method,t.ref,t.coaAcct||"",t.offsetAcct||"",t.bankRef||""
+    t.method,t.ref,t.coaAcct||"",t.offsetAcct||"",t.lines?JSON.stringify(t.lines):"",t.bankRef||""
   ]);
-  const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, and Auto-Posted Closures",txHeaders,txData);
-  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12},{wch:13},{wch:14}];
+  const wsT=bannerSheet("Unified Transactions Ledger","Master log for Income, Expenses, Transfers, Journals and multi-line Vouchers",txHeaders,txData);
+  wsT["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:18},{wch:26},{wch:13},{wch:20},{wch:15},{wch:24},{wch:12},{wch:13},{wch:40},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
@@ -1801,9 +1837,9 @@ function refreshSelects(){
   const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
-  // transaction category depends on type
-  syncTxnCat();
-  syncOffCat();updateTxnPreview();
+  // voucher grid: bind once, seed with two lines if empty
+  bindVoucherGrid();
+  if(!vLines.length&&!editingTxn)resetVoucher();else renderVLines();
   const pay=$("#tPay");if(pay)pay.innerHTML=opts(lists.payMethods);
   const iv=$("#ivType");if(iv)iv.innerHTML=opts(lists.investTypes);
   // bank selects
@@ -1838,66 +1874,126 @@ function fillCoaCascade(type,catSel,acctSel){
   const curName=acctSel.value;
   acctSel.innerHTML=accts.length?accts.map(a=>`<option value="${esc(a.name)}" data-num="${esc(a.number)}"${a.name===curName?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join(""):'<option value="">— none —</option>';
 }
-/* the Account (Dr) side */
-function syncTxnCat(){
-  fillCoaCascade($("#tType")?$("#tType").value:"Expense",$("#tCatGrp"),$("#tCat"));
-  syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");
-  updateTxnPreview();
-}
-function syncTxnAcct(){
-  const type=$("#tType")?$("#tType").value:"Expense";
-  fillCoaCascade(type,$("#tCatGrp"),$("#tCat"));   // rebuild account list for the chosen category
-  syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");
-  updateTxnPreview();
-}
-/* the Offset (Cr) side */
-function syncOffCat(){
-  fillCoaCascade($("#tOffType")?$("#tOffType").value:"Asset",$("#tOffCat"),$("#tOffAcct"));
-  syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");
-  updateTxnPreview();
-}
-function syncOffAcct(){
-  const type=$("#tOffType")?$("#tOffType").value:"Asset";
-  fillCoaCascade(type,$("#tOffCat"),$("#tOffAcct"));
-  syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");
-  updateTxnPreview();
-}
 /* selected COA number on a side */
 function selNum(id){const s=$("#"+id);return s&&s.selectedOptions.length?(s.selectedOptions[0].getAttribute("data-num")||""):"";}
-function txnFormAcctNumber(){return selNum("tCat");}
-function txnOffsetNumber(){return selNum("tOffAcct");}
 /* the bank whose main account (coa) is this number, if any */
 function bankForCoa(num){return num?banks.find(b=>b.coa===num):null;}
-/* live preview of the double entry that will post */
-function updateTxnPreview(){
-  const el=$("#tPreview");if(!el)return;
-  const dr=coaByNumber(txnFormAcctNumber()),cr=coaByNumber(txnOffsetNumber());
-  const amt=num($("#tAmt")?$("#tAmt").value:0);
-  if(!dr||!cr){el.textContent="Pick an account and an offset to see the entry.";return;}
-  const drSub=jrnlSubName("tRec","tRecWrap"),crSub=jrnlSubName("tOffRec","tOffRecWrap");
-  const subParts=[];
-  if(drSub)subParts.push(esc(drSub));
-  if(crSub)subParts.push(esc(crSub));
-  const subTxt=subParts.length?` &nbsp;<span style="color:var(--muted)">(Subledger: ${subParts.join(", ")})</span>`:"";
-  const amtTxt=amt>0?fmt(amt):"\u2014";
-  const bankTouched=bankForCoa(dr.number)||bankForCoa(cr.number)
-    ||(/^bank:/.test(($("#tRec")&&$("#tRecWrap").style.display!=="none")?$("#tRec").value:""))
-    ||(/^bank:/.test(($("#tOffRec")&&$("#tOffRecWrap").style.display!=="none")?$("#tOffRec").value:""));
-  el.innerHTML=`<b>Will post:</b> &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(dr.name)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(cr.name)}${subTxt} &nbsp;|&nbsp; <b>${amtTxt}</b>`
-    +(bankTouched?"":' &nbsp;<span style="color:var(--muted)">(no bank affected)</span>');
+
+/* ============================================================
+   MULTI-LINE JOURNAL VOUCHER GRID
+   Each line: kind (Ledger/Bank/Investment/Loan), a COA account
+   (auto for sub-masters), and a Debit or Credit amount.
+   Post is allowed only when total Debit === total Credit.
+============================================================ */
+let vLines=[];            // [{kind,type,cat,acct,sub,dr,cr}]
+let vLineSeq=0;
+function newVLine(over){return Object.assign({uid:++vLineSeq,kind:"Ledger",type:"Expense",cat:"",acct:"",sub:"",dr:"",cr:""},over||{});}
+function resetVoucher(){
+  vLines=[newVLine({kind:"Ledger",type:"Expense"}),newVLine({kind:"Bank"})];
+  renderVLines();
 }
-/* the sub-master name currently chosen on a side, or "" */
-function jrnlSubName(recSelId,wrapId){
-  const sel=$("#"+recSelId),wrap=$("#"+wrapId);
-  if(!sel||!wrap||wrap.style.display==="none"||!sel.value)return "";
-  const v=sel.value;
-  if(v.startsWith("inv:")){const iv=invs.find(x=>x.id===v.slice(4));return iv?iv.name:"";}
-  if(v.startsWith("bank:"))return v.slice(5);
-  if(v.startsWith("ld:")){const l=lends.find(x=>x.id===v.slice(3));return l?l.person:"";}
-  if(v==="newinv")return "new investment";
-  if(v.startsWith("newld"))return "new record";
+/* accounts available for a Ledger line, grouped Category -> account */
+function vLedgerCatOpts(type,cur){
+  const cats=txnCatsFor(type);
+  return cats.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("")||'<option value="">— none —</option>';
+}
+function vLedgerAcctOpts(type,cat,cur){
+  const accts=txnAcctsFor(type,cat);
+  return accts.map(a=>`<option value="${esc(a.number)}"${a.number===cur?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}${a.control?" \u00b7 control":""}</option>`).join("")||'<option value="">— none —</option>';
+}
+/* sub-master options for Bank/Investment/Loan lines */
+function vSubOpts(kind,cur){
+  if(kind==="Bank")return '<option value="">— choose bank —</option>'+banks.map(b=>`<option value="bank:${esc(b.name)}"${"bank:"+b.name===cur?" selected":""}>${esc(b.name)} \u2014 ${fmt(bankBalance(b.name))}</option>`).join("");
+  if(kind==="Investment")return '<option value="">— choose investment —</option>'+invs.filter(v=>v.status!=="Closed").map(v=>`<option value="inv:${esc(v.id)}"${"inv:"+v.id===cur?" selected":""}>${esc(v.name)} \u00b7 ${esc(v.id)}</option>`).join("")+`<option value="newinv"${cur==="newinv"?" selected":""}>\u2795 New investment</option>`;
+  if(kind==="Loan")return '<option value="">— choose person / loan —</option>'+lends.filter(l=>l.status!=="Closed").map(l=>`<option value="ld:${esc(l.id)}"${"ld:"+l.id===cur?" selected":""}>${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due</option>`).join("")+`<option value="newld:recv"${cur==="newld:recv"?" selected":""}>\u2795 New person I lent to</option><option value="newld:pay"${cur==="newld:pay"?" selected":""}>\u2795 New debt I owe</option>`;
   return "";
 }
+/* resolve a line to a {number,name} COA-style account for display/posting */
+function vLineAccount(ln){
+  if(ln.kind==="Ledger")return coaByNumber(ln.acct)||null;
+  if(ln.kind==="Bank"&&ln.sub.startsWith("bank:")){const b=banks.find(x=>x.name===ln.sub.slice(5));if(b){const a=coaByNumber(b.coa);return a||{number:b.coa||"BANK",name:b.name};}}
+  if(ln.kind==="Investment"&&ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));if(v){const a=coaByNumber(v.coa);return a||{number:v.coa||"INV",name:v.name};}}
+  if(ln.kind==="Loan"&&ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));if(l){const a=coaByNumber(l.coa);return a||{number:l.coa||"LOAN",name:l.person};}}
+  if(ln.kind==="Investment"&&ln.sub==="newinv")return {number:"(new)",name:"New investment"};
+  if(ln.kind==="Loan"&&ln.sub.startsWith("newld"))return {number:"(new)",name:"New record"};
+  return null;
+}
+function vLineName(ln){const a=vLineAccount(ln);return a?`${a.number} \u00b7 ${a.name}`:"\u2014 pick an account \u2014";}
+/* display name for a sub-master reference stored on a posted voucher line */
+function vSubDisplay(ln){
+  if(!ln||!ln.sub)return ln&&ln.acct||"Account";
+  if(ln.sub.startsWith("bank:"))return ln.sub.slice(5);
+  if(ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));return v?v.name:ln.sub.slice(4);}
+  if(ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));return l?l.person:ln.sub.slice(3);}
+  return ln.acct||"Account";
+}
+function renderVLines(){
+  const box=$("#vLines");if(!box)return;
+  box.innerHTML=vLines.map((ln,i)=>{
+    const ledger=ln.kind==="Ledger";
+    const grey=ledger?"":"greyed";
+    const drCls=num(ln.dr)>0?"dr-line":num(ln.cr)>0?"cr-line":"";
+    return `<div class="vline ${drCls}" data-i="${i}">
+      <div class="vline-grid">
+        <div class="f"><label>Line type</label><select data-vf="kind">
+          <option${ln.kind==="Ledger"?" selected":""}>Ledger</option>
+          <option${ln.kind==="Bank"?" selected":""}>Bank</option>
+          <option${ln.kind==="Investment"?" selected":""}>Investment</option>
+          <option${ln.kind==="Loan"?" selected":""}>Loan</option>
+        </select></div>
+        <div class="f ${grey}"><label>Account type</label><select data-vf="type">
+          ${["Asset","Liability","Equity","Income","Expense"].map(t=>`<option${ln.type===t?" selected":""}>${t}</option>`).join("")}
+        </select></div>
+        <div class="f ${grey}"><label>Category</label><select data-vf="cat">${ledger?vLedgerCatOpts(ln.type,ln.cat):'<option>—</option>'}</select></div>
+        <div class="f"><label>${ledger?"Account":ln.kind}</label>${
+          ledger?`<select data-vf="acct">${vLedgerAcctOpts(ln.type,ln.cat,ln.acct)}</select>`
+                :`<select data-vf="sub">${vSubOpts(ln.kind,ln.sub)}</select>`}</div>
+        <div class="f"><label>Debit</label><input type="number" min="0" step="0.01" inputmode="decimal" data-vf="dr" value="${ln.dr}" placeholder="0.00"></div>
+        <div class="f"><label>Credit</label><input type="number" min="0" step="0.01" inputmode="decimal" data-vf="cr" value="${ln.cr}" placeholder="0.00"></div>
+        <button type="button" class="vline-del" title="Remove line" ${vLines.length<=1?"disabled":""}>\u00d7</button>
+      </div>
+      <div class="vline-name">${esc(vLineName(ln))}</div>
+    </div>`;
+  }).join("");
+  renderVTotals();
+}
+function renderVTotals(){
+  const el=$("#vTotals");if(!el)return;
+  const tDr=r2(vLines.reduce((s,l)=>s+num(l.dr),0));
+  const tCr=r2(vLines.reduce((s,l)=>s+num(l.cr),0));
+  const diff=r2(tDr-tCr);
+  const ok=Math.abs(diff)<0.005&&tDr>0;
+  el.innerHTML=`<span>Debit <b class="pos">${fmt(tDr)}</b></span><span>Credit <b class="neg">${fmt(tCr)}</b></span>`
+    +(ok?`<span class="vt-bal ok">Balanced</span>`:`<span class="vt-bal off">${tDr===0?"Enter amounts":"Off by "+fmt(Math.abs(diff))}</span>`);
+  const btn=$("#btnPostVoucher");if(btn)btn.disabled=!ok;
+}
+/* delegated events on the lines container */
+function bindVoucherGrid(){
+  const box=$("#vLines");if(!box||box.dataset.bound)return;box.dataset.bound="1";
+  box.addEventListener("change",e=>{
+    const f=e.target.getAttribute("data-vf");if(!f)return;
+    const row=e.target.closest(".vline");const i=+row.dataset.i;const ln=vLines[i];if(!ln)return;
+    if(f==="kind"){ln.kind=e.target.value;ln.sub="";ln.acct="";if(ln.kind==="Ledger"&&!ln.type)ln.type="Expense";renderVLines();return;}
+    if(f==="type"){ln.type=e.target.value;ln.cat="";ln.acct="";renderVLines();return;}
+    if(f==="cat"){ln.cat=e.target.value;ln.acct="";renderVLines();return;}
+    if(f==="acct"){ln.acct=e.target.value;$(".vline[data-i='"+i+"'] .vline-name",row).textContent=vLineName(ln);return;}
+    if(f==="sub"){ln.sub=e.target.value;renderVLines();return;}
+  });
+  box.addEventListener("input",e=>{
+    const f=e.target.getAttribute("data-vf");if(!f)return;
+    const row=e.target.closest(".vline");const i=+row.dataset.i;const ln=vLines[i];if(!ln)return;
+    if(f==="dr"){ln.dr=e.target.value;if(num(ln.dr)>0)ln.cr="";}
+    if(f==="cr"){ln.cr=e.target.value;if(num(ln.cr)>0)ln.dr="";}
+    row.classList.toggle("dr-line",num(ln.dr)>0);row.classList.toggle("cr-line",num(ln.cr)>0);
+    renderVTotals();
+  });
+  box.addEventListener("click",e=>{
+    if(!e.target.classList.contains("vline-del"))return;
+    const i=+e.target.closest(".vline").dataset.i;
+    if(vLines.length>1){vLines.splice(i,1);renderVLines();}
+  });
+}
+function $q(sel,root){return (root||document).querySelector(sel);}
 /* what kind of register does this COA account map to? */
 function recKindFor(acct){
   if(!acct)return null;
@@ -2011,6 +2107,18 @@ function plGroups(mk){
       const key=hit.number;
       if(!acctSums[key])acctSums[key]={name:hit.name,category:hit.category||"Other",amt:0};
       acctSums[key].amt=r2(acctSums[key].amt+t.amount);
+    });
+    /* multi-line vouchers: each line hitting an income/expense account contributes.
+       Dr on an expense account is expense; Cr on an income account is income.        */
+    txns.filter(t=>t.type==="Voucher"&&t.lines&&inP(t)).forEach(t=>{
+      t.lines.forEach(ln=>{
+        const a=coaByNumber(ln.acct);if(!a||a.type!==type)return;
+        const amt=type==="Expense"?num(ln.dr)-num(ln.cr):num(ln.cr)-num(ln.dr);  // net into the P&L line
+        if(!amt)return;
+        const key=a.number;
+        if(!acctSums[key])acctSums[key]={name:a.name,category:a.category||"Other",amt:0};
+        acctSums[key].amt=r2(acctSums[key].amt+amt);
+      });
     });
     const groups={};
     Object.values(acctSums).forEach(a=>{(groups[a.category]=groups[a.category]||[]).push({name:a.name,amt:a.amt});});
@@ -2639,6 +2747,14 @@ function acctForInv(v){
 function voucherFor(t){
   const lines=[];
   let m;
+  if(t.type==="Voucher"&&t.lines){
+    /* multi-line journal: each line carries its own Dr/Cr amount */
+    t.lines.forEach(ln=>{
+      const a=coaByNumber(ln.acct)||{number:ln.acct||"\u2014",name:vSubDisplay(ln)};
+      lines.push({side:num(ln.dr)>0?"Dr":"Cr",a,amt:num(ln.dr)>0?num(ln.dr):num(ln.cr)});
+    });
+    return {no:t.id,date:t.date,narration:t.desc||t.cat,amount:r2(t.lines.reduce((s,l)=>s+num(l.dr),0)),lines,multi:true};
+  }
   if(t.type==="Journal"){
     /* explicit manual entry: Dr coaAcct / Cr offsetAcct */
     const dr=coaByNumber(t.coaAcct)||{number:"\u2014",name:t.cat||"Account"};
@@ -2672,13 +2788,13 @@ function openVoucher(t){
   const v=voucherFor(t);
   const typeColor=t.type==="Income"?"var(--mint)":t.type==="Expense"?"var(--coral)":t.type==="Transfer"?"var(--blue)":"var(--violet)";
   $("#vchMeta").innerHTML=`<span class="vch-badge" style="background:${typeColor}1f;color:${typeColor};border-color:${typeColor}55">${esc(t.type)}</span> <b class="mono-id" style="display:inline;margin:0">${esc(v.no)}</b> \u00b7 ${esc(fmtDate(v.date))}`;
-  const dr=v.lines.filter(l=>l.side==="Dr");
-  const cr=v.lines.filter(l=>l.side==="Cr");
+  const dr=v.multi?v.lines:v.lines.filter(l=>l.side==="Dr");
+  const cr=v.multi?[]:v.lines.filter(l=>l.side==="Cr");
   const lineRow=(l)=>`<tr>
       <td class="vch-side">${l.side}</td>
       <td class="vch-acct"><span class="vch-num">${esc(l.a.number)}</span><span class="vch-name">${esc(l.a.name)}</span></td>
-      <td class="num vch-dr">${l.side==="Dr"?fmt(v.amount):""}</td>
-      <td class="num vch-cr">${l.side==="Cr"?fmt(v.amount):""}</td>
+      <td class="num vch-dr">${l.side==="Dr"?fmt(v.multi?l.amt:v.amount):""}</td>
+      <td class="num vch-cr">${l.side==="Cr"?fmt(v.multi?l.amt:v.amount):""}</td>
     </tr>`;
   /* a statement import repeats the file name in both narration and reference;
      show a short clean narration and skip the duplicate reference line */
@@ -2730,140 +2846,115 @@ function reverseInvTopup(t){
   v.current=r2(Math.max(0,v.current-t.amount));
 }
 
-/* ---------- forms ---------- */
-$("#tType")&&$("#tType").addEventListener("change",syncTxnCat);
-$("#tCatGrp")&&$("#tCatGrp").addEventListener("change",syncTxnAcct);
-$("#tCat")&&$("#tCat").addEventListener("change",()=>{syncRecPicker("tCat","tRecWrap","tRec","tRecLabel");updateTxnPreview();});
-$("#tOffType")&&$("#tOffType").addEventListener("change",syncOffCat);
-$("#tOffCat")&&$("#tOffCat").addEventListener("change",syncOffAcct);
-$("#tOffAcct")&&$("#tOffAcct").addEventListener("change",()=>{syncRecPicker("tOffAcct","tOffRecWrap","tOffRec","tOffRecLabel");updateTxnPreview();});
-$("#tRec")&&$("#tRec").addEventListener("change",updateTxnPreview);
-$("#tOffRec")&&$("#tOffRec").addEventListener("change",updateTxnPreview);
-$("#tAmt")&&$("#tAmt").addEventListener("input",updateTxnPreview);
+/* ---------- voucher grid form ---------- */
+$("#btnAddLine")&&$("#btnAddLine").addEventListener("click",()=>{vLines.push(newVLine());renderVLines();});
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
-  const amount=num($("#tAmt").value);
-  if(amount<=0){toast("Enter an amount");return;}
-  const drNum=txnFormAcctNumber(),crNum=txnOffsetNumber();
-  const drA=coaByNumber(drNum),crA=coaByNumber(crNum);
-  if(!drA||!crA){toast("Pick an account and an offset account");return;}
-  if(drNum===crNum){toast("Account and offset must differ");return;}
-  /* control accounts must post via a sub-master: require the record picker */
-  const drLinkSel=$("#tRec")&&$("#tRecWrap").style.display!=="none"?$("#tRec").value:"";
-  const crLinkSel=$("#tOffRec")&&$("#tOffRecWrap").style.display!=="none"?$("#tOffRec").value:"";
-  if(isControl(drA)&&!drLinkSel){toast(`"${drA.name}" is a control account \u2014 choose which sub-master on the Account side`);return;}
-  if(isControl(crA)&&!crLinkSel){toast(`"${crA.name}" is a control account \u2014 choose which sub-master on the Offset side`);return;}
-  /* a bank chosen as a sub-master resolves to that actual bank for balance effects */
-  const drBank=bankForCoa(drNum)||(drLinkSel.startsWith("bank:")?banks.find(b=>b.name===drLinkSel.slice(5)):null);
-  const crBank=bankForCoa(crNum)||(crLinkSel.startsWith("bank:")?banks.find(b=>b.name===crLinkSel.slice(5)):null);
   const date=$("#tDate").value||todayISO(),desc=$("#tDesc").value.trim(),method=$("#tPay").value;
-  let rec;
-  /* map the double entry onto the tested transaction types where it fits;
-     anything non-standard posts as a generic Journal that the voucher/P&L/bank
-     logic understands. bank balances move only when a bank is on a side.       */
-  if(crBank&&drA.type==="Expense"){
-    rec={date,type:"Expense",cat:drA.name,coaAcct:drNum,desc,amount,bank:crBank.name,toBank:"",method,ref:"",loanRef:""};
-  }else if(drBank&&crA.type==="Income"){
-    rec={date,type:"Income",cat:crA.name,coaAcct:crNum,desc,amount,bank:drBank.name,toBank:"",method,ref:"",loanRef:""};
-  }else if(drBank&&crBank){
-    rec={date,type:"Transfer",cat:"Transfer",desc,amount,bank:crBank.name,toBank:drBank.name,method,ref:"",loanRef:""};
-  }else{
-    // generic journal: store both COA sides; if a bank sub-master is on a side, tag it
-    rec={date,type:"Journal",cat:drA.name,coaAcct:drBank?bankForCoa(drNum)?drNum:drBank.coa:drNum,offsetAcct:crBank?bankForCoa(crNum)?crNum:crBank.coa:crNum,desc,amount,bank:"",toBank:"",method,ref:"",loanRef:""};
+  const tDr=r2(vLines.reduce((s,l)=>s+num(l.dr),0)),tCr=r2(vLines.reduce((s,l)=>s+num(l.cr),0));
+  /* ---- standard voucher validations ---- */
+  if(tDr<=0){toast("Enter debit and credit amounts");return;}
+  if(Math.abs(r2(tDr-tCr))>=0.005){toast(`Voucher is out of balance by ${fmt(Math.abs(r2(tDr-tCr)))} \u2014 debits must equal credits`);return;}
+  for(const ln of vLines){
+    const both=num(ln.dr)>0&&num(ln.cr)>0;
+    const neither=num(ln.dr)<=0&&num(ln.cr)<=0;
+    if(both){toast("Each line takes a debit OR a credit, not both");return;}
+    if(neither){toast("Every line needs a debit or credit amount");return;}
+    if(!vLineAccount(ln)){toast("Every line needs an account chosen");return;}
+    if(ln.kind==="Ledger"&&isControl(coaByNumber(ln.acct))){toast(`"${coaByNumber(ln.acct).name}" is a control account \u2014 use a Bank/Investment/Loan line to post via its sub-master`);return;}
   }
+  /* build normalized voucher lines */
+  const lines=vLines.map(ln=>{
+    const a=vLineAccount(ln);
+    return {kind:ln.kind,acct:a?a.number:"",sub:ln.sub||"",dr:r2(num(ln.dr)),cr:r2(num(ln.cr))};
+  });
   if(editingTxn){
     const t=txns.find(x=>x.id===editingTxn);
-    if(t){
-      reverseLoanPayment(t);
-      Object.assign(t,{date:rec.date,type:rec.type,cat:rec.cat,coaAcct:rec.coaAcct||"",offsetAcct:rec.offsetAcct||"",desc:rec.desc,amount:rec.amount,bank:rec.bank,toBank:rec.toBank,method:rec.method,ref:rec.ref,loanRef:rec.loanRef});
-      applyLoanPayment(t);
-    }
-    cancelEditTxn();
-    setDirty(true);renderAll();toast("Transaction updated");
+    if(t){reverseVoucherEffects(t);Object.assign(t,{date,desc,method,type:"Voucher",amount:tDr,lines,cat:lines[0]?vLineName2(lines[0]):"",coaAcct:"",offsetAcct:"",bank:"",toBank:"",ref:"",loanRef:""});applyVoucherEffects(t);}
+    cancelEditTxn();setDirty(true);renderAll();toast("Voucher updated");
   }else{
-    rec.id=nextTxnId();
-    /* apply investment/loan record links (banks already handled by the derivation).
-       direction: a record on the Dr side gains value; on the Cr side it loses value. */
-    applyJrnlRecord(rec,drLinkSel.startsWith("bank:")?"":drLinkSel,"dr",drA);
-    applyJrnlRecord(rec,crLinkSel.startsWith("bank:")?"":crLinkSel,"cr",crA);
+    const rec={id:nextTxnId(),date,desc,method,type:"Voucher",amount:tDr,lines,cat:lines[0]?vLineName2(lines[0]):"",coaAcct:"",offsetAcct:"",bank:"",toBank:"",ref:"",loanRef:"",bankRef:""};
+    applyVoucherEffects(rec);
     txns.push(rec);
-    e.target.reset();$("#tDate").value=todayISO();
-    $("#tType").value="Expense";$("#tOffType").value="Asset";
-    syncTxnCat();syncOffCat();updateTxnPreview();
+    resetVoucher();$("#tDate").value=todayISO();$("#tDesc").value="";
     setDirty(true);renderAll();
-    toast(`Posted \u00b7 Dr ${drA.name} / Cr ${crA.name}`);
+    toast(`Voucher posted \u00b7 ${lines.length} lines \u00b7 ${fmt(tDr)}`);
   }
 });
-/* apply an investment/loan record link to a freshly-built transaction.
-   side "dr": record gains value; side "cr": record loses value.               */
-function applyJrnlRecord(rec,link,side,acct){
-  if(!link)return;
-  const amt=rec.amount;
-  if(link.startsWith("inv:")){
-    const v=invs.find(x=>x.id===link.slice(4));if(!v)return;
-    if(side==="dr"){v.amount=r2(v.amount+amt);v.current=r2(v.current+amt);rec.ref="Linked: "+v.id+" (top-up)";}
-    else{v.current=r2(Math.max(0,v.current-amt));rec.ref="Linked: "+v.id+" (redeem)";}
-  }else if(link==="newinv"){
-    const id=nextId(invs,"INV",1);
-    invs.push({id,name:(rec.desc||"Investment "+rec.date).slice(0,40),assetType:"Other",date:rec.date,amount:amt,current:amt,bank:"",coa:acct?acct.number:"",opening:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
-    rec.ref="Linked: "+id;
-  }else if(link.startsWith("ld:")){
-    const l=lends.find(x=>x.id===link.slice(3));if(!l)return;
-    const recv=l.type==="Debt Receivable";
-    /* receivable (asset): Dr = lend more (up), Cr = received back (down)
-       payable   (liab):   Dr = repaid (down),  Cr = borrowed more (up)      */
-    let delta;
-    if(recv)delta=side==="dr"?amt:-amt; else delta=side==="dr"?-amt:amt;
-    l.balance=r2(Math.max(0,l.balance+delta));
-    if(delta>0)l.principal=r2(l.principal+delta);
-    if(l.balance<=0.004){l.status="Closed";l.closedDate=rec.date;}
-    rec.loanRef=l.id;rec.ref=(delta<0?"Payment: ":"Linked: ")+l.id+" ("+l.person+")";
-  }else if(link==="newld:recv"||link==="newld:pay"){
-    const recvNew=link==="newld:recv";
-    const id=nextId(lends,"DEBT",1);
-    lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(rec.desc||"From posting").slice(0,30),purpose:"Posted "+rec.date,principal:amt,rate:0,term:0,balance:amt,issue:rec.date,due:"",status:"Open",coa:acct?acct.number:"",closedDate:"",closeBank:"",txnRef:""});
-    rec.ref="Linked: "+id+" ("+lends[lends.length-1].person+")";
-  }
+function vLineName2(l){const a=coaByNumber(l.acct);return a?a.name:(l.acct||"Account");}
+/* apply / reverse the stored-balance effects of a voucher's Bank/Investment/Loan lines.
+   (bank balances are derived, so only investments & loans need touching here)          */
+function applyVoucherEffects(t){voucherEffect(t,+1);}
+function reverseVoucherEffects(t){voucherEffect(t,-1);}
+function voucherEffect(t,sign){
+  if(!t.lines)return;
+  t.lines.forEach(ln=>{
+    const amt=(num(ln.dr)>0?num(ln.dr):-num(ln.cr))*sign;  // Dr positive, Cr negative
+    if(ln.kind==="Investment"){
+      if(ln.sub==="newinv"&&sign>0){
+        const id=nextId(invs,"INV",1);
+        invs.push({id,name:(t.desc||"Investment "+t.date).slice(0,40),assetType:"Other",date:t.date,amount:Math.abs(amt),current:Math.abs(amt),bank:"",coa:ln.acct||"",opening:0,status:"Open",closedDate:"",closedValue:0,txnRef:t.id});
+        ln.sub="inv:"+id;
+      }else if(ln.sub.startsWith("inv:")){
+        const v=invs.find(x=>x.id===ln.sub.slice(4));
+        if(v){v.amount=r2(v.amount+amt);v.current=r2(v.current+amt);}   // Dr up, Cr down
+      }
+    }else if(ln.kind==="Loan"){
+      if((ln.sub==="newld:recv"||ln.sub==="newld:pay")&&sign>0){
+        const recvNew=ln.sub==="newld:recv";
+        const id=nextId(lends,"DEBT",1);
+        lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(t.desc||"From voucher").slice(0,30),purpose:"Posted "+t.date,principal:Math.abs(amt),rate:0,term:0,balance:Math.abs(amt),issue:t.date,due:"",status:"Open",coa:ln.acct||"",closedDate:"",closeBank:"",txnRef:t.id});
+        ln.sub="ld:"+id;
+      }else if(ln.sub.startsWith("ld:")){
+        const l=lends.find(x=>x.id===ln.sub.slice(3));
+        if(l){
+          const recv=l.type==="Debt Receivable";
+          /* receivable rises with Dr; payable rises with Cr */
+          const delta=recv?amt:-amt;
+          l.balance=r2(Math.max(0,l.balance+delta));
+          if(delta>0)l.principal=r2(l.principal+delta);
+          if(l.balance<=0.004&&sign>0){l.status="Closed";l.closedDate=t.date;}
+        }
+      }
+    }
+  });
 }
 function loadTxnIntoForm(t){
   editingTxn=t.id;
   $("#tDate").value=t.date||todayISO();
   $("#tDesc").value=t.desc||"";
-  $("#tAmt").value=t.amount||"";
   if($("#tPay"))$("#tPay").value=t.method||"";
-  /* reconstruct both sides from the transaction's own voucher, so any type
-     (Income/Expense/Transfer/Journal) loads back into the account+offset pickers */
-  const v=voucherFor(t);
-  const dr=v.lines.find(l=>l.side==="Dr"),cr=v.lines.find(l=>l.side==="Cr");
-  const setSide=(typeSel,catSel,acctSel,acctNum)=>{
-    const a=coaByNumber(acctNum);
-    if(!a)return;
-    $(typeSel).value=a.type;
-    if(typeSel==="#tType")syncTxnCat();else syncOffCat();
-    if(a.category){$(catSel).value=a.category;if(typeSel==="#tType")syncTxnAcct();else syncOffAcct();}
-    if($(acctSel))$(acctSel).value=a.name;
-  };
-  if(dr&&dr.a&&dr.a.number!=="\u2014")setSide("#tType","#tCatGrp","#tCat",dr.a.number);
-  if(cr&&cr.a&&cr.a.number!=="\u2014")setSide("#tOffType","#tOffCat","#tOffAcct",cr.a.number);
-  updateTxnPreview();
-  // switch the submit button into "update" mode + reveal cancel
-  const submitBtn=$("#formTxn button[type=submit]");
-  if(submitBtn)submitBtn.textContent="✓ Update transaction";
+  /* rebuild the grid rows from the transaction's voucher lines */
+  if(t.type==="Voucher"&&t.lines&&t.lines.length){
+    vLines=t.lines.map(ln=>{
+      const a=coaByNumber(ln.acct);
+      return newVLine({kind:ln.kind||"Ledger",type:a?a.type:"Expense",cat:a?a.category:"",acct:ln.kind==="Ledger"?ln.acct:"",sub:ln.sub||"",dr:ln.dr||"",cr:ln.cr||""});
+    });
+  }else{
+    /* legacy 2-line txn: derive Dr/Cr from its voucher and load as two Ledger lines */
+    const v=voucherFor(t);
+    vLines=v.lines.map(l=>{
+      const a=l.a&&l.a.number!=="\u2014"?coaByNumber(l.a.number):null;
+      const bank=a?bankForCoa(a.number):null;
+      return newVLine(bank
+        ?{kind:"Bank",sub:"bank:"+bank.name,dr:l.side==="Dr"?t.amount:"",cr:l.side==="Cr"?t.amount:""}
+        :{kind:"Ledger",type:a?a.type:"Expense",cat:a?a.category:"",acct:a?a.number:"",dr:l.side==="Dr"?t.amount:"",cr:l.side==="Cr"?t.amount:""});
+    });
+  }
+  renderVLines();
+  const submitBtn=$("#btnPostVoucher");if(submitBtn)submitBtn.textContent="\u2713 Update voucher";
   if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="";
   const form=$("#formTxn");if(form)form.classList.add("editing");
   const panel=$("#panel-add");if(panel){$$(".pill").forEach(p=>p.classList.remove("active"));const pill=document.querySelector('.pill[data-tab="add"]');if(pill)pill.classList.add("active");$$(".panel").forEach(p=>p.classList.remove("active"));panel.classList.add("active");}
   window.scrollTo(0,0);
-  toast("Editing "+t.id+" — change the fields and press Update");
+  toast("Editing "+t.id+" \u2014 change the lines and press Update");
 }
 function cancelEditTxn(){
   editingTxn=null;
-  const form=$("#formTxn");if(form){form.reset();form.classList.remove("editing");}
-  $("#tDate").value=todayISO();
-  if($("#tType"))$("#tType").value="Expense";
-  if($("#tOffType"))$("#tOffType").value="Asset";
-  syncTxnCat();syncOffCat();updateTxnPreview();
-  const submitBtn=$("#formTxn button[type=submit]");
-  if(submitBtn)submitBtn.textContent="+ Add transaction";
+  const form=$("#formTxn");if(form)form.classList.remove("editing");
+  $("#tDate").value=todayISO();$("#tDesc").value="";
+  resetVoucher();
+  const submitBtn=$("#btnPostVoucher");if(submitBtn)submitBtn.textContent="Post voucher";
   if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="none";
 }
 $("#btnCancelTxn")&&$("#btnCancelTxn").addEventListener("click",cancelEditTxn);

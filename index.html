@@ -1916,17 +1916,51 @@ function vSubOpts(kind,cur){
   if(kind==="Loan")return '<option value="">— choose person / loan —</option>'+lends.filter(l=>l.status!=="Closed").map(l=>`<option value="ld:${esc(l.id)}"${"ld:"+l.id===cur?" selected":""}>${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due</option>`).join("")+`<option value="newld:recv"${cur==="newld:recv"?" selected":""}>\u2795 New person I lent to</option><option value="newld:pay"${cur==="newld:pay"?" selected":""}>\u2795 New debt I owe</option>`;
   return "";
 }
+/* ensure a Ledger line has a valid account selected (browser shows the first option
+   by default, but the grid state must record it too, or validation thinks it's blank) */
+function normalizeVLine(ln){
+  if(ln.kind==="Ledger"){
+    const accts=txnAcctsFor(ln.type,ln.cat);
+    if(accts.length&&!accts.some(a=>a.number===ln.acct))ln.acct=accts[0].number;
+  }
+  return ln;
+}
+/* map a main COA account onto a bank / investment / loan that lacks one, so voucher
+   lines always resolve to a real ledger account. picks the first free account in the
+   right category (or the category's control account) and remembers it on the record. */
+function ensureSubCoa(kind,rec){
+  if(!rec||rec.coa)return rec&&rec.coa;
+  const pick=(type,rx)=>{
+    const taken=coaTakenBy(kind);
+    const inCat=coa.filter(a=>a.type===type&&rx.test((a.category||"").toLowerCase()));
+    return (inCat.find(a=>!taken.has(a.number))||inCat.find(a=>a.control)||inCat[0]||null);
+  };
+  let a=null;
+  if(kind==="bank")a=pick("Asset",/(cash|bank)/);
+  else if(kind==="inv")a=pick("Asset",/invest/);
+  else if(kind==="loan")a=pick(rec.type==="Debt Receivable"?"Asset":"Liability",rec.type==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/);
+  if(a){rec.coa=a.number;setDirty(true);}
+  return rec.coa;
+}
 /* resolve a line to a {number,name} COA-style account for display/posting */
 function vLineAccount(ln){
-  if(ln.kind==="Ledger")return coaByNumber(ln.acct)||null;
-  if(ln.kind==="Bank"&&ln.sub.startsWith("bank:")){const b=banks.find(x=>x.name===ln.sub.slice(5));if(b){const a=coaByNumber(b.coa);return a||{number:b.coa||"BANK",name:b.name};}}
-  if(ln.kind==="Investment"&&ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));if(v){const a=coaByNumber(v.coa);return a||{number:v.coa||"INV",name:v.name};}}
-  if(ln.kind==="Loan"&&ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));if(l){const a=coaByNumber(l.coa);return a||{number:l.coa||"LOAN",name:l.person};}}
+  if(ln.kind==="Ledger"){normalizeVLine(ln);return coaByNumber(ln.acct)||null;}
+  if(ln.kind==="Bank"&&ln.sub.startsWith("bank:")){const b=banks.find(x=>x.name===ln.sub.slice(5));if(b){ensureSubCoa("bank",b);const a=coaByNumber(b.coa);return a||{number:b.coa||"BANK",name:b.name};}}
+  if(ln.kind==="Investment"&&ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));if(v){ensureSubCoa("inv",v);const a=coaByNumber(v.coa);return a||{number:v.coa||"INV",name:v.name};}}
+  if(ln.kind==="Loan"&&ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));if(l){ensureSubCoa("loan",l);const a=coaByNumber(l.coa);return a||{number:l.coa||"LOAN",name:l.person};}}
   if(ln.kind==="Investment"&&ln.sub==="newinv")return {number:"(new)",name:"New investment"};
   if(ln.kind==="Loan"&&ln.sub.startsWith("newld"))return {number:"(new)",name:"New record"};
   return null;
 }
-function vLineName(ln){const a=vLineAccount(ln);return a?`${a.number} \u00b7 ${a.name}`:"\u2014 pick an account \u2014";}
+function vLineName(ln){
+  const a=vLineAccount(ln);
+  if(!a)return "\u2014 pick an account \u2014";
+  /* for sub-master lines, make the mapped main (ledger) account explicit */
+  if(ln.kind!=="Ledger"&&ln.sub&&!ln.sub.startsWith("new")){
+    return `${vSubDisplay(ln)} \u2192 maps to ${a.number} \u00b7 ${a.name}`;
+  }
+  return `${a.number} \u00b7 ${a.name}`;
+}
 /* display name for a sub-master reference stored on a posted voucher line */
 function vSubDisplay(ln){
   if(!ln||!ln.sub)return ln&&ln.acct||"Account";
@@ -1937,6 +1971,7 @@ function vSubDisplay(ln){
 }
 function renderVLines(){
   const box=$("#vLines");if(!box)return;
+  vLines.forEach(normalizeVLine);   // sync default-selected accounts into state
   box.innerHTML=vLines.map((ln,i)=>{
     const ledger=ln.kind==="Ledger";
     const grey=ledger?"":"greyed";

@@ -1778,15 +1778,27 @@ function buildWorkbook(){
 }
 
 /* ---------- lists / selects ---------- */
-function coaAcctOptions(type,sel){
-  const list=coa.filter(a=>a.type===type).slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
-  return '<option value="">\u2014 auto \u2014</option>'+list.map(a=>`<option value="${esc(a.number)}"${a.number===sel?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}</option>`).join("");
+function coaAcctOptions(type,sel,opts){
+  opts=opts||{};
+  let list=coa.filter(a=>a.type===type);
+  if(opts.catMatch)list=list.filter(a=>opts.catMatch.test((a.category||"").toLowerCase()));
+  if(opts.taken)list=list.filter(a=>!opts.taken.has(a.number)||a.number===sel);
+  list=list.slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true}));
+  return '<option value="">\u2014 auto \u2014</option>'+list.map(a=>`<option value="${esc(a.number)}"${a.number===sel?" selected":""}>${esc(a.number)} \u00b7 ${esc(a.name)}${a.control?" \u00b7 control":""}</option>`).join("");
+}
+/* COA numbers already used as a main account by banks / investments / loans */
+function coaTakenBy(kind){
+  const s=new Set();
+  if(kind==="bank")banks.forEach(b=>{if(b.coa)s.add(b.coa);});
+  else if(kind==="inv")invs.forEach(v=>{if(v.coa)s.add(v.coa);});
+  else if(kind==="loan")lends.forEach(l=>{if(l.coa)s.add(l.coa);});
+  return s;
 }
 function refreshSelects(){
   try{syncCoaCat();}catch(e){}
-  const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value);
-  const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value);
-  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value);}
+  const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value,{catMatch:/(cash|bank)/,taken:coaTakenBy("bank")});
+  const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value,{catMatch:/invest/,taken:coaTakenBy("inv")});
+  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
   // transaction category depends on type
@@ -2917,7 +2929,7 @@ function updateLdPreview(){
 function loadLDIntoForm(r){
   editingLD=r.id;
   $("#ldType").value=r.type;$("#ldPerson").value=r.person;$("#ldPurpose").value=r.purpose||"";
-  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"");
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"",{catMatch:r.type==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
   $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
   $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
   if($("#ldFundWrap"))$("#ldFundWrap").style.display="none";   // funding only applies to new records
@@ -3005,7 +3017,7 @@ function loadInvIntoForm(r){
   $("#ivDate").value=r.date||todayISO();
   $("#ivAmt").value=r.amount;
   $("#ivCur").value=r.current;
-  if($("#ivCoa"))$("#ivCoa").innerHTML=coaAcctOptions("Asset",r.coa||"");
+  if($("#ivCoa"))$("#ivCoa").innerHTML=coaAcctOptions("Asset",r.coa||"",{catMatch:/invest/,taken:coaTakenBy("inv")});
   /* editing details \u2014 no bank funding, but the opening-balance toggle stays available
      so a holding can be marked (or unmarked) as an opening balance while editing */
   if($("#ivBankWrap"))$("#ivBankWrap").style.display="none";
@@ -3169,7 +3181,7 @@ document.addEventListener("click",e=>{
   if(!btn)return;
   const i=+btn.closest("tr").dataset.i, b=banks[i];
   if(btn.dataset.bact==="edit"){
-    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions("Asset",b.coa||"");
+    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions("Asset",b.coa||"",{catMatch:/(cash|bank)/,taken:coaTakenBy("bank")});
     bankEditState={id:b.id,statement:b.statement,recDate:b.recDate,opening:b.opening};
     banks.splice(i,1);setDirty(true);renderAll();
     setSettingsTab&&setSettingsTab("secBanks");
@@ -3192,7 +3204,7 @@ $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   const t=$("#ldType").value;
   $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":"Person";
   $("#ldFundWrap").style.display=t==="Bank Loan Payable"?"none":"";
-  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",$("#ldCoa").value);
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",$("#ldCoa").value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
 });
 
 /* ---------- tab nav ---------- */

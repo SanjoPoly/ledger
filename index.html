@@ -2447,14 +2447,20 @@ function renderTxn(){
     const sign=t.type==="Income"?"pos":t.type==="Expense"?"neg":"";
     const amt=(t.type==="Income"?"+":t.type==="Expense"?"−":"")+fmt(t.amount);
     const typeTag=t.type==="Income"?"in":t.type==="Expense"?"out":"iv";
+    /* vouchers span several accounts \u2014 summarise them for the list */
+    const isVch=t.type==="Voucher"&&t.lines&&t.lines.length;
+    const catCell=isVch?`${t.lines.length} lines`:esc(t.cat||"\u2014");
+    const acctCell=isVch
+      ? esc(t.lines.map(ln=>{const a=coaByNumber(ln.acct);return a?a.name:(ln.acct||"?");}).slice(0,3).join(", ")+(t.lines.length>3?"\u2026":""))
+      : (t.type==="Transfer"?esc(t.bank+" \u2192 "+t.toBank):bankTag(t.bank));
     return `<tr data-i="${i}">
       <td data-l="Txn ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(t.id)}</td>
       <td data-l="Date">${esc(t.date)}</td>
       <td data-l="Type"><span class="tag ${typeTag}">${esc(t.type)}</span></td>
-      <td data-l="Category">${esc(t.cat||"—")}</td>
+      <td data-l="Category">${catCell}</td>
       <td data-l="Description">${esc(t.desc||"")}${auto?`<span style="display:block;font-size:.7rem;color:var(--muted)">🔗 ${esc(t.ref)}</span>`:""}</td>
       <td data-l="Amount" class="num"><span class="${sign}">${amt}</span></td>
-      <td data-l="Account">${t.type==="Transfer"?esc(t.bank+" → "+t.toBank):bankTag(t.bank)}</td>
+      <td data-l="Account">${acctCell}</td>
       <td data-l="Method" style="color:var(--muted);font-size:.83rem">${esc(t.method||"")}</td>
       <td data-l="">${auto?`<div class="row-actions"><button type="button" class="icon-btn" data-act="voucher" title="View journal voucher">Vch</button><span class="tag done" style="font-size:.62rem">auto</span></div>`:`<div class="row-actions"><button type="button" class="icon-btn" data-act="voucher" title="View journal voucher">Vch</button><button type="button" class="icon-btn" data-act="editTxn">Edit</button><button type="button" class="icon-btn danger" data-act="delTxn">Del</button></div>`}</td></tr>`;
   }).join("");
@@ -2497,6 +2503,7 @@ function renderBank(){
 
 /* ---------- bank statement ---------- */
 function bankLedger(name){
+  const bank=banks.find(b=>b.name===name);const bc=bank?bank.coa:"";
   const rows=[];
   txns.forEach(t=>{
     if(t.type==="Income"&&t.bank===name)rows.push({date:t.date,detail:t.desc||t.cat||"Income",type:t.cat||"Income",amt:t.amount});
@@ -2504,6 +2511,20 @@ function bankLedger(name){
     if(t.type==="Transfer"){
       if(t.bank===name)rows.push({date:t.date,detail:"Transfer to "+t.toBank+(t.desc?" · "+t.desc:""),type:"Transfer",amt:-t.amount});
       if(t.toBank===name)rows.push({date:t.date,detail:"Transfer from "+t.bank+(t.desc?" · "+t.desc:""),type:"Transfer",amt:t.amount});
+    }
+    /* single-account journal entries that hit this bank's COA account */
+    if(t.type==="Journal"&&bc){
+      if(t.coaAcct===bc)rows.push({date:t.date,detail:t.desc||"Journal",type:"Journal",amt:t.amount});      // Dr bank = up
+      if(t.offsetAcct===bc)rows.push({date:t.date,detail:t.desc||"Journal",type:"Journal",amt:-t.amount});    // Cr bank = down
+    }
+    /* multi-line vouchers: any line that resolves to this bank */
+    if(t.type==="Voucher"&&t.lines){
+      t.lines.forEach(ln=>{
+        const hits=(ln.kind==="Bank"&&ln.sub==="bank:"+name)||(bc&&ln.acct===bc);
+        if(!hits)return;
+        const amt=r2(num(ln.dr)-num(ln.cr));   // Dr = balance up, Cr = down
+        if(amt)rows.push({date:t.date,detail:t.desc||"Voucher",type:"Voucher",amt});
+      });
     }
   });
   rows.sort((a,b)=>(a.date||"").localeCompare(b.date||""));

@@ -668,17 +668,17 @@
         <div class="f"><label for="tType" id="tTypeLabel">Account type</label><select id="tType"><option value="Asset">Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense" selected>Expense</option></select></div>
         <div class="f" id="tCatGrpWrap"><label for="tCatGrp" id="tCatGrpLabel">Category</label><select id="tCatGrp"></select></div>
         <div class="f" id="tCatWrap"><label for="tCat" id="tCatLabel">Account</label><select id="tCat"></select></div>
-        <div class="f" id="tRecWrap" style="display:none;grid-column:1/-1"><label for="tRec" id="tRecLabel">Which record</label><select id="tRec"></select></div>
+        <div class="f" id="tRecWrap" style="display:none;grid-column:1/-1"><label for="tRec" id="tRecLabel">Subledger / entity</label><select id="tRec"></select></div>
       </div>
       <div class="jrnl-side"><span class="jrnl-badge cr">Offset (Cr)</span>
         <div class="f"><label for="tOffType">Offset type</label><select id="tOffType"><option value="Asset" selected>Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Income">Income</option><option value="Expense">Expense</option></select></div>
         <div class="f" id="tOffCatWrap"><label for="tOffCat">Offset category</label><select id="tOffCat"></select></div>
         <div class="f" id="tOffAcctWrap"><label for="tOffAcct">Offset account</label><select id="tOffAcct"></select></div>
-        <div class="f" id="tOffRecWrap" style="display:none;grid-column:1/-1"><label for="tOffRec" id="tOffRecLabel">Which record</label><select id="tOffRec"></select></div>
+        <div class="f" id="tOffRecWrap" style="display:none;grid-column:1/-1"><label for="tOffRec" id="tOffRecLabel">Offset subledger / entity</label><select id="tOffRec"></select></div>
       </div>
-      <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f"><label for="tAmt">Amount</label><input type="number" id="tAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
       <div class="f"><label for="tPay">Payment method</label><select id="tPay"></select></div>
+      <div class="f"><label for="tDesc">Description</label><input type="text" id="tDesc" placeholder="e.g. Grocery, Salary…"></div>
       <div class="f jrnl-preview-wrap" style="grid-column:1/-1"><span class="jrnl-preview" id="tPreview"></span></div>
       <div class="f"><button type="submit">+ Add transaction</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <input type="hidden" id="tLoan" value=""><input type="hidden" id="tBank"><input type="hidden" id="tBankTo">
@@ -1861,11 +1861,30 @@ function updateTxnPreview(){
   const el=$("#tPreview");if(!el)return;
   const dr=coaByNumber(txnFormAcctNumber()),cr=coaByNumber(txnOffsetNumber());
   const amt=num($("#tAmt")?$("#tAmt").value:0);
-  const amtTxt=amt>0?fmt(amt):"amount";
   if(!dr||!cr){el.textContent="Pick an account and an offset to see the entry.";return;}
-  const drName=jrnlRecLabel("tRec",dr),crName=jrnlRecLabel("tOffRec",cr);
-  el.innerHTML=`Will post &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(drName)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(crName)} &nbsp;\u00b7&nbsp; ${amtTxt}`
-    +((bankForCoa(dr.number)||bankForCoa(cr.number))?'':' &nbsp;<span style="color:var(--muted)">(no bank affected)</span>');
+  const drSub=jrnlSubName("tRec","tRecWrap"),crSub=jrnlSubName("tOffRec","tOffRecWrap");
+  const subParts=[];
+  if(drSub)subParts.push(esc(drSub));
+  if(crSub)subParts.push(esc(crSub));
+  const subTxt=subParts.length?` &nbsp;<span style="color:var(--muted)">(Subledger: ${subParts.join(", ")})</span>`:"";
+  const amtTxt=amt>0?fmt(amt):"\u2014";
+  const bankTouched=bankForCoa(dr.number)||bankForCoa(cr.number)
+    ||(/^bank:/.test(($("#tRec")&&$("#tRecWrap").style.display!=="none")?$("#tRec").value:""))
+    ||(/^bank:/.test(($("#tOffRec")&&$("#tOffRecWrap").style.display!=="none")?$("#tOffRec").value:""));
+  el.innerHTML=`<b>Will post:</b> &nbsp;<b class="pos">Dr</b> ${esc(dr.number)} ${esc(dr.name)} &nbsp;<b class="neg">Cr</b> ${esc(cr.number)} ${esc(cr.name)}${subTxt} &nbsp;|&nbsp; <b>${amtTxt}</b>`
+    +(bankTouched?"":' &nbsp;<span style="color:var(--muted)">(no bank affected)</span>');
+}
+/* the sub-master name currently chosen on a side, or "" */
+function jrnlSubName(recSelId,wrapId){
+  const sel=$("#"+recSelId),wrap=$("#"+wrapId);
+  if(!sel||!wrap||wrap.style.display==="none"||!sel.value)return "";
+  const v=sel.value;
+  if(v.startsWith("inv:")){const iv=invs.find(x=>x.id===v.slice(4));return iv?iv.name:"";}
+  if(v.startsWith("bank:"))return v.slice(5);
+  if(v.startsWith("ld:")){const l=lends.find(x=>x.id===v.slice(3));return l?l.person:"";}
+  if(v==="newinv")return "new investment";
+  if(v.startsWith("newld"))return "new record";
+  return "";
 }
 /* what kind of register does this COA account map to? */
 function recKindFor(acct){
@@ -1883,41 +1902,36 @@ function isControl(acct){return !!(acct&&acct.control);}
    "general" option is removed \u2014 you have to choose a specific record.            */
 function syncRecPicker(acctSelId,wrapId,recSelId,labelId){
   const acct=coaByNumber(selNum(acctSelId));
-  const kind=recKindFor(acct);
   const control=isControl(acct);
   const wrap=$("#"+wrapId),sel=$("#"+recSelId),lbl=$("#"+labelId);
   if(!wrap||!sel)return false;
-  /* a control account always needs a sub-master picker; resolve a kind from the
-     category even when the account itself isn't tagged to a register             */
-  let k=kind;
-  if(control){
-    const cat=(acct.category||"").toLowerCase();
-    k=/invest/.test(cat)?"inv"
-     :/receivable/.test(cat)?"recv"
-     :/(loan|debt|borrow|payable|credit)/.test(cat)?"pay"
-     :/(cash|bank)/.test(cat)?"bank"
-     :kind||"bank";
-  }
-  if(!k||(k==="bank"&&!control)){wrap.style.display="none";sel.innerHTML="";return false;}
+  /* subledgers belong to CONTROL accounts only. a plain account (a specific bank,
+     a direct expense, etc.) posts straight to itself \u2014 no sub-master needed.      */
+  if(!control){wrap.style.display="none";wrap.classList.remove("jrnl-required");sel.innerHTML="";return false;}
+  const cat=(acct.category||"").toLowerCase();
+  const k=/invest/.test(cat)?"inv"
+    :/receivable/.test(cat)?"recv"
+    :/(loan|debt|borrow|payable|credit)/.test(cat)?"pay"
+    :/(cash|bank)/.test(cat)?"bank"
+    :recKindFor(acct)||"bank";
   const cur=sel.value;
   const o=(v,l)=>`<option value="${esc(v)}"${v===cur?" selected":""}>${l}</option>`;
-  const noneOpt=control?"":o("","\u2014 none / general \u2014");   // control = must pick one
+  const head=o("","\u2014 choose "+(k==="inv"?"investment":k==="bank"?"bank":"person / entity")+" \u2014");
   if(k==="inv"){
-    if(lbl)lbl.textContent=control?"Which investment (required)":"Which investment (optional)";
+    if(lbl)lbl.textContent="Subledger / entity \u2014 investment";
     const open=invs.filter(v=>v.status!=="Closed");
-    sel.innerHTML=noneOpt+o("newinv","\u2795 New investment (name = description)")
-      +open.map(v=>o("inv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 ${fmt(v.current)}`)).join("");
+    sel.innerHTML=head+open.map(v=>o("inv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 ${fmt(v.current)}`)).join("")+o("newinv","\u2795 New investment (name = description)");
   }else if(k==="bank"){
-    if(lbl)lbl.textContent="Which bank (required)";
-    sel.innerHTML=noneOpt+banks.map(b=>o("bank:"+b.name,`${esc(b.name)} \u2014 ${fmt(bankBalance(b.name))}`)).join("");
+    if(lbl)lbl.textContent="Subledger / entity \u2014 bank";
+    sel.innerHTML=head+banks.map(b=>o("bank:"+b.name,`${esc(b.name)} \u2014 ${fmt(bankBalance(b.name))}`)).join("");
   }else{
-    if(lbl)lbl.textContent=control?"Which person / loan (required)":"Which person / loan (optional)";
+    if(lbl)lbl.textContent="Subledger / entity \u2014 "+(k==="recv"?"customer / person":"vendor / lender");
     const rel=lends.filter(l=>l.status!=="Closed"&&(k==="recv"?l.type==="Debt Receivable":l.type!=="Debt Receivable"));
-    sel.innerHTML=noneOpt+o(k==="recv"?"newld:recv":"newld:pay","\u2795 New "+(k==="recv"?"person I lent to":"debt I owe")+" (name = description)")
-      +rel.map(l=>o("ld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("");
+    sel.innerHTML=head+rel.map(l=>o("ld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("")
+      +o(k==="recv"?"newld:recv":"newld:pay","\u2795 New "+(k==="recv"?"customer / person":"vendor / lender")+" (name = description)");
   }
   wrap.style.display="";
-  wrap.classList.toggle("jrnl-required",control);
+  wrap.classList.add("jrnl-required");
   return true;
 }
 function jrnlRecLabel(recSelId,acct){

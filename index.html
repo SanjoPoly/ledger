@@ -378,6 +378,8 @@
   .jrnl-preview-wrap{margin-top:.2rem}
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  .jrnl-required select{border-color:var(--mint)!important;box-shadow:0 0 0 2px rgba(61,220,163,.15)}
+  .jrnl-required label{color:var(--mint)!important}
   @media(max-width:640px){.jrnl-side{grid-template-columns:1fr 1fr}}
   .dash-periodbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.1rem;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:.6rem .85rem}
   .dash-period-label{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
@@ -825,6 +827,7 @@
       <div class="f"><label for="coaCat">Account category <i>(filtered by type)</i></label><select id="coaCat"></select><input type="text" id="coaCatNew" placeholder="New category name" style="display:none;margin-top:.4rem"></div>
       <div class="f"><label for="coaSub">Account sub category <i>(filtered by category)</i></label><select id="coaSub"></select><input type="text" id="coaSubNew" placeholder="New sub category name" style="display:none;margin-top:.4rem"></div>
       <div class="f"><label for="coaKw">Keywords for statement matching <i>(comma-separated)</i></label><input type="text" id="coaKw" placeholder="grocery,supermarket,dmart"></div>
+      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="coaControl" style="width:17px;height:17px;accent-color:var(--mint)"> Control account — don't post directly, post via a sub-master (bank / investment / loan)</label></div>
       <div class="f"><button type="submit">+ Add account</button><button type="button" id="btnCancelCoa" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
@@ -1666,7 +1669,8 @@ function parseWorkbook(buf,name){
       type:String(gv(r,"Account Type")||"").trim(),
       category:String(gv(r,"Account Category")||"").trim(),
       sub:String(gv(r,"Account Sub Category","Sub Category")||"").trim(),
-      keywords:String(gv(r,"Key Words for Matching","Keywords for Matching","Keywords")||"").trim()
+      keywords:String(gv(r,"Key Words for Matching","Keywords for Matching","Keywords")||"").trim(),
+      control:/^(1|y|yes|true|control)/i.test(String(gv(r,"Control Account","Control","Posting")||"").trim())?1:0
     });
   });
 
@@ -1750,10 +1754,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsI,"Investments");
 
   // Chart of Accounts — preserved on every save so hand-added accounts survive
-  const coaHeaders=["Account Number","Name","Account Type","Account Category","Account Sub Category","Key Words for Matching"];
-  const coaData=coa.slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true})).map(a=>[a.number,a.name,a.type,a.category,a.sub,a.keywords]);
-  const wsC=bannerSheet("Chart of Accounts","Main accounts with 5-digit codes: 1=Asset 2=Liability 3=Equity 4=Income 5=Expense. Keywords drive statement-upload auto-matching.",coaHeaders,coaData);
-  wsC["!cols"]=[{wch:14},{wch:30},{wch:12},{wch:20},{wch:24},{wch:46}];
+  const coaHeaders=["Account Number","Name","Account Type","Account Category","Account Sub Category","Key Words for Matching","Control Account"];
+  const coaData=coa.slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true})).map(a=>[a.number,a.name,a.type,a.category,a.sub,a.keywords,a.control?"Yes":""]);
+  const wsC=bannerSheet("Chart of Accounts","Main accounts with 5-digit codes: 1=Asset 2=Liability 3=Equity 4=Income 5=Expense. Control accounts post only via a sub-master. Keywords drive statement matching.",coaHeaders,coaData);
+  wsC["!cols"]=[{wch:14},{wch:30},{wch:12},{wch:20},{wch:24},{wch:46},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsC,"Chart of Accounts");
 
   // Lists
@@ -1873,27 +1877,43 @@ function recKindFor(acct){
   if(acct.type==="Liability"&&/(loan|debt|borrow|payable|credit card)/.test(cat))return "pay";
   return null;
 }
-/* fill a record select for the account chosen on a side; returns true if a picker is shown */
+function isControl(acct){return !!(acct&&acct.control);}
+/* fill a record select for the account chosen on a side; returns true if a picker is shown.
+   a CONTROL account must post via a sub-master, so the picker is shown and the
+   "general" option is removed \u2014 you have to choose a specific record.            */
 function syncRecPicker(acctSelId,wrapId,recSelId,labelId){
   const acct=coaByNumber(selNum(acctSelId));
   const kind=recKindFor(acct);
+  const control=isControl(acct);
   const wrap=$("#"+wrapId),sel=$("#"+recSelId),lbl=$("#"+labelId);
   if(!wrap||!sel)return false;
-  if(!kind||kind==="bank"){wrap.style.display="none";sel.innerHTML="";return false;}
+  /* a control account with no obvious register still needs a sub-master picker;
+     fall back to a sensible kind from the category so it can be posted            */
+  let k=kind;
+  if(control&&(!k||k==="bank")){
+    const cat=(acct.category||"").toLowerCase();
+    k=/invest/.test(cat)?"inv":/receivable/.test(cat)?"recv":/(loan|debt|borrow|payable|credit)/.test(cat)?"pay":kind;
+  }
+  if(!k||(k==="bank"&&!control)){wrap.style.display="none";sel.innerHTML="";return false;}
   const cur=sel.value;
   const o=(v,l)=>`<option value="${esc(v)}"${v===cur?" selected":""}>${l}</option>`;
-  if(kind==="inv"){
-    if(lbl)lbl.textContent="Which investment (optional)";
+  const noneOpt=control?"":o("","\u2014 none / general \u2014");   // control = must pick one
+  if(k==="inv"){
+    if(lbl)lbl.textContent=control?"Which investment (required)":"Which investment (optional)";
     const open=invs.filter(v=>v.status!=="Closed");
-    sel.innerHTML=o("","\u2014 none / general \u2014")+o("newinv","\u2795 New investment (name = description)")
+    sel.innerHTML=noneOpt+o("newinv","\u2795 New investment (name = description)")
       +open.map(v=>o("inv:"+v.id,`${esc(v.name)} \u00b7 ${esc(v.id)} \u2014 ${fmt(v.current)}`)).join("");
+  }else if(k==="bank"){
+    if(lbl)lbl.textContent="Which bank (required)";
+    sel.innerHTML=noneOpt+banks.map(b=>o("bank:"+b.name,`${esc(b.name)} \u2014 ${fmt(bankBalance(b.name))}`)).join("");
   }else{
-    if(lbl)lbl.textContent="Which person / loan (optional)";
-    const rel=lends.filter(l=>l.status!=="Closed"&&(kind==="recv"?l.type==="Debt Receivable":l.type!=="Debt Receivable"));
-    sel.innerHTML=o("","\u2014 none / general \u2014")+o(kind==="recv"?"newld:recv":"newld:pay","\u2795 New "+(kind==="recv"?"person I lent to":"debt I owe")+" (name = description)")
+    if(lbl)lbl.textContent=control?"Which person / loan (required)":"Which person / loan (optional)";
+    const rel=lends.filter(l=>l.status!=="Closed"&&(k==="recv"?l.type==="Debt Receivable":l.type!=="Debt Receivable"));
+    sel.innerHTML=noneOpt+o(k==="recv"?"newld:recv":"newld:pay","\u2795 New "+(k==="recv"?"person I lent to":"debt I owe")+" (name = description)")
       +rel.map(l=>o("ld:"+l.id,`${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due`)).join("");
   }
   wrap.style.display="";
+  wrap.classList.toggle("jrnl-required",control);
   return true;
 }
 function jrnlRecLabel(recSelId,acct){
@@ -1901,6 +1921,7 @@ function jrnlRecLabel(recSelId,acct){
   if(sel&&sel.value&&sel.style.display!=="none"){
     const v=sel.value;
     if(v.startsWith("inv:")){const iv=invs.find(x=>x.id===v.slice(4));if(iv)return acct.name+" \u2192 "+iv.name;}
+    if(v.startsWith("bank:"))return acct.name+" \u2192 "+v.slice(5);
     if(v.startsWith("ld:")){const l=lends.find(x=>x.id===v.slice(3));if(l)return acct.name+" \u2192 "+l.person;}
     if(v.startsWith("newinv"))return acct.name+" \u2192 new holding";
     if(v.startsWith("newld"))return acct.name+" \u2192 new record";
@@ -2697,24 +2718,28 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   const drA=coaByNumber(drNum),crA=coaByNumber(crNum);
   if(!drA||!crA){toast("Pick an account and an offset account");return;}
   if(drNum===crNum){toast("Account and offset must differ");return;}
-  const drBank=bankForCoa(drNum),crBank=bankForCoa(crNum);
+  /* control accounts must post via a sub-master: require the record picker */
+  const drLinkSel=$("#tRec")&&$("#tRecWrap").style.display!=="none"?$("#tRec").value:"";
+  const crLinkSel=$("#tOffRec")&&$("#tOffRecWrap").style.display!=="none"?$("#tOffRec").value:"";
+  if(isControl(drA)&&!drLinkSel){toast(`"${drA.name}" is a control account \u2014 choose which sub-master on the Account side`);return;}
+  if(isControl(crA)&&!crLinkSel){toast(`"${crA.name}" is a control account \u2014 choose which sub-master on the Offset side`);return;}
+  /* a bank chosen as a sub-master resolves to that actual bank for balance effects */
+  const drBank=bankForCoa(drNum)||(drLinkSel.startsWith("bank:")?banks.find(b=>b.name===drLinkSel.slice(5)):null);
+  const crBank=bankForCoa(crNum)||(crLinkSel.startsWith("bank:")?banks.find(b=>b.name===crLinkSel.slice(5)):null);
   const date=$("#tDate").value||todayISO(),desc=$("#tDesc").value.trim(),method=$("#tPay").value;
   let rec;
   /* map the double entry onto the tested transaction types where it fits;
      anything non-standard posts as a generic Journal that the voucher/P&L/bank
      logic understands. bank balances move only when a bank is on a side.       */
   if(crBank&&drA.type==="Expense"){
-    // money out of a bank to an expense  (Dr expense / Cr bank)
     rec={date,type:"Expense",cat:drA.name,coaAcct:drNum,desc,amount,bank:crBank.name,toBank:"",method,ref:"",loanRef:""};
   }else if(drBank&&crA.type==="Income"){
-    // money into a bank from an income source (Dr bank / Cr income)
     rec={date,type:"Income",cat:crA.name,coaAcct:crNum,desc,amount,bank:drBank.name,toBank:"",method,ref:"",loanRef:""};
   }else if(drBank&&crBank){
-    // bank to bank (Dr destination / Cr source)
     rec={date,type:"Transfer",cat:"Transfer",desc,amount,bank:crBank.name,toBank:drBank.name,method,ref:"",loanRef:""};
   }else{
-    // generic journal: store both sides; bankBalance handles any bank involved
-    rec={date,type:"Journal",cat:drA.name,coaAcct:drNum,offsetAcct:crNum,desc,amount,bank:"",toBank:"",method,ref:"",loanRef:""};
+    // generic journal: store both COA sides; if a bank sub-master is on a side, tag it
+    rec={date,type:"Journal",cat:drA.name,coaAcct:drBank?bankForCoa(drNum)?drNum:drBank.coa:drNum,offsetAcct:crBank?bankForCoa(crNum)?crNum:crBank.coa:crNum,desc,amount,bank:"",toBank:"",method,ref:"",loanRef:""};
   }
   if(editingTxn){
     const t=txns.find(x=>x.id===editingTxn);
@@ -2727,13 +2752,10 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     setDirty(true);renderAll();toast("Transaction updated");
   }else{
     rec.id=nextTxnId();
-    /* apply any record link chosen on a side (investment top-up/redeem, loan add/pay).
-       direction: a record on the Dr side gains value (asset up / liability down repaid);
-       on the Cr side it loses value (asset down / liability up borrowed).            */
-    const drLink=$("#tRec")&&$("#tRecWrap").style.display!=="none"?$("#tRec").value:"";
-    const crLink=$("#tOffRec")&&$("#tOffRecWrap").style.display!=="none"?$("#tOffRec").value:"";
-    applyJrnlRecord(rec,drLink,"dr",drA);
-    applyJrnlRecord(rec,crLink,"cr",crA);
+    /* apply investment/loan record links (banks already handled by the derivation).
+       direction: a record on the Dr side gains value; on the Cr side it loses value. */
+    applyJrnlRecord(rec,drLinkSel.startsWith("bank:")?"":drLinkSel,"dr",drA);
+    applyJrnlRecord(rec,crLinkSel.startsWith("bank:")?"":crLinkSel,"cr",crA);
     txns.push(rec);
     e.target.reset();$("#tDate").value=todayISO();
     $("#tType").value="Expense";$("#tOffType").value="Asset";
@@ -3217,7 +3239,7 @@ function renderCoa(){
   $("#coaFilteredSum").textContent=rows.length!==coa.length?`${rows.length} shown`:"";
   body.innerHTML=rows.map(a=>`<tr data-num="${esc(a.number)}"${editingCoa===a.number?' class="dup-row"':''}>
     <td data-l="Number"><span class="mono-id" style="font-size:.84rem;color:var(--text);margin:0">${esc(a.number)}</span></td>
-    <td data-l="Name"><strong>${esc(a.name)}</strong></td>
+    <td data-l="Name"><strong>${esc(a.name)}</strong>${a.control?' <span class="tag done" style="font-size:.6rem;vertical-align:middle">control</span>':''}</td>
     <td data-l="Type"><span class="tag ${coaTagClass(a.type)}">${esc(a.type||"\u2014")}</span></td>
     <td data-l="Category">${esc(a.category||"\u2014")}</td>
     <td data-l="Sub category" style="color:var(--muted);font-size:.83rem">${esc(a.sub||"\u2014")}</td>
@@ -3239,7 +3261,7 @@ $("#formCoa")&&$("#formCoa").addEventListener("submit",e=>{
   let category=$("#coaCat").value, sub=$("#coaSub").value;
   if(category==="__new"){category=$("#coaCatNew").value.trim();if(!category){toast("Type the new category name");return;}}
   if(sub==="__new"){sub=$("#coaSubNew").value.trim();if(!sub){toast("Type the new sub category name");return;}}
-  const rec={number:numv,name,type:$("#coaType").value,category,sub,keywords:$("#coaKw").value.trim()};
+  const rec={number:numv,name,type:$("#coaType").value,category,sub,keywords:$("#coaKw").value.trim(),control:$("#coaControl")&&$("#coaControl").checked?1:0};
   if(editingCoa){
     const a=coa.find(x=>x.number===editingCoa);
     if(a)Object.assign(a,rec);
@@ -3277,6 +3299,7 @@ $("#tblCoa")&&$("#tblCoa").addEventListener("click",e=>{
     syncCoaSub(a.sub||"");$("#coaSub").value=a.sub||"";
     $("#coaCatNew").style.display="none";$("#coaSubNew").style.display="none";
     $("#coaKw").value=a.keywords||"";
+    if($("#coaControl"))$("#coaControl").checked=!!a.control;
     const b=document.querySelector("#formCoa button[type=submit]");if(b)b.textContent="\u2713 Update account";
     $("#btnCancelCoa").style.display="";$("#formCoa").classList.add("editing");
     renderCoa();window.scrollTo(0,0);

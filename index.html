@@ -766,10 +766,12 @@
           <option value="Debt Receivable">Debt receivable (they owe me)</option>
           <option value="Debt Payable">Debt payable (I owe a person)</option>
           <option value="Bank Loan Payable">Bank loan (I owe a bank)</option>
+          <option value="Credit Card">Credit card</option>
         </select></div>
       <div class="f"><label for="ldPerson" id="ldPersonLabel">Person / Lender</label><input type="text" id="ldPerson" required></div>
       <div class="f"><label for="ldPurpose">Category / Purpose</label><input type="text" id="ldPurpose" placeholder="e.g. Money given, Housing loan"></div>
-      <div class="f"><label for="ldPrincipal">Opening principal <i>(optional — post entries later)</i></label><input type="number" id="ldPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f" id="ldLimitWrap" style="display:none"><label for="ldLimit">Credit limit <i>(optional)</i></label><input type="number" id="ldLimit" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 100000"></div>
+      <div class="f"><label for="ldPrincipal" id="ldPrincipalLabel">Opening principal <i>(optional — post entries later)</i></label><input type="number" id="ldPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
       <div class="f"><label for="ldRate">Interest rate <i>(% per year, optional)</i></label><input type="number" id="ldRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
       <div class="f"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
@@ -1672,6 +1674,7 @@ function parseWorkbook(buf,name){
       due:normDate(gv(r,"Due Date","Due")),
       status:String(gv(r,"Status")||"Open").trim()||"Open",
       coa:String(gv(r,"Main Account")||"").trim(),
+      creditLimit:num(gv(r,"Credit Limit","Limit")),
       closedDate:normDate(gv(r,"Closed Date")),
       closeBank:String(gv(r,"Close Bank Account","Close Bank")||"").trim(),
       txnRef:String(gv(r,"Auto-Posted Txn Ref","Txn Ref")||"").trim()
@@ -1783,10 +1786,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
-  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref","Main Account"];
-  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||"",r.coa||""]);
-  const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due.",ldHeaders,ldData);
-  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18}];
+  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref","Main Account","Credit Limit"];
+  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||"",r.coa||"",r.creditLimit||""]);
+  const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due. Credit cards track available = limit − balance.",ldHeaders,ldData);
+  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18},{wch:18},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
 
   // Investments
@@ -2415,13 +2418,17 @@ function renderAddRecent(){
   const recent=txns.slice(-5).reverse();   // last five in posting order, newest first
   if(!recent.length){box.innerHTML='<div class="empty-mini">Nothing posted yet — your first transaction will show here.</div>';return;}
   box.innerHTML=recent.map(t=>{
+    const i=txns.indexOf(t);
     const isIn=t.type==="Income", isOut=t.type==="Expense";
     const amt=(isIn?"+":isOut?"\u2212":"")+fmt(t.amount);
-    const acct=t.type==="Transfer"?(esc(t.bank)+" \u2192 "+esc(t.toBank)):esc(t.bank||"\u2014");
-    return `<div class="stmt-row" style="grid-template-columns:70px 1fr 110px">
+    const isVch=t.type==="Voucher"&&t.lines&&t.lines.length;
+    const acct=isVch?`${t.lines.length} lines`
+      :t.type==="Transfer"?(esc(t.bank)+" \u2192 "+esc(t.toBank)):esc(t.bank||"\u2014");
+    return `<div class="stmt-row" style="grid-template-columns:70px 1fr 110px auto" data-i="${i}">
       <div class="stmt-date">${esc((t.date||"").slice(5))}</div>
       <div class="stmt-detail"><strong>${esc(t.desc||t.cat||t.type)}</strong><span>${esc(t.cat||t.type)} \u00b7 ${acct}</span></div>
       <div class="stmt-amt"><span class="${isIn?"pos":isOut?"neg":"muted-amt"}">${amt}</span></div>
+      <div class="stmt-amt"><button type="button" class="icon-btn" data-act="voucher" title="View journal voucher">Vch</button></div>
     </div>`;
   }).join("");
 }
@@ -2563,8 +2570,8 @@ function renderStatement(){
 }
 
 /* ---------- loans & debts ---------- */
-function ldLabel(type){return type==="Debt Receivable"?"Receivable · owed to me":type==="Debt Payable"?"Payable · I owe":"Bank loan · I owe";}
-function ldShort(type){return type==="Debt Receivable"?"Receivable":type==="Debt Payable"?"Payable":"Bank loan";}
+function ldLabel(type){return type==="Debt Receivable"?"Receivable · owed to me":type==="Debt Payable"?"Payable · I owe":type==="Credit Card"?"Credit card · I owe":"Bank loan · I owe";}
+function ldShort(type){return type==="Debt Receivable"?"Receivable":type==="Debt Payable"?"Payable":type==="Credit Card"?"Credit card":"Bank loan";}
 /* ---------- loan interest maths ----------
    EMI uses the standard reducing-balance amortisation formula.
    Net payable = EMI x term. With no term we cannot spread interest,
@@ -2593,11 +2600,13 @@ function ldRowHtml(r,i){
   const net=ldNetPayable(r), emi=ldEmi(r), paid=r2(net-r.balance);
   const pct=net>0?Math.max(0,Math.min(100,paid/net*100)):0;
   const interest=ldInterest(r);
-  const sub=[r.purpose,r.due?"due "+r.due:""].filter(Boolean).join(" \u00b7 ");
+  const isCard=r.type==="Credit Card";
+  const avail=isCard&&r.creditLimit>0?r2(r.creditLimit-r.balance):null;
+  const sub=[r.purpose,isCard&&r.creditLimit>0?`limit ${fmt(r.creditLimit)} \u00b7 ${fmt(avail)} available`:"",r.due?"due "+r.due:""].filter(Boolean).join(" \u00b7 ");
   return `<tr data-i="${i}"${closed?' class="is-closed"':''}>
     <td data-l="Record" class="ld-id"><span class="mono-id">${esc(r.id)}</span><span class="tag ${recvType?"given":"taken"}" title="${esc(ldLabel(r.type))}">${esc(ldShort(r.type))}</span></td>
     <td data-l="Person / Lender" class="ld-who"><strong class="ld-name" title="${esc(r.person)}">${esc(r.person)}</strong>${sub?`<span class="ld-sub" title="${esc(sub)}">${esc(sub)}</span>`:""}${closed&&r.txnRef?`<span class="ld-sub">\ud83d\udd17 ${esc(r.txnRef)}</span>`:""}</td>
-    <td data-l="Principal" class="num">${fmt(r.principal)}</td>
+    <td data-l="Principal" class="num">${isCard?(r.creditLimit>0?`${fmt(avail)}<span class="cell-sub">of ${fmt(r.creditLimit)} free</span>`:'<span class="dash">\u2014</span>'):fmt(r.principal)}</td>
     <td data-l="EMI / rate" class="num">${r.rate>0?(emi>0?`${fmt(emi)}<span class="cell-sub">${esc(r.rate)}% \u00b7 ${r.term} mo</span>`:`${esc(r.rate)}%<span class="cell-sub">no term set</span>`):'<span class="dash">\u2014</span>'}</td>
     <td data-l="Net payable" class="num">${fmt(net)}${interest>0?`<span class="cell-sub coral">+${fmt(interest)} int</span>`:""}</td>
     <td data-l="Paid" class="num">${paid>0?fmt(paid):'<span class="dash">\u2014</span>'}${net>0&&!closed&&paid>0?`<span class="ld-bar" title="${pct.toFixed(1)}% repaid"><i style="width:${pct.toFixed(1)}%"></i></span>`:""}</td>
@@ -3077,6 +3086,7 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
       r.principal=principal;r.rate=rate;r.term=term;
       r.issue=$("#ldIssue").value||r.issue;r.due=$("#ldDue").value||"";
       r.coa=coaVal;
+      r.creditLimit=num($("#ldLimit").value);
       // shift the outstanding balance by however much the net payable moved
       r.balance=r2(r.balance+(ldNetPayable(r)-oldNet));
       if(r.balance<0)r.balance=0;
@@ -3084,14 +3094,14 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
     cancelEditLD();setDirty(true);renderAll();toast("Record updated");
     return;
   }
-  const prefix=type==="Bank Loan Payable"?"LOAN":"DEBT";
+  const prefix=type==="Bank Loan Payable"?"LOAN":type==="Credit Card"?"CARD":"DEBT";
   const id=nextId(lends,prefix,1);
-  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",coa:coaVal,closedDate:"",closeBank:"",txnRef:""};
+  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,creditLimit:num($("#ldLimit").value),balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",coa:coaVal,closedDate:"",closeBank:"",txnRef:""};
   rec.balance=ldNetPayable(rec);   // liability starts at principal + interest (0 if no principal yet)
   lends.push(rec);
   /* master only \u2014 no bank cash posting. build the balance by posting vouchers to this record. */
-  e.target.reset();$("#ldIssue").value=todayISO();updateLdPreview();setDirty(true);renderAll();
-  toast(rec.term>0?`${id} added — EMI ${fmt(ldEmi(rec))}, net payable ${fmt(ldNetPayable(rec))}`:"Record added");
+  e.target.reset();$("#ldIssue").value=todayISO();if($("#ldLimitWrap"))$("#ldLimitWrap").style.display="none";updateLdPreview();setDirty(true);renderAll();
+  toast(type==="Credit Card"?`Credit card ${id} added`:rec.term>0?`${id} added — EMI ${fmt(ldEmi(rec))}, net payable ${fmt(ldNetPayable(rec))}`:"Record added");
 });
 /* live EMI / net-payable preview under the loan form */
 function updateLdPreview(){
@@ -3119,7 +3129,8 @@ function loadLDIntoForm(r){
   if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"",{catMatch:r.type==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
   $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
   $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
-  /* funding field removed - master only */
+  if($("#ldLimit"))$("#ldLimit").value=r.creditLimit||"";
+  if($("#ldLimitWrap"))$("#ldLimitWrap").style.display=r.type==="Credit Card"?"":"none";
   const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="✓ Update record";
   if($("#btnCancelLD"))$("#btnCancelLD").style.display="";
   $("#formLD").classList.add("editing");
@@ -3210,13 +3221,13 @@ $("#btnCancelInv")&&$("#btnCancelInv").addEventListener("click",cancelEditInv);
 document.addEventListener("click",e=>{
   const btn=e.target.closest("[data-act]");
   if(!btn)return;
-  const tr=btn.closest("tr");if(!tr)return;
+  const tr=btn.closest("tr,[data-i]");if(!tr)return;
   const i=+tr.dataset.i;
   const done=()=>{setDirty(true);renderAll();};
   switch(btn.dataset.act){
     case "voucher":{const t=txns[i];if(t)openVoucher(t);break;}
     case "editTxn":{const t=txns[i];if(t)loadTxnIntoForm(t);break;}
-    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();reverseLoanPayment(txns[i]);reverseInvTopup(txns[i]);reverseLoanTopup(txns[i]);txns.splice(i,1);done();}break;
+    case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();const tt=txns[i];if(tt.type==="Voucher")reverseVoucherEffects(tt);else{reverseLoanPayment(tt);reverseInvTopup(tt);reverseLoanTopup(tt);}txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
     case "editInv":{const r=invs[i];if(r)loadInvIntoForm(r);break;}
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
@@ -3362,8 +3373,13 @@ $("#stmtBank")&&$("#stmtBank").addEventListener("change",renderStatement);
 $("#stmtMonth")&&$("#stmtMonth").addEventListener("change",renderStatement);
 $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   const t=$("#ldType").value;
-  $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":"Person";
-  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",$("#ldCoa").value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
+  const card=t==="Credit Card";
+  $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":card?"Card name / issuer":"Person";
+  if($("#ldLimitWrap"))$("#ldLimitWrap").style.display=card?"":"none";
+  if($("#ldPrincipalLabel"))$("#ldPrincipalLabel").innerHTML=card?'Opening outstanding <i>(optional)</i>':'Opening principal <i>(optional — post entries later)</i>';
+  /* credit cards are a payable liability, same COA family as loans owed */
+  const payable=t==="Debt Receivable"?false:true;
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(payable?"Liability":"Asset",$("#ldCoa").value,{catMatch:payable?/(loan|debt|borrow|payable|credit)/:/receivable/,taken:coaTakenBy("loan")});
 });
 
 /* ---------- tab nav ---------- */

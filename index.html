@@ -774,9 +774,9 @@
       <div class="f"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
       <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
-      <div class="f" id="ldFundWrap"><label for="ldFundBank" id="ldFundLabel">Funded from bank <i>(optional)</i></label><select id="ldFundBank"></select></div>
       <div class="f"><label for="ldCoa">Main account <i>(COA · required)</i></label><select id="ldCoa"></select></div>
-      <div class="f"><button type="submit">+ Add record</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+      <input type="hidden" id="ldFundBank" value="">
+      <div class="f"><button type="submit">+ Create record master</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <div id="ldCalcPreview" class="calc-preview" style="display:none"></div>
     </form>
     <div class="toolbar">
@@ -3089,15 +3089,7 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",coa:coaVal,closedDate:"",closeBank:"",txnRef:""};
   rec.balance=ldNetPayable(rec);   // liability starts at principal + interest (0 if no principal yet)
   lends.push(rec);
-  // Optionally auto-post the cash movement when a debt is funded from a bank (only if a principal was entered)
-  const fund=$("#ldFundBank").value;
-  if(fund&&principal>0&&type!=="Bank Loan Payable"){
-    if(type==="Debt Receivable"){ // I gave money out → expense-like debit from bank
-      txns.push({id:nextTxnId(),date:rec.issue,type:"Expense",cat:"Debt Given",desc:"Lent to "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")",loanRef:""});
-    }else{ // Debt Payable: I borrowed → income-like credit into bank
-      txns.push({id:nextTxnId(),date:rec.issue,type:"Income",cat:"Debt Taken",desc:"Borrowed from "+rec.person,amount:principal,bank:fund,toBank:"",method:"",ref:"Linked: "+id+" ("+rec.person+")",loanRef:""});
-    }
-  }
+  /* master only \u2014 no bank cash posting. build the balance by posting vouchers to this record. */
   e.target.reset();$("#ldIssue").value=todayISO();updateLdPreview();setDirty(true);renderAll();
   toast(rec.term>0?`${id} added — EMI ${fmt(ldEmi(rec))}, net payable ${fmt(ldNetPayable(rec))}`:"Record added");
 });
@@ -3127,7 +3119,7 @@ function loadLDIntoForm(r){
   if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"",{catMatch:r.type==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
   $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
   $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
-  if($("#ldFundWrap"))$("#ldFundWrap").style.display="none";   // funding only applies to new records
+  /* funding field removed - master only */
   const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="✓ Update record";
   if($("#btnCancelLD"))$("#btnCancelLD").style.display="";
   $("#formLD").classList.add("editing");
@@ -3138,7 +3130,7 @@ function cancelEditLD(){
   editingLD=null;
   const f=$("#formLD");if(f){f.reset();f.classList.remove("editing");}
   $("#ldIssue").value=todayISO();
-  if($("#ldFundWrap"))$("#ldFundWrap").style.display="";
+
   const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="+ Add record";
   if($("#btnCancelLD"))$("#btnCancelLD").style.display="none";
   updateLdPreview();
@@ -3371,7 +3363,6 @@ $("#stmtMonth")&&$("#stmtMonth").addEventListener("change",renderStatement);
 $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   const t=$("#ldType").value;
   $("#ldPersonLabel").textContent=t==="Bank Loan Payable"?"Lender / Bank":"Person";
-  $("#ldFundWrap").style.display=t==="Bank Loan Payable"?"none":"";
   if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",$("#ldCoa").value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
 });
 

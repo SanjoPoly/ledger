@@ -890,13 +890,15 @@
     <div class="set-sec active" id="secBanks">
       <p class="sub" style="margin-bottom:1rem">Add and manage your bank accounts and opening balances here. Balances and statements appear on the Banks tab.</p>
       <form class="add-card" id="formBank" style="grid-template-columns:1fr 1fr">
-        <div class="f"><label for="bName">Bank / Account name</label><input type="text" id="bName" required></div>
+        <div class="f"><label for="bName">Bank / Card name</label><input type="text" id="bName" required></div>
+        <div class="f"><label for="bKind">Account kind</label><select id="bKind"><option value="bank">Bank account (asset)</option><option value="card">Credit card (liability)</option></select></div>
         <div class="f"><label for="bAcct">Account number</label><input type="text" id="bAcct"></div>
         <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
-        <div class="f"><label for="bOpen">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
-        <div class="f"><label for="bCoa">Main account <i>(COA · auto if blank)</i></label><select id="bCoa"></select></div>
+        <div class="f"><label for="bOpen" id="bOpenLabel">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
+        <div class="f" id="bLimitWrap" style="display:none"><label for="bLimit">Credit limit</label><input type="number" step="0.01" id="bLimit" value="0" placeholder="e.g. 100000"></div>
+        <div class="f"><label for="bCoa" id="bCoaLabel">Main account <i>(COA · required)</i></label><select id="bCoa"></select></div>
         <div class="f wide" style="grid-column:1/-1"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
-        <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add bank</button>
+        <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add account</button>
       </form>
       <div class="toolbar"><input type="search" id="searchBank" placeholder="Search banks…"></div>
       <div class="table-card">
@@ -1567,8 +1569,13 @@ function voucherBankFlow(name,side,asOf){
 function bankBalance(name,asOf){
   const b=banks.find(x=>x.name===name);
   const opening=b?b.opening:0;
+  /* a credit card is a liability: spends (debits) increase what you owe,
+     payments (credits) reduce it \u2014 so the sign is flipped vs an asset bank */
+  if(b&&b.kind==="card")return r2(opening+bankDebits(name,asOf)-bankCredits(name,asOf));
   return r2(opening+bankCredits(name,asOf)-bankDebits(name,asOf));
 }
+function isCardAcct(name){const b=banks.find(x=>x.name===name);return !!(b&&b.kind==="card");}
+function cardAvailable(name){const b=banks.find(x=>x.name===name);if(!b||b.kind!=="card")return null;return r2((b.creditLimit||0)-bankBalance(name));}
 
 /* ---------- parse the 4-sheet workbook (headers on row 3) ---------- */
 function sheetRows(wb,name){
@@ -1649,6 +1656,8 @@ function parseWorkbook(buf,name){
       type:String(gv(r,"Account Type")||"Savings").trim()||"Savings",
       opening:num(gv(r,"Opening Balance")),
       coa:String(gv(r,"Main Account")||"").trim(),
+      kind:/card/i.test(String(gv(r,"Account Kind","Kind")||""))?"card":"bank",
+      creditLimit:num(gv(r,"Credit Limit","Limit")),
       recDate:normDate(gv(r,"Reconciled Date")),
       statement:gv(r,"Statement Balance")===""?null:num(gv(r,"Statement Balance")),
       notes:String(gv(r,"Notes")||"").trim()
@@ -1773,16 +1782,17 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
-  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status","Main Account"];
+  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status","Main Account","Account Kind","Credit Limit"];
   const bkData=banks.map(b=>{
-    const cr=bankCredits(b.name),db=bankDebits(b.name),book=r2(b.opening+cr-db);
+    const cr=bankCredits(b.name),db=bankDebits(b.name);
+    const book=b.kind==="card"?r2(b.opening+db-cr):r2(b.opening+cr-db);   // card = outstanding owed
     const stmt=b.statement;
     const disc=stmt==null?"":r2(book-stmt);
     const status=stmt==null?"Pending":(Math.abs(book-stmt)<0.01?"Reconciled":"Discrepancy");
-    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status,b.coa||""];
+    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status,b.coa||"",b.kind==="card"?"Credit Card":"Bank",b.creditLimit||""];
   });
-  const wsB=bannerSheet("Bank Accounts & Reconciliation","Automated balance tracking with reconciliation discrepancy checking",bkHeaders,bkData);
-  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18},{wch:12}];
+  const wsB=bannerSheet("Bank Accounts & Reconciliation","Automated balance tracking with reconciliation. Credit-card accounts track outstanding = opening + spends − payments.",bkHeaders,bkData);
+  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18},{wch:12},{wch:13},{wch:13}];
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
@@ -2179,10 +2189,11 @@ function renderStatements(){
   const asOf=(typeof dashAsOf==="function")?dashAsOf():"";
   const beforeAsOf=d=>!asOf||(d||"")<=asOf;
   /* ----- assets & liabilities as of the selected period (or now) ----- */
-  const bankRows=banks.map(b=>({name:b.name,amt:bankBalance(b.name,asOf)}));
+  const bankRows=banks.filter(b=>b.kind!=="card").map(b=>({name:b.name,amt:bankBalance(b.name,asOf)}));
+  const cardRows=banks.filter(b=>b.kind==="card").map(b=>({name:b.name+" (card)",amt:bankBalance(b.name,asOf)})).filter(x=>x.amt>0.005);
   const invRows=invs.filter(v=>v.status!=="Closed"&&beforeAsOf(v.date)).map(v=>({name:v.name+" \u00b7 "+v.id,amt:v.current}));
   const recvRows=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
-  const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
+  const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance})).concat(cardRows);
   const aT=r2([...bankRows,...invRows,...recvRows].reduce((sm,x)=>sm+x.amt,0));
   const lT=r2(payRows.reduce((sm,x)=>sm+x.amt,0));
   const stBalScope=$("#stBalScope");
@@ -2239,7 +2250,7 @@ function renderDash(){
   const incM=txns.filter(t=>t.type==="Income"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
   const expM=txns.filter(t=>t.type==="Expense"&&monthKeyOf(t.date)===mk).reduce((s,t)=>s+t.amount,0);
   const net=incM-expM;
-  const cash=banks.reduce((s,b)=>s+bankBalance(b.name),0);
+  const cash=banks.filter(b=>b.kind!=="card").reduce((s,b)=>s+bankBalance(b.name),0);
   const invested=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.amount,0);
   const value=invs.filter(v=>v.status!=="Closed").reduce((s,v)=>s+v.current,0);
   const gain=value-invested,pct=invested?gain/invested*100:0;
@@ -2478,29 +2489,39 @@ function renderTxn(){
 function renderBank(){
   const cardBox=$("#bankCards"),tblBody=document.querySelector("#tblBank tbody");
   const head=$("#bankTotalHead");
-  if(head)head.textContent=banks.length?`${fmt(banks.reduce((s,b)=>s+bankBalance(b.name),0))} total`:"";
+  if(head){
+    const assets=banks.filter(b=>b.kind!=="card").reduce((s,b)=>s+bankBalance(b.name),0);
+    const cardDebt=banks.filter(b=>b.kind==="card").reduce((s,b)=>s+bankBalance(b.name),0);
+    head.textContent=banks.length?(fmt(assets)+" in banks"+(cardDebt>0?" \u00b7 "+fmt(cardDebt)+" on cards":"")):"";
+  }
   if(cardBox){
     cardBox.innerHTML=banks.map((b,i)=>{
+      const isCard=b.kind==="card";
       const bal=bankBalance(b.name);
       const last=(b.acct||"").toString().slice(-4);
-      const book=r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
+      const book=isCard?r2(b.opening+bankDebits(b.name)-bankCredits(b.name)):r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
       const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
-      const recTag=reconciled?`<div class="rec-chip">✓ Reconciled ${esc(b.recDate||"")}</div>`:"";
-      return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}"><div class="label">${esc(b.type||"")}${last?" · ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div>${recTag}</div>`;
+      const recTag=reconciled?`<div class="rec-chip">\u2713 Reconciled ${esc(b.recDate||"")}</div>`:"";
+      if(isCard){
+        const avail=cardAvailable(b.name);
+        return `<div class="bank-card card-acct" data-i="${i}"><div class="label">\ud83d\udcb3 Credit card${last?" \u00b7 ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance neg">${fmt(bal)} <span style="font-size:.7rem;color:var(--muted)">owed</span></div>${b.creditLimit>0?`<div class="rec-chip" style="background:rgba(61,220,163,.12);color:var(--mint)">${fmt(avail)} of ${fmt(b.creditLimit)} available</div>`:""}${recTag}</div>`;
+      }
+      return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}"><div class="label">${esc(b.type||"")}${last?" \u00b7 ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div>${recTag}</div>`;
     }).join("");
   }
   if(tblBody){
     const q=($("#searchBank")?$("#searchBank").value:"").trim().toLowerCase();
     const rows=banks.map((b,i)=>({b,i})).filter(({b})=>!q||b.name.toLowerCase().includes(q));
     tblBody.innerHTML=rows.map(({b,i})=>{
-      const book=r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
+      const isCard=b.kind==="card";
+      const book=isCard?r2(b.opening+bankDebits(b.name)-bankCredits(b.name)):r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
       const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
       return `<tr data-i="${i}">`+
-        `<td data-l="Bank"><strong>${esc(b.name)}</strong>${reconciled?` <span class="tag done" style="font-size:.62rem">✓ ${esc(b.recDate||"")}</span>`:""}${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>`+
-        `<td data-l="Type">${esc(b.type||"")}</td>`+
-        `<td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"—"}</td>`+
+        `<td data-l="Bank"><strong>${esc(b.name)}</strong>${isCard?' <span class="tag taken" style="font-size:.6rem">card</span>':""}${reconciled?` <span class="tag done" style="font-size:.62rem">\u2713 ${esc(b.recDate||"")}</span>`:""}${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:.15rem">${esc(b.notes)}</div>`:""}</td>`+
+        `<td data-l="Type">${esc(b.type||"")}${isCard&&b.creditLimit>0?`<div style="font-size:.7rem;color:var(--muted)">limit ${fmt(b.creditLimit)}</div>`:""}</td>`+
+        `<td data-l="Account#" style="font-family:var(--mono);font-size:.8rem">${b.acct?"····"+esc(String(b.acct).slice(-4)):"\u2014"}</td>`+
         `<td data-l="Opening" class="num">${fmt(b.opening)}</td>`+
-        `<td data-l="Balance" class="num"><strong>${fmt(bankBalance(b.name))}</strong></td>`+
+        `<td data-l="Balance" class="num"><strong class="${isCard?"neg":""}">${fmt(bankBalance(b.name))}</strong>${isCard?'<span class="cell-sub">outstanding</span>':""}</td>`+
         `<td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-bact="edit">Edit</button><button type="button" class="icon-btn danger" data-bact="del">Delete</button></div></td></tr>`;
     }).join("");
   }
@@ -3340,23 +3361,39 @@ let bankEditState=null;
 $("#formBank")&&$("#formBank").addEventListener("submit",e=>{
   e.preventDefault();
   const name=$("#bName").value.trim();
-  if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("Bank name already exists");return;}
-  const nb={id:nextId(banks,"ACC",1),name,acct:$("#bAcct").value.trim(),type:$("#bType").value,opening:num($("#bOpen").value),coa:$("#bCoa")?$("#bCoa").value:"",recDate:null,statement:null,notes:$("#bNotes").value.trim()};
+  if(banks.some(b=>b.name.toLowerCase()===name.toLowerCase())){toast("That name already exists");return;}
+  const kind=$("#bKind")?$("#bKind").value:"bank";
+  const coaVal=$("#bCoa")?$("#bCoa").value:"";
+  if(!coaVal){toast("Choose a main account \u2014 it's required so entries post to the right ledger");return;}
+  const nb={id:nextId(banks,kind==="card"?"CARD":"ACC",1),name,acct:$("#bAcct").value.trim(),type:kind==="card"?"Credit Card":$("#bType").value,opening:num($("#bOpen").value),coa:coaVal,kind,creditLimit:kind==="card"?num($("#bLimit").value):0,recDate:null,statement:null,notes:$("#bNotes").value.trim()};
   if(bankEditState){nb.id=bankEditState.id;if(bankEditState.opening===nb.opening){nb.statement=bankEditState.statement;nb.recDate=bankEditState.recDate;}bankEditState=null;}
   banks.push(nb);
-  e.target.reset();$("#bOpen").value="0";
-  setDirty(true);renderAll();toast("Bank saved");
+  e.target.reset();$("#bOpen").value="0";if($("#bLimit"))$("#bLimit").value="0";if($("#bLimitWrap"))$("#bLimitWrap").style.display="none";
+  setDirty(true);renderAll();toast(kind==="card"?"Credit card saved":"Bank saved");
+});
+$("#bKind")&&$("#bKind").addEventListener("change",()=>{
+  const card=$("#bKind").value==="card";
+  if($("#bLimitWrap"))$("#bLimitWrap").style.display=card?"":"none";
+  if($("#bOpenLabel"))$("#bOpenLabel").textContent=card?"Opening outstanding":"Opening balance";
+  /* a card's main account is a liability (Credit Card Payable); a bank's is an asset */
+  if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions(card?"Liability":"Asset",$("#bCoa").value,{catMatch:card?/(credit|card|payable)/:/(cash|bank)/,taken:coaTakenBy("bank")});
 });
 document.addEventListener("click",e=>{
   const btn=e.target.closest("[data-bact]");
   if(!btn)return;
   const i=+btn.closest("tr").dataset.i, b=banks[i];
   if(btn.dataset.bact==="edit"){
-    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions("Asset",b.coa||"",{catMatch:/(cash|bank)/,taken:coaTakenBy("bank")});
+    if($("#bKind"))$("#bKind").value=b.kind||"bank";
+    const card=(b.kind==="card");
+    $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
+    if($("#bLimit"))$("#bLimit").value=b.creditLimit||0;
+    if($("#bLimitWrap"))$("#bLimitWrap").style.display=card?"":"none";
+    if($("#bOpenLabel"))$("#bOpenLabel").textContent=card?"Opening outstanding":"Opening balance";
+    if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions(card?"Liability":"Asset",b.coa||"",{catMatch:card?/(credit|card|payable)/:/(cash|bank)/,taken:coaTakenBy("bank")});
     bankEditState={id:b.id,statement:b.statement,recDate:b.recDate,opening:b.opening};
     banks.splice(i,1);setDirty(true);renderAll();
     setSettingsTab&&setSettingsTab("secBanks");
-    toast("Loaded into the form — edit and press “+ Add bank” to save it back");
+    toast("Loaded into the form \u2014 edit and save to update");
   }else if(btn.dataset.bact==="del"){
     const used=txns.some(t=>t.bank===b.name||t.toBank===b.name)||invs.some(v=>v.bank===b.name)||lends.some(l=>l.closeBank===b.name);
     if(used){toast("This bank has transactions — remove those first");return;}

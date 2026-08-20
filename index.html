@@ -802,13 +802,12 @@
     <form class="add-card" id="formInv">
       <div class="f"><label for="ivName">Asset name</label><input type="text" id="ivName" placeholder="e.g. APY Pension" required></div>
       <div class="f"><label for="ivType">Asset type</label><select id="ivType"></select></div>
-      <div class="f"><label for="ivDate" id="ivDateLabel">Invested date</label><input type="date" id="ivDate" required></div>
-      <div class="f"><label for="ivAmt" id="ivAmtLabel">Amount invested</label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f"><label for="ivCur">Current value</label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as amount"></div>
-      <div class="f" id="ivBankWrap"><label for="ivBank">Funded from bank</label><select id="ivBank"></select></div>
-      <div class="f"><label for="ivCoa">Main account <i>(COA · auto if blank)</i></label><select id="ivCoa"></select></div>
-      <div class="f" style="justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text)"><input type="checkbox" id="ivExisting" style="width:17px;height:17px;accent-color:var(--mint)"> Existing holding — enter opening balance (no bank posting)</label></div>
-      <div class="f"><button type="submit" id="ivSubmitBtn">+ Add investment</button><button type="button" id="btnCancelInv" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+      <div class="f"><label for="ivDate" id="ivDateLabel">As-of date</label><input type="date" id="ivDate"></div>
+      <div class="f"><label for="ivAmt" id="ivAmtLabel">Opening cost <i>(optional — post entries later)</i></label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="ivCur">Current value <i>(optional)</i></label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as opening"></div>
+      <div class="f"><label for="ivCoa">Main account <i>(COA · required)</i></label><select id="ivCoa"></select></div>
+      <input type="hidden" id="ivBank" value=""><input type="checkbox" id="ivExisting" style="display:none">
+      <div class="f"><button type="submit" id="ivSubmitBtn">+ Create investment master</button><button type="button" id="btnCancelInv" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
     <div class="toolbar">
       <input type="search" id="searchInv" placeholder="Search asset…">
@@ -3160,23 +3159,14 @@ $("#tblInv")&&$("#tblInv").addEventListener("click",e=>{
     renderLD();
   });
 });
-$("#ivExisting")&&$("#ivExisting").addEventListener("change",()=>{
-  const on=$("#ivExisting").checked;
-  /* while editing, the bank field stays hidden (edits never re-post cash) */
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display=(on||editingInv)?"none":"";
-  /* speak in opening-balance terms for a holding you already own */
-  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent=on?"Opening balance (invested cost)":"Amount invested";
-  if($("#ivDateLabel"))$("#ivDateLabel").textContent=on?"As-of date":"Invested date";
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=editingInv?(on?"\u2713 Update opening balance":"\u2713 Update investment"):(on?"+ Add opening balance":"+ Add investment");
-});
+/* (investment form is now master-only; the existing-holding toggle was removed) */
 $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
   e.preventDefault();
-  const amount=num($("#ivAmt").value);
-  const existing=$("#ivExisting")&&$("#ivExisting").checked;
-  if(amount<=0){toast(existing?"Enter the opening balance":"Enter the amount invested");return;}
+  const amount=num($("#ivAmt").value);   // 0 allowed \u2014 create the master, post entries later
+  const coaVal=$("#ivCoa")?$("#ivCoa").value:"";
+  if(!coaVal){toast("Choose a main account \u2014 it's required so entries post to the right ledger");return;}
+  if(!$("#ivName").value.trim()){toast("Enter the asset name");return;}
   if(editingInv){
-    /* update the existing holding in place; funding/bank posting is left as-is
-       (editing details doesn't re-post cash — use delete+add if the funding changed) */
     const r=invs.find(v=>v.id===editingInv);
     if(r){
       r.name=$("#ivName").value.trim();
@@ -3184,8 +3174,8 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
       r.date=$("#ivDate").value||r.date;
       r.amount=amount;
       r.current=$("#ivCur").value===""?amount:num($("#ivCur").value);
-      r.coa=$("#ivCoa")?$("#ivCoa").value:r.coa;
-      r.opening=existing?1:0;   // mark/unmark as an opening-balance holding
+      r.coa=coaVal;
+      r.opening=amount>0?1:0;
     }
     cancelEditInv();
     setDirty(true);renderAll();
@@ -3193,18 +3183,12 @@ $("#formInv")&&$("#formInv").addEventListener("submit",e=>{
     return;
   }
   const id=nextId(invs,"INV",1);
-  const bank=existing?"":$("#ivBank").value;
-  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank,coa:$("#ivCoa")?$("#ivCoa").value:"",opening:existing?1:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
-  // auto-post the cash leaving the bank \u2014 skipped for pre-existing holdings brought in as opening balances
-  if(bank&&!existing)txns.push({id:nextTxnId(),date:$("#ivDate").value||todayISO(),type:"Expense",cat:"Investment",desc:"Invested in "+$("#ivName").value.trim(),amount,bank,toBank:"",method:"",ref:"Linked: "+id,loanRef:""});
+  /* master only \u2014 no bank cash posting. build value by posting vouchers to this holding. */
+  invs.push({id,name:$("#ivName").value.trim(),assetType:$("#ivType").value,date:$("#ivDate").value||todayISO(),amount,current:$("#ivCur").value===""?amount:num($("#ivCur").value),bank:"",coa:coaVal,opening:amount>0?1:0,status:"Open",closedDate:"",closedValue:0,txnRef:""});
   e.target.reset();$("#ivDate").value=todayISO();
-  /* restore default labels after the form resets the checkbox */
-  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent="Amount invested";
-  if($("#ivDateLabel"))$("#ivDateLabel").textContent="Invested date";
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Add investment";
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display="";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Create investment master";
   setDirty(true);renderAll();
-  toast(existing?"Opening balance recorded":"Investment added");
+  toast("Investment master created \u00b7 "+id);
 });
 function loadInvIntoForm(r){
   editingInv=r.id;
@@ -3214,15 +3198,7 @@ function loadInvIntoForm(r){
   $("#ivAmt").value=r.amount;
   $("#ivCur").value=r.current;
   if($("#ivCoa"))$("#ivCoa").innerHTML=coaAcctOptions("Asset",r.coa||"",{catMatch:/invest/,taken:coaTakenBy("inv")});
-  /* editing details \u2014 no bank funding, but the opening-balance toggle stays available
-     so a holding can be marked (or unmarked) as an opening balance while editing */
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display="none";
-  if($("#ivExisting")){
-    const wrap=$("#ivExisting").closest(".f");if(wrap)wrap.style.display="";
-    $("#ivExisting").checked=!!r.opening;
-    $("#ivExisting").dispatchEvent(new Event("change"));   // relabel amount->opening if ticked
-  }
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent=r.opening?"\u2713 Update opening balance":"\u2713 Update investment";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="\u2713 Update investment";
   if($("#btnCancelInv"))$("#btnCancelInv").style.display="";
   $("#formInv").classList.add("editing");
   window.scrollTo(0,0);
@@ -3232,11 +3208,7 @@ function cancelEditInv(){
   editingInv=null;
   const f=$("#formInv");if(f){f.reset();f.classList.remove("editing");}
   $("#ivDate").value=todayISO();
-  if($("#ivBankWrap"))$("#ivBankWrap").style.display="";
-  if($("#ivExisting")&&$("#ivExisting").closest(".f"))$("#ivExisting").closest(".f").style.display="";
-  if($("#ivAmtLabel"))$("#ivAmtLabel").textContent="Amount invested";
-  if($("#ivDateLabel"))$("#ivDateLabel").textContent="Invested date";
-  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Add investment";
+  if($("#ivSubmitBtn"))$("#ivSubmitBtn").textContent="+ Create investment master";
   if($("#btnCancelInv"))$("#btnCancelInv").style.display="none";
 }
 $("#btnCancelInv")&&$("#btnCancelInv").addEventListener("click",cancelEditInv);

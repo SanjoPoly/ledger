@@ -394,6 +394,9 @@
   .due-row .due-who{font-weight:600;font-size:.86rem}
   .due-row .due-meta{font-size:.72rem;color:var(--muted);margin-top:.1rem}
   .due-row .due-amt{font-family:var(--mono);font-weight:700;font-size:.9rem;text-align:right;white-space:nowrap}
+  .due-right{display:flex;align-items:center;gap:.6rem}
+  .due-btn{border:1px solid var(--line-strong);background:var(--card);color:var(--text);border-radius:8px;padding:.32rem .7rem;font-size:.74rem;font-weight:600;cursor:pointer;white-space:nowrap}
+  .due-btn:hover{border-color:var(--mint);color:var(--mint)}
   .due-row.overdue{border-color:var(--coral);background:rgba(255,110,97,.07)}
   .due-row.soon{border-color:var(--amber,#E0A21B)}
   .due-tag{display:inline-block;font-size:.6rem;font-weight:700;padding:.1rem .4rem;border-radius:999px;margin-left:.35rem;vertical-align:middle}
@@ -713,7 +716,7 @@
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
     </div>
-    <div class="section-head" style="margin-top:1.6rem"><h2 style="font-size:1.05rem">Dues &amp; receipts</h2><span class="total" id="duesHead"></span></div>
+    <div class="section-head" style="margin-top:1.6rem"><h2 style="font-size:1.05rem">Dues &amp; receipts</h2><select id="duesPeriod" class="mini-select" style="margin-left:.6rem"></select><span class="total" id="duesHead" style="margin-left:auto"></span></div>
     <div class="dues-grid">
       <div class="chart-card"><h3 style="color:var(--mint)">To receive <small id="dueRecvSum"></small></h3><div id="dueRecv" class="dues-list"></div></div>
       <div class="chart-card"><h3 style="color:var(--coral)">To pay <small id="duePaySum"></small></h3><div id="duePay" class="dues-list"></div></div>
@@ -1038,6 +1041,22 @@
     <div class="stack">
       <button class="btn primary" id="btnCloseConfirm">Confirm &amp; close</button>
       <button class="btn ghost" id="btnCloseCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="settleOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:440px;max-height:90vh;overflow:auto">
+    <h2 style="font-size:1.25rem;margin-bottom:.5rem" id="settleTitle">Record payment</h2>
+    <p class="sub" id="settleSub"></p>
+    <div class="auth-error" id="settleError"></div>
+    <div class="f"><label for="settleAmt">Amount</label><input type="number" step="0.01" id="settleAmt" placeholder="0.00"></div>
+    <div class="f"><label for="settleDate">Date</label><input type="date" id="settleDate"></div>
+    <div class="f"><label for="settleAcct" id="settleAcctLabel">From / to account</label><select id="settleAcct" class="bank-select" style="width:100%"></select></div>
+    <div class="rec-hint" id="settleHint" style="margin-bottom:1rem"></div>
+    <div class="stack">
+      <button class="btn primary" id="btnSettleConfirm">Confirm &amp; post</button>
+      <button class="btn ghost" id="btnSettleCancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -2186,58 +2205,147 @@ function jrnlRecLabel(recSelId,acct){
 function syncTxnLoan(){ /* obsolete: the Add form is now a journal poster; loan/investment tagging lives on their own tabs */ }
 
 
-/* ---------- render all ---------- */
 /* ---------- dues & receipts ---------- */
-/* pulls together what's owed to you (receivables) and what you owe this month
-   (loan EMIs, personal debts, and credit-card outstanding), with due-date flags */
+let duesPeriodKey="all";   // "all" or "YYYY-MM"
+/* build the month options: All + the next 6 months (and any month a fixed due falls in) */
+function duesMonthOptions(){
+  const set=new Set();
+  const now=new Date();
+  for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);set.add(d.toISOString().slice(0,7));}
+  lends.forEach(l=>{if(l.due)set.add(monthKeyOf(l.due));});
+  const months=[...set].filter(Boolean).sort();
+  return months;
+}
+function fmtMonthLabel(mk){const[y,m]=mk.split("-");return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+m-1]+" "+y;}
 function renderDues(){
   const recvBox=$("#dueRecv"),payBox=$("#duePay");
   if(!recvBox||!payBox)return;
+  const sel=$("#duesPeriod");
+  if(sel&&!sel.dataset.built){
+    sel.innerHTML='<option value="all">All \u2014 full balance</option>'+duesMonthOptions().map(mk=>`<option value="${mk}">${fmtMonthLabel(mk)}</option>`).join("");
+    sel.value=duesPeriodKey;sel.dataset.built="1";
+    sel.addEventListener("change",()=>{duesPeriodKey=sel.value;renderDues();});
+  }
+  const period=duesPeriodKey;                 // "all" or a month key
+  const showAll=period==="all";
   const today=todayISO();
-  const curMk=(typeof dashPeriodKey==="function"&&dashPeriodKey())||thisMonthKey();
-  const dueClass=(d)=>{if(!d)return "";return d<today?"overdue":(monthKeyOf(d)<=curMk?"soon":"");};
-  const dueTag=(d)=>{if(!d)return "";return d<today?'<span class="due-tag od">overdue</span>':(monthKeyOf(d)<=curMk?'<span class="due-tag sn">due</span>':"");};
-  const row=(who,meta,amt,cls,extraTag)=>`<div class="due-row ${cls||""}"><div><div class="due-who">${esc(who)}${extraTag||""}</div>${meta?`<div class="due-meta">${esc(meta)}</div>`:""}</div><div class="due-amt">${fmt(amt)}</div></div>`;
+  const dueClass=(d)=>{if(!d)return "";return d<today?"overdue":"soon";};
+  const dueTag=(d)=>{if(!d)return "";return d<today?'<span class="due-tag od">overdue</span>':'<span class="due-tag sn">due</span>';};
+  /* a due falls in the selected month if it has no date (ongoing) or its due month matches */
+  const inPeriod=(dISO,monthly)=>showAll?true:(monthly?true:(dISO?monthKeyOf(dISO)<=period:true));
+  const row=(id,kind,who,meta,amt,cls,extraTag)=>`<div class="due-row ${cls||""}" data-due="${esc(id)}"><div><div class="due-who">${esc(who)}${extraTag||""}</div>${meta?`<div class="due-meta">${esc(meta)}</div>`:""}</div><div class="due-right"><div class="due-amt">${fmt(amt)}</div><button type="button" class="due-btn" data-settle="${esc(id)}">${kind==="recv"?"Receive":"Pay"}</button></div></div>`;
+  duesData={};   // id -> {kind, ref, refId, amt, who}
 
-  /* ---- TO RECEIVE: open receivable loans/debts ---- */
+  /* ---- TO RECEIVE ---- */
   const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&l.balance>0.5);
-  let recvTotal=0;
-  recvBox.innerHTML=recvs.length?recvs
-    .sort((a,b)=>((a.monthly&&a.dueDay?dueDateISO(a.dueDay):a.due)||"9999").localeCompare((b.monthly&&b.dueDay?dueDateISO(b.dueDay):b.due)||"9999"))
-    .map(l=>{recvTotal+=l.balance;const dISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):l.due;const dTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):l.due;return row(l.person,(l.purpose||"")+(dTxt?" \u00b7 due "+dTxt:""),l.balance,dueClass(dISO),dueTag(dISO));}).join("")
-    :'<div class="dues-empty">Nothing to receive \u2014 all settled.</div>';
-  if($("#dueRecvSum"))$("#dueRecvSum").textContent=recvs.length?fmt(recvTotal)+" outstanding":"";
+  let recvTotal=0;const recvRows=[];
+  recvs.forEach(l=>{
+    const dISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):l.due;
+    if(!inPeriod(dISO,l.monthly))return;
+    const dTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):l.due;
+    const amt=l.balance;   // receivables settle the full outstanding
+    recvTotal+=amt;
+    duesData[l.id]={kind:"recv",ref:"loan",refId:l.id,amt,who:l.person};
+    recvRows.push({dISO,html:row(l.id,"recv",l.person,(l.purpose||"")+(dTxt?" \u00b7 due "+dTxt:""),amt,dueClass(dISO),dueTag(dISO))});
+  });
+  recvBox.innerHTML=recvRows.length?recvRows.sort((a,b)=>(a.dISO||"9999").localeCompare(b.dISO||"9999")).map(r=>r.html).join("")
+    :'<div class="dues-empty">Nothing to receive here.</div>';
+  if($("#dueRecvSum"))$("#dueRecvSum").textContent=recvRows.length?fmt(recvTotal)+(showAll?" outstanding":" this period"):"";
 
-  /* ---- TO PAY: loan EMIs, personal debts, and credit cards ---- */
-  const payItems=[];
+  /* ---- TO PAY ---- */
+  const payRows=[];let payTotal=0;
   lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&l.balance>0.5).forEach(l=>{
-    const dueISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):(l.due||"");
-    const dueTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):(l.due||"");
-    if(l.term>0){
-      const emi=Math.min(ldEmi(l),l.balance);   // this month's instalment (capped at balance)
-      payItems.push({who:l.person,meta:(l.purpose||"loan")+" \u00b7 balance "+fmt(l.balance)+(dueTxt?" \u00b7 due "+dueTxt:""),amt:emi,due:dueISO,tag:'<span class="due-tag emi">EMI</span>'});
-    }else{
-      payItems.push({who:l.person,meta:(l.purpose||"debt")+(dueTxt?" \u00b7 due "+dueTxt:""),amt:l.balance,due:dueISO,tag:l.monthly?'<span class="due-tag emi">monthly</span>':""});
-    }
+    const dISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):(l.due||"");
+    if(!inPeriod(dISO,l.monthly))return;
+    const dTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):(l.due||"");
+    /* per-month view shows the EMI instalment; "All" shows the whole balance */
+    const emi=l.term>0?Math.min(ldEmi(l),l.balance):l.balance;
+    const amt=showAll?l.balance:emi;
+    payTotal+=amt;
+    duesData[l.id]={kind:"pay",ref:"loan",refId:l.id,amt,who:l.person};
+    const tag=l.term>0?'<span class="due-tag emi">EMI</span>':(l.monthly?'<span class="due-tag emi">monthly</span>':"");
+    const meta=(l.purpose||(l.term>0?"loan":"debt"))+(l.term>0?" \u00b7 balance "+fmt(l.balance):"")+(dTxt?" \u00b7 due "+dTxt:"");
+    payRows.push({dISO,html:row(l.id,"pay",l.person,meta,amt,dueClass(dISO),tag+dueTag(dISO))});
   });
-  /* credit cards: outstanding to pay, with the card's due date */
   banks.filter(b=>b.kind==="card").forEach(b=>{
-    const owed=bankBalance(b.name);
-    if(owed>0.5){
-      const dueTxt=b.dueDay?nextDueDateText(b.dueDay):"";
-      const dueISO=b.dueDay?dueDateISO(b.dueDay):"";
-      payItems.push({who:b.name,meta:"card outstanding"+(dueTxt?" \u00b7 due "+dueTxt:""),amt:owed,due:dueISO,tag:'<span class="due-tag card">card</span>'});
-    }
+    const owed=bankBalance(b.name);if(owed<=0.5)return;
+    const dISO=b.dueDay?dueDateISO(b.dueDay):"";
+    if(!inPeriod(dISO,false))return;
+    const dTxt=b.dueDay?nextDueDateText(b.dueDay):"";
+    payTotal+=owed;
+    const cid="card:"+b.name;
+    duesData[cid]={kind:"pay",ref:"card",refId:b.name,amt:owed,who:b.name};
+    payRows.push({dISO,html:row(cid,"pay",b.name,"card outstanding"+(dTxt?" \u00b7 due "+dTxt:""),owed,dueClass(dISO),'<span class="due-tag card">card</span>'+dueTag(dISO))});
   });
-  let payTotal=0;
-  payBox.innerHTML=payItems.length?payItems
-    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
-    .map(it=>{payTotal+=it.amt;return row(it.who,it.meta,it.amt,dueClass(it.due),it.tag+dueTag(it.due));}).join("")
-    :'<div class="dues-empty">Nothing to pay \u2014 you\u2019re all clear.</div>';
-  if($("#duePaySum"))$("#duePaySum").textContent=payItems.length?fmt(payTotal)+" due":"";
+  payBox.innerHTML=payRows.length?payRows.sort((a,b)=>(a.dISO||"9999").localeCompare(b.dISO||"9999")).map(r=>r.html).join("")
+    :'<div class="dues-empty">Nothing to pay here.</div>';
+  if($("#duePaySum"))$("#duePaySum").textContent=payRows.length?fmt(payTotal)+(showAll?" balance":" due"):"";
 
-  if($("#duesHead"))$("#duesHead").textContent=(recvs.length||payItems.length)?`${fmt(recvTotal)} in \u00b7 ${fmt(payTotal)} out`:"";
+  if($("#duesHead"))$("#duesHead").textContent=(recvRows.length||payRows.length)?`${fmt(recvTotal)} in \u00b7 ${fmt(payTotal)} out`:"";
 }
+let duesData={};
+/* ---- settle a due: pick an account, confirm, and post the entry ---- */
+let settleCtx=null;
+function openSettle(id){
+  const d=duesData[id];if(!d)return;
+  settleCtx=d;
+  const isRecv=d.kind==="recv";
+  $("#settleTitle").textContent=isRecv?"Record receipt \u2014 "+d.who:"Record payment \u2014 "+d.who;
+  $("#settleSub").textContent=isRecv?"Money coming in from this person into an account.":"Money going out of an account to settle this due.";
+  $("#settleAcctLabel").textContent=isRecv?"Receive into":"Pay from";
+  $("#settleAmt").value=r2(d.amt);
+  $("#settleDate").value=todayISO();
+  $("#settleError").textContent="";
+  /* account options: for paying a card, exclude that same card; cards can't receive here */
+  const opts=banks.filter(b=>isRecv?b.kind!=="card":!(d.ref==="card"&&b.name===d.refId))
+    .map(b=>`<option value="${esc(b.name)}">${esc(b.name)}${b.kind==="card"?" (card)":""} \u2014 ${fmt(bankBalance(b.name))}</option>`).join("");
+  $("#settleAcct").innerHTML=opts||'<option value="">\u2014 add a bank first \u2014</option>';
+  $("#settleHint").textContent=d.ref==="card"?"Posts Dr card / Cr the chosen account, reducing the card outstanding.":isRecv?"Posts Dr account / Cr the receivable, clearing part or all of it.":"Posts Dr the debt / Cr account, reducing what you owe.";
+  $("#settleOverlay").style.display="flex";
+}
+$("#btnSettleCancel")&&$("#btnSettleCancel").addEventListener("click",()=>{$("#settleOverlay").style.display="none";settleCtx=null;});
+$("#btnSettleConfirm")&&$("#btnSettleConfirm").addEventListener("click",()=>{
+  if(!settleCtx)return;
+  const d=settleCtx;
+  const amt=num($("#settleAmt").value);
+  const acct=$("#settleAcct").value;
+  const date=$("#settleDate").value||todayISO();
+  if(amt<=0){$("#settleError").textContent="Enter an amount.";return;}
+  if(!acct){$("#settleError").textContent="Pick an account.";return;}
+  if(!confirm(`Post ${d.kind==="recv"?"receipt":"payment"} of ${fmt(amt)} ${d.kind==="recv"?"from":"to settle"} ${d.who} via ${acct}?`))return;
+  const bank=banks.find(b=>b.name===acct);
+  const acctCoa=bank?bank.coa:"";
+  if(d.ref==="card"){
+    /* pay a credit card: Dr card (liability down) / Cr the paying account */
+    const card=banks.find(b=>b.name===d.refId);
+    txns.push({id:nextTxnId(),date,type:"Voucher",desc:"Card payment \u2014 "+d.who,amount:amt,cat:"Card payment",lines:[
+      {kind:"Bank",acct:card?card.coa:"",sub:"bank:"+d.refId,dr:amt,cr:0},   // card outstanding down
+      {kind:"Bank",acct:acctCoa,sub:"bank:"+acct,dr:0,cr:amt}                // paid from account
+    ],coaAcct:"",offsetAcct:"",bank:"",toBank:"",method:"",ref:"Card payment: "+d.refId,loanRef:"",bankRef:""});
+  }else{
+    /* settle a loan/debt */
+    const l=lends.find(x=>x.id===d.refId);if(!l){$("#settleError").textContent="Record not found.";return;}
+    const recv=l.type==="Debt Receivable";
+    txns.push({id:nextTxnId(),date,type:"Voucher",desc:(recv?"Received from ":"Paid ")+l.person,amount:amt,cat:recv?"Debt Settlement":"Loan Repayment",lines:recv?[
+      {kind:"Bank",acct:acctCoa,sub:"bank:"+acct,dr:amt,cr:0},        // money into account
+      {kind:"Loan",acct:l.coa,sub:"ld:"+l.id,dr:0,cr:amt}            // receivable down (Cr)
+    ]:[
+      {kind:"Loan",acct:l.coa,sub:"ld:"+l.id,dr:amt,cr:0},          // payable down (Dr)
+      {kind:"Bank",acct:acctCoa,sub:"bank:"+acct,dr:0,cr:amt}       // money out of account
+    ],coaAcct:"",offsetAcct:"",bank:"",toBank:"",method:"",ref:"Settlement: "+l.id,loanRef:l.id,bankRef:""});
+    /* apply the balance change to the loan record */
+    const delta=recv?-amt:-amt;   // both reduce the outstanding balance
+    l.balance=r2(Math.max(0,l.balance-amt));
+    if(l.balance<=0.5){l.status="Closed";l.closedDate=date;l.closeBank=acct;}
+  }
+  $("#settleOverlay").style.display="none";settleCtx=null;
+  setDirty(true);renderAll();
+  toast(`Posted ${fmt(amt)} \u00b7 ${d.who}`);
+});
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-settle]");
+  if(b)openSettle(b.getAttribute("data-settle"));
+});
 /* ISO date of the next occurrence of a day-of-month (for sorting) */
 function dueDateISO(day){
   if(!day)return "";

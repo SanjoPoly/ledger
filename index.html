@@ -384,6 +384,22 @@
   .emi-note{margin-top:.6rem;font-size:.8rem;color:var(--muted)}
   .emi-note b{color:var(--text);font-family:var(--mono)}
   @media(max-width:560px){.emi-grid{grid-template-columns:1fr 1fr}}
+  /* dues & receipts */
+  .dues-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+  .dues-list{display:flex;flex-direction:column;gap:.55rem}
+  .due-row{display:grid;grid-template-columns:1fr auto;gap:.5rem;align-items:center;padding:.6rem .7rem;border:1px solid var(--line);border-radius:var(--r-md);background:var(--wash)}
+  .due-row .due-who{font-weight:600;font-size:.86rem}
+  .due-row .due-meta{font-size:.72rem;color:var(--muted);margin-top:.1rem}
+  .due-row .due-amt{font-family:var(--mono);font-weight:700;font-size:.9rem;text-align:right;white-space:nowrap}
+  .due-row.overdue{border-color:var(--coral);background:rgba(255,110,97,.07)}
+  .due-row.soon{border-color:var(--amber,#E0A21B)}
+  .due-tag{display:inline-block;font-size:.6rem;font-weight:700;padding:.1rem .4rem;border-radius:999px;margin-left:.35rem;vertical-align:middle}
+  .due-tag.od{background:rgba(255,110,97,.16);color:var(--coral)}
+  .due-tag.sn{background:rgba(255,176,32,.16);color:var(--amber,#E0A21B)}
+  .due-tag.card{background:rgba(139,124,246,.16);color:var(--violet)}
+  .due-tag.emi{background:rgba(61,140,246,.16);color:var(--blue)}
+  .dues-empty{font-size:.82rem;color:var(--muted);padding:.7rem;text-align:center}
+  @media(max-width:720px){.dues-grid{grid-template-columns:1fr}}
   /* multi-line voucher grid */
   #formTxn{display:block!important}   /* the voucher form is block flow, not the add-card grid */
   #formTxn>.f{max-width:340px}
@@ -693,6 +709,11 @@
     <div class="charts-row2">
       <div class="chart-card"><h3>Investment allocation <small>by type</small></h3><div class="chart-box"><canvas id="chInvAlloc"></canvas></div></div>
       <div class="chart-card"><h3>Recent activity <small>latest transactions</small></h3><div class="tx-list" id="txList"></div></div>
+    </div>
+    <div class="section-head" style="margin-top:1.6rem"><h2 style="font-size:1.05rem">Dues &amp; receipts</h2><span class="total" id="duesHead"></span></div>
+    <div class="dues-grid">
+      <div class="chart-card"><h3 style="color:var(--mint)">To receive <small id="dueRecvSum"></small></h3><div id="dueRecv" class="dues-list"></div></div>
+      <div class="chart-card"><h3 style="color:var(--coral)">To pay <small id="duePaySum"></small></h3><div id="duePay" class="dues-list"></div></div>
     </div>
     <div class="charts">
       <div class="chart-card"><h3>Assets &amp; liabilities <small>statement · <span id="stBalScope">as of today</span></small></h3><div id="stBalance" class="fin-st"></div></div>
@@ -1548,7 +1569,7 @@ let coa=[];       // {number,name,type,category,sub,keywords} — Chart of Accou
 
 /* ---------- id helpers ---------- */
 function nextTxnId(){
-  let max=1000;
+  let max=10000;
   txns.forEach(t=>{const m=/TXN-(\d+)/.exec(t.id||"");if(m)max=Math.max(max,+m[1]);});
   return "TXN-"+(max+1);
 }
@@ -2149,9 +2170,67 @@ function syncTxnLoan(){ /* obsolete: the Add form is now a journal poster; loan/
 
 
 /* ---------- render all ---------- */
+/* ---------- dues & receipts ---------- */
+/* pulls together what's owed to you (receivables) and what you owe this month
+   (loan EMIs, personal debts, and credit-card outstanding), with due-date flags */
+function renderDues(){
+  const recvBox=$("#dueRecv"),payBox=$("#duePay");
+  if(!recvBox||!payBox)return;
+  const today=todayISO();
+  const curMk=(typeof dashPeriodKey==="function"&&dashPeriodKey())||thisMonthKey();
+  const dueClass=(d)=>{if(!d)return "";return d<today?"overdue":(monthKeyOf(d)<=curMk?"soon":"");};
+  const dueTag=(d)=>{if(!d)return "";return d<today?'<span class="due-tag od">overdue</span>':(monthKeyOf(d)<=curMk?'<span class="due-tag sn">due</span>':"");};
+  const row=(who,meta,amt,cls,extraTag)=>`<div class="due-row ${cls||""}"><div><div class="due-who">${esc(who)}${extraTag||""}</div>${meta?`<div class="due-meta">${esc(meta)}</div>`:""}</div><div class="due-amt">${fmt(amt)}</div></div>`;
+
+  /* ---- TO RECEIVE: open receivable loans/debts ---- */
+  const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&l.balance>0.5);
+  let recvTotal=0;
+  recvBox.innerHTML=recvs.length?recvs
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
+    .map(l=>{recvTotal+=l.balance;return row(l.person,(l.purpose||"")+(l.due?" \u00b7 due "+l.due:""),l.balance,dueClass(l.due),dueTag(l.due));}).join("")
+    :'<div class="dues-empty">Nothing to receive \u2014 all settled.</div>';
+  if($("#dueRecvSum"))$("#dueRecvSum").textContent=recvs.length?fmt(recvTotal)+" outstanding":"";
+
+  /* ---- TO PAY: loan EMIs, personal debts, and credit cards ---- */
+  const payItems=[];
+  lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&l.balance>0.5).forEach(l=>{
+    if(l.term>0){
+      const emi=Math.min(ldEmi(l),l.balance);   // this month's instalment (capped at balance)
+      payItems.push({who:l.person,meta:(l.purpose||"loan")+" \u00b7 balance "+fmt(l.balance),amt:emi,due:l.due,tag:'<span class="due-tag emi">EMI</span>'});
+    }else{
+      payItems.push({who:l.person,meta:(l.purpose||"debt")+(l.due?" \u00b7 due "+l.due:""),amt:l.balance,due:l.due,tag:""});
+    }
+  });
+  /* credit cards: outstanding to pay, with the card's due date */
+  banks.filter(b=>b.kind==="card").forEach(b=>{
+    const owed=bankBalance(b.name);
+    if(owed>0.5){
+      const dueTxt=b.dueDay?nextDueDateText(b.dueDay):"";
+      const dueISO=b.dueDay?dueDateISO(b.dueDay):"";
+      payItems.push({who:b.name,meta:"card outstanding"+(dueTxt?" \u00b7 due "+dueTxt:""),amt:owed,due:dueISO,tag:'<span class="due-tag card">card</span>'});
+    }
+  });
+  let payTotal=0;
+  payBox.innerHTML=payItems.length?payItems
+    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
+    .map(it=>{payTotal+=it.amt;return row(it.who,it.meta,it.amt,dueClass(it.due),it.tag+dueTag(it.due));}).join("")
+    :'<div class="dues-empty">Nothing to pay \u2014 you\u2019re all clear.</div>';
+  if($("#duePaySum"))$("#duePaySum").textContent=payItems.length?fmt(payTotal)+" due":"";
+
+  if($("#duesHead"))$("#duesHead").textContent=(recvs.length||payItems.length)?`${fmt(recvTotal)} in \u00b7 ${fmt(payTotal)} out`:"";
+}
+/* ISO date of the next occurrence of a day-of-month (for sorting) */
+function dueDateISO(day){
+  if(!day)return "";
+  const now=new Date();let y=now.getFullYear(),m=now.getMonth();
+  const dim=(yy,mm)=>new Date(yy,mm+1,0).getDate();
+  let d=Math.min(day,dim(y,m));
+  if(new Date(y,m,d)<new Date(y,m,now.getDate())){m++;if(m>11){m=0;y++;}d=Math.min(day,dim(y,m));}
+  return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+}
 function renderAll(){
   try{refreshSelects();}catch(e){console.error("selects",e);}
-  [renderDash,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderCoa,renderStatement].forEach(fn=>{
+  [renderDash,renderDues,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderCoa,renderStatement].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }

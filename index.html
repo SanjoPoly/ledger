@@ -691,6 +691,7 @@
     <button class="pill" data-tab="ld"><span class="dot"></span>Loans &amp; Debts</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
     <button class="pill" data-tab="fa"><span class="dot"></span>Fixed Assets</button>
+    <button class="pill" data-tab="commit"><span class="dot"></span>Commitments</button>
     <button class="pill" data-tab="imp"><span class="dot"></span>Statement Upload</button>
     <button class="pill" data-tab="coa"><span class="dot"></span>Chart of Accounts</button>
   </nav>
@@ -912,6 +913,32 @@
     <div class="table-card">
       <table id="tblFA"><thead><tr><th>ID</th><th>Asset</th><th>Type</th><th style="text-align:right">Value</th><th>Insurance</th><th>Maintenance</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyFA" style="display:none">No fixed assets yet. Add your house, vehicles, etc.</div>
+    </div>
+  </section>
+
+  <!-- ============ COMMITMENTS ============ -->
+  <section class="panel" id="panel-commit">
+    <div class="section-head"><h2>Recurring commitments</h2><span class="total" id="cmTotalHead"></span></div>
+    <p class="sub" style="margin:-.3rem 0 1rem;color:var(--muted);font-size:.85rem">Recurring tasks &amp; reminders — recharges, house cleaning, water-tank cleaning, whitewash, AMC renewals. Ledgr tracks the next due date and flags what's coming up.</p>
+    <form class="add-card" id="formCM" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="f"><label for="cmName">Commitment</label><input type="text" id="cmName" placeholder="e.g. Mobile recharge, Water tank cleaning" required></div>
+      <div class="f"><label for="cmCat">Category</label><select id="cmCat"><option>Recharge / Bills</option><option>Cleaning</option><option>Maintenance</option><option>Subscription</option><option>Insurance</option><option>Rent / Lease</option><option>Health</option><option>Other</option></select></div>
+      <div class="f"><label for="cmFreq">Frequency</label><select id="cmFreq"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="halfyearly">Half-yearly</option><option value="yearly">Yearly</option></select></div>
+      <div class="f"><label for="cmNext">Next due date</label><input type="date" id="cmNext"></div>
+      <div class="f"><label for="cmAmt">Amount <i>(optional)</i></label><input type="number" id="cmAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="cmActive">Status</label><select id="cmActive"><option value="1">Active</option><option value="0">Paused</option></select></div>
+      <div class="f" style="grid-column:1/-1"><label for="cmNote">Note</label><input type="text" id="cmNote" placeholder="e.g. Jio number 98xxx, cleaner Ramesh 90xxx"></div>
+      <div class="f" style="grid-column:1/-1"><button type="submit" id="cmSubmitBtn">+ Add commitment</button><button type="button" id="btnCancelCM" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchCM" placeholder="Search…">
+      <select id="filterCMFreq"><option value="">All frequencies</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="halfyearly">Half-yearly</option><option value="yearly">Yearly</option></select>
+      <span class="sum" id="cmFilteredSum"></span>
+    </div>
+    <div id="cmCards" class="fa-cards"></div>
+    <div class="table-card">
+      <table id="tblCM"><thead><tr><th>Commitment</th><th>Category</th><th>Frequency</th><th>Next due</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyCM" style="display:none">No commitments yet. Add recurring tasks like recharges, cleaning, or whitewash.</div>
     </div>
   </section>
 
@@ -1640,10 +1667,12 @@ let editingTxn=null;  // Txn ID currently being edited in the posting form
 let editingLD=null;   // Loan/debt Record ID currently being edited
 let editingInv=null;  // Investment ID currently being edited
 let editingFA=null;   // Fixed-asset ID currently being edited
+let editingCM=null;   // Commitment ID currently being edited
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
 let fassets=[];   // {id,name,assetType,date,amount,current,coa,insurer,insPrem,insExpiry,maintDue,maintNote,status,notes}
+let commits=[];   // {id,name,cat,freq,next,amount,active,note}
 let coa=[];       // {number,name,type,category,sub,keywords} — Chart of Accounts
 
 /* ---------- id helpers ---------- */
@@ -1871,6 +1900,24 @@ function parseWorkbook(buf,name){
       notes:String(gv(r,"Notes")||"").trim()
     });
   });
+
+  // Commitments
+  commits.length=0;
+  sheetRows(wb,"Commitments").forEach(r=>{
+    const nm=String(gv(r,"Commitment","Name")||"").trim();
+    if(!nm&&!gv(r,"ID"))return;
+    const fr=String(gv(r,"Frequency","Freq")||"monthly").trim().toLowerCase().replace(/[^a-z]/g,"");
+    commits.push({
+      id:String(gv(r,"ID","Commitment ID")||"").trim()||nextId(commits,"CM",1),
+      name:nm,
+      cat:String(gv(r,"Category","Type")||"Other").trim()||"Other",
+      freq:["weekly","monthly","quarterly","halfyearly","yearly"].includes(fr)?fr:"monthly",
+      next:normDate(gv(r,"Next Due","Next Due Date","Due"))||todayISO(),
+      amount:num(gv(r,"Amount")),
+      active:/^(0|n|no|false|paused)/i.test(String(gv(r,"Status","Active")||"Active").trim())?0:1,
+      note:String(gv(r,"Note","Notes")||"").trim()
+    });
+  });
   coa=[];
   sheetRows(wb,"Chart of Accounts").forEach(r=>{
     const numv=String(gv(r,"Account Number")||"").trim();
@@ -1974,6 +2021,13 @@ function buildWorkbook(){
   const wsFA=bannerSheet("Fixed Assets Register","House, vehicles and other fixed assets with insurance renewal and maintenance reminders.",faHeaders,faData);
   wsFA["!cols"]=[{wch:10},{wch:20},{wch:14},{wch:13},{wch:14},{wch:14},{wch:14},{wch:20},{wch:16},{wch:18},{wch:14},{wch:24},{wch:10},{wch:24}];
   XLSX.utils.book_append_sheet(wb,wsFA,"Fixed Assets");
+
+  // Commitments
+  const cmHeaders=["ID","Commitment","Category","Frequency","Next Due","Amount","Status","Note"];
+  const cmData=commits.map(c=>[c.id,c.name,c.cat,FREQ_LABEL[c.freq]||c.freq,c.next||"",c.amount||"",c.active?"Active":"Paused",c.note||""]);
+  const wsCM=bannerSheet("Recurring Commitments","Recurring financial tasks and reminders \u2014 recharges, cleaning, maintenance, subscriptions \u2014 with next-due tracking.",cmHeaders,cmData);
+  wsCM["!cols"]=[{wch:10},{wch:24},{wch:16},{wch:13},{wch:13},{wch:12},{wch:9},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,wsCM,"Commitments");
 
   // Chart of Accounts — preserved on every save so hand-added accounts survive
   const coaHeaders=["Account Number","Name","Account Type","Account Category","Account Sub Category","Key Words for Matching","Control Account"];
@@ -2093,6 +2147,7 @@ function vSubOpts(kind,cur){
   if(kind==="Bank")return '<option value="">— choose bank —</option>'+banks.map(b=>`<option value="bank:${esc(b.name)}"${"bank:"+b.name===cur?" selected":""}>${esc(b.name)} \u2014 ${fmt(bankBalance(b.name))}</option>`).join("");
   if(kind==="Investment")return '<option value="">— choose investment —</option>'+invs.filter(v=>v.status!=="Closed").map(v=>`<option value="inv:${esc(v.id)}"${"inv:"+v.id===cur?" selected":""}>${esc(v.name)} \u00b7 ${esc(v.id)}</option>`).join("")+`<option value="newinv"${cur==="newinv"?" selected":""}>\u2795 New investment</option>`;
   if(kind==="Loan")return '<option value="">— choose person / loan —</option>'+lends.filter(l=>l.status!=="Closed").map(l=>`<option value="ld:${esc(l.id)}"${"ld:"+l.id===cur?" selected":""}>${esc(l.person)} \u00b7 ${esc(l.id)} \u2014 ${fmt(l.balance)} due</option>`).join("")+`<option value="newld:recv"${cur==="newld:recv"?" selected":""}>\u2795 New person I lent to</option><option value="newld:pay"${cur==="newld:pay"?" selected":""}>\u2795 New debt I owe</option>`;
+  if(kind==="Fixed Asset")return '<option value="">— choose asset —</option>'+fassets.filter(a=>a.status!=="Disposed").map(a=>`<option value="fa:${esc(a.id)}"${"fa:"+a.id===cur?" selected":""}>${esc(a.name)} \u00b7 ${esc(a.id)}</option>`).join("");
   return "";
 }
 /* ensure a Ledger line has a valid account selected (browser shows the first option
@@ -2127,6 +2182,7 @@ function vLineAccount(ln){
   if(ln.kind==="Bank"&&ln.sub.startsWith("bank:")){const b=banks.find(x=>x.name===ln.sub.slice(5));if(b){ensureSubCoa("bank",b);const a=coaByNumber(b.coa);return a||{number:b.coa||"BANK",name:b.name};}}
   if(ln.kind==="Investment"&&ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));if(v){ensureSubCoa("inv",v);const a=coaByNumber(v.coa);return a||{number:v.coa||"INV",name:v.name};}}
   if(ln.kind==="Loan"&&ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));if(l){ensureSubCoa("loan",l);const a=coaByNumber(l.coa);return a||{number:l.coa||"LOAN",name:l.person};}}
+  if(ln.kind==="Fixed Asset"&&ln.sub.startsWith("fa:")){const a=fassets.find(x=>x.id===ln.sub.slice(3));if(a){const c=coaByNumber(a.coa);return c||{number:a.coa||"FA",name:a.name};}}
   if(ln.kind==="Investment"&&ln.sub==="newinv")return {number:"(new)",name:"New investment"};
   if(ln.kind==="Loan"&&ln.sub.startsWith("newld"))return {number:"(new)",name:"New record"};
   return null;
@@ -2146,6 +2202,7 @@ function vSubDisplay(ln){
   if(ln.sub.startsWith("bank:"))return ln.sub.slice(5);
   if(ln.sub.startsWith("inv:")){const v=invs.find(x=>x.id===ln.sub.slice(4));return v?v.name:ln.sub.slice(4);}
   if(ln.sub.startsWith("ld:")){const l=lends.find(x=>x.id===ln.sub.slice(3));return l?l.person:ln.sub.slice(3);}
+  if(ln.sub.startsWith("fa:")){const a=fassets.find(x=>x.id===ln.sub.slice(3));return a?a.name:ln.sub.slice(3);}
   return ln.acct||"Account";
 }
 function renderVLines(){
@@ -2162,6 +2219,7 @@ function renderVLines(){
           <option${ln.kind==="Bank"?" selected":""}>Bank</option>
           <option${ln.kind==="Investment"?" selected":""}>Investment</option>
           <option${ln.kind==="Loan"?" selected":""}>Loan</option>
+          <option${ln.kind==="Fixed Asset"?" selected":""}>Fixed Asset</option>
         </select></div>
         <div class="f ${grey}"><label>Account type</label><select data-vf="type">
           ${["Asset","Liability","Equity","Income","Expense"].map(t=>`<option${ln.type===t?" selected":""}>${t}</option>`).join("")}
@@ -2368,6 +2426,14 @@ function renderDues(){
       payRows.push({dISO:d,html:rowHtml});
     });
   });
+  /* recurring commitments coming up (recharges, cleaning, etc.) — a Done button rolls them forward */
+  commits.filter(c=>c.active).forEach(c=>{
+    const d=cmNextDue(c);
+    if(!d||!inPeriod(d,false))return;
+    if(c.amount>0)payTotal+=c.amount;
+    const rowHtml=`<div class="due-row ${dueClass(d)}"><div><div class="due-who">${cmIcon(c.cat)} ${esc(c.name)} <span class="due-tag" style="background:var(--wash-strong);color:var(--muted)">${esc(FREQ_LABEL[c.freq]||c.freq)}</span>${dueTag(d)}</div><div class="due-meta">${esc(c.note||c.cat)} \u00b7 due ${esc(d)}</div></div><div class="due-right"><div class="due-amt">${c.amount>0?fmt(c.amount):"\u2014"}</div><button type="button" class="due-btn" data-cmdone="${esc(c.id)}">Done</button></div></div>`;
+    payRows.push({dISO:d,html:rowHtml});
+  });
   payBox.innerHTML=payRows.length?payRows.sort((a,b)=>(a.dISO||"9999").localeCompare(b.dISO||"9999")).map(r=>r.html).join("")
     :'<div class="dues-empty">Nothing to pay here.</div>';
   if($("#duePaySum"))$("#duePaySum").textContent=payRows.length?fmt(payTotal)+(showAll?" balance":" due"):"";
@@ -2448,7 +2514,7 @@ function dueDateISO(day){
 }
 function renderAll(){
   try{refreshSelects();}catch(e){console.error("selects",e);}
-  [renderDash,renderDues,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderFA,renderCoa,renderStatement].forEach(fn=>{
+  [renderDash,renderDues,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderFA,renderCM,renderCoa,renderStatement].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -3211,6 +3277,94 @@ $("#btnCancelFA")&&$("#btnCancelFA").addEventListener("click",cancelEditFA);
 $("#searchFA")&&$("#searchFA").addEventListener("input",renderFA);
 $("#filterFAStatus")&&$("#filterFAStatus").addEventListener("change",renderFA);
 
+/* ---------- recurring commitments ---------- */
+const FREQ_LABEL={weekly:"Weekly",monthly:"Monthly",quarterly:"Quarterly",halfyearly:"Half-yearly",yearly:"Yearly"};
+const FREQ_MONTHS={monthly:1,quarterly:3,halfyearly:6,yearly:12};
+function cmAdvance(next,freq){
+  /* roll a due date forward by one cycle */
+  const d=new Date(next);
+  if(freq==="weekly")d.setDate(d.getDate()+7);
+  else d.setMonth(d.getMonth()+(FREQ_MONTHS[freq]||1));
+  return d.toISOString().slice(0,10);
+}
+/* keep advancing a past due date until it's today or later, so reminders stay current */
+function cmNextDue(c){
+  let n=c.next;if(!n)return "";
+  let guard=0;
+  while(n<todayISO()&&guard<400){n=cmAdvance(n,c.freq);guard++;}
+  return n;
+}
+function cmIcon(cat){cat=(cat||"").toLowerCase();return /recharge|bill/.test(cat)?"\ud83d\udcf1":/clean/.test(cat)?"\ud83e\uddf9":/mainten/.test(cat)?"\ud83d\udd27":/subscrip/.test(cat)?"\ud83d\udcfa":/insur/.test(cat)?"\ud83d\udee1\ufe0f":/rent|lease/.test(cat)?"\ud83c\udfe1":/health/.test(cat)?"\ud83d\udc8a":"\ud83d\udd01";}
+function renderCM(){
+  const cardBox=$("#cmCards"),tblBody=document.querySelector("#tblCM tbody");
+  const active=commits.filter(c=>c.active);
+  if($("#cmTotalHead"))$("#cmTotalHead").textContent=commits.length?`${active.length} active \u00b7 ${fmt(active.reduce((s,c)=>s+(c.amount||0),0))}/cycle`:"";
+  const q=($("#searchCM")?$("#searchCM").value:"").trim().toLowerCase();
+  const ff=$("#filterCMFreq")?$("#filterCMFreq").value:"";
+  const rows=commits.map((c,i)=>({c,i})).filter(({c})=>(!q||(c.name+" "+c.cat+" "+(c.note||"")).toLowerCase().includes(q))&&(!ff||c.freq===ff));
+  if($("#cmFilteredSum"))$("#cmFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
+  /* cards show the soonest-due active commitments with a countdown chip */
+  if(cardBox){
+    const upcoming=active.map(c=>({c,due:cmNextDue(c)})).filter(x=>x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,8);
+    cardBox.innerHTML=upcoming.map(({c,due})=>{
+      const n=daysUntil(due);
+      const chip=n<0?`<span class="fa-chip bad">overdue \u00b7 ${esc(due)}</span>`:n<=7?`<span class="fa-chip warn">in ${n}d \u00b7 ${esc(due)}</span>`:`<span class="fa-chip ok">${esc(due)}</span>`;
+      return `<div class="fa-card"><div class="fa-ic">${cmIcon(c.cat)}</div><div class="fa-ty">${esc(FREQ_LABEL[c.freq]||c.freq)}</div><div class="fa-nm">${esc(c.name)}</div>${c.amount>0?`<div class="fa-val">${fmt(c.amount)}</div>`:""}${chip}<div style="margin-top:.5rem"><button type="button" class="due-btn" data-cmdone="${esc(c.id)}">Mark done</button></div></div>`;
+    }).join("")||'<div class="dues-empty" style="grid-column:1/-1">No active commitments — add one below.</div>';
+  }
+  if(tblBody){
+    tblBody.innerHTML=rows.map(({c,i})=>{
+      const due=cmNextDue(c);const n=due?daysUntil(due):null;
+      const dueCls=n==null?"":n<0?"bad":n<=7?"warn":"ok";
+      return `<tr data-i="${i}"${!c.active?' style="opacity:.55"':''}>
+        <td data-l="Commitment"><strong>${cmIcon(c.cat)} ${esc(c.name)}</strong>${c.note?`<div style="font-size:.7rem;color:var(--muted)">${esc(c.note)}</div>`:""}</td>
+        <td data-l="Category">${esc(c.cat)}</td>
+        <td data-l="Frequency">${esc(FREQ_LABEL[c.freq]||c.freq)}</td>
+        <td data-l="Next due">${due?`<span class="fa-chip ${dueCls}">${esc(due)}</span>`:"\u2014"}</td>
+        <td data-l="Amount" class="num">${c.amount>0?fmt(c.amount):"\u2014"}</td>
+        <td data-l="Status">${c.active?'<span class="tag in">Active</span>':'<span style="font-size:.72rem;color:var(--muted)">Paused</span>'}</td>
+        <td data-l=""><div class="row-actions">${c.active?`<button type="button" class="icon-btn" data-act="doneCM" title="Mark done \u2014 roll to next cycle">Done</button>`:""}<button type="button" class="icon-btn" data-act="editCM">Edit</button><button type="button" class="icon-btn danger" data-act="delCM">Del</button></div></td></tr>`;
+    }).join("");
+  }
+  if($("#emptyCM"))$("#emptyCM").style.display=commits.length?"none":"block";
+  if($("#tblCM"))$("#tblCM").style.display=commits.length?"":"none";
+}
+$("#formCM")&&$("#formCM").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("#cmName").value.trim();if(!name){toast("Enter the commitment name");return;}
+  const rec={name,cat:$("#cmCat").value,freq:$("#cmFreq").value,next:$("#cmNext").value||todayISO(),amount:num($("#cmAmt").value),active:$("#cmActive").value==="1"?1:0,note:$("#cmNote").value.trim()};
+  if(editingCM){const c=commits.find(x=>x.id===editingCM);if(c)Object.assign(c,rec);cancelEditCM();setDirty(true);renderAll();toast("Commitment updated");return;}
+  rec.id=nextId(commits,"CM",1);commits.push(rec);
+  e.target.reset();$("#cmNext").value=todayISO();$("#cmFreq").value="monthly";$("#cmActive").value="1";
+  setDirty(true);renderAll();toast("Commitment added \u00b7 "+rec.id);
+});
+function loadCMIntoForm(c){
+  editingCM=c.id;
+  $("#cmName").value=c.name;$("#cmCat").value=c.cat;$("#cmFreq").value=c.freq;$("#cmNext").value=c.next||todayISO();
+  $("#cmAmt").value=c.amount||"";$("#cmActive").value=c.active?"1":"0";$("#cmNote").value=c.note||"";
+  if($("#cmSubmitBtn"))$("#cmSubmitBtn").textContent="\u2713 Update commitment";
+  if($("#btnCancelCM"))$("#btnCancelCM").style.display="";
+  window.scrollTo(0,0);toast("Editing "+c.id);
+}
+function cancelEditCM(){
+  editingCM=null;const f=$("#formCM");if(f)f.reset();
+  $("#cmNext").value=todayISO();$("#cmFreq").value="monthly";$("#cmActive").value="1";
+  if($("#cmSubmitBtn"))$("#cmSubmitBtn").textContent="+ Add commitment";
+  if($("#btnCancelCM"))$("#btnCancelCM").style.display="none";
+}
+/* mark a commitment done: roll its next-due forward one cycle (and optionally post the spend) */
+function markCMDone(id){
+  const c=commits.find(x=>x.id===id);if(!c)return;
+  const due=cmNextDue(c);
+  c.next=cmAdvance(due||todayISO(),c.freq);
+  setDirty(true);renderAll();
+  toast(`${c.name} done \u00b7 next ${c.next}`);
+}
+$("#btnCancelCM")&&$("#btnCancelCM").addEventListener("click",cancelEditCM);
+$("#searchCM")&&$("#searchCM").addEventListener("input",renderCM);
+$("#filterCMFreq")&&$("#filterCMFreq").addEventListener("change",renderCM);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-cmdone]");if(b)markCMDone(b.getAttribute("data-cmdone"));});
+
 /* ---------- applying payments against a loan / debt ----------
    A payment lowers Balance Due. When the balance reaches zero the record
    closes itself. Reversing (edit or delete) puts the money back and
@@ -3265,6 +3419,16 @@ function applyPostingTag(txn,tag){
     const id=nextId(lends,"DEBT",1);
     lends.push({id,type:recvNew?"Debt Receivable":"Debt Payable",person:(txn.desc||"From posting").slice(0,30),purpose:"Posted "+txn.date,principal:txn.amount,rate:0,term:0,balance:txn.amount,issue:txn.date,due:"",status:"Open",coa:"",closedDate:"",closeBank:"",txnRef:""});
     txn.ref="Linked: "+id+" ("+lends[lends.length-1].person+")";created++;
+  }else if(act==="newfa"){
+    const id=nextId(fassets,"FA",1);
+    fassets.push({id,name:(txn.desc||"Fixed asset "+txn.date).slice(0,40),assetType:"Other",date:txn.date,amount:txn.amount,current:txn.amount,coa:txn.coaAcct||"",insurer:"",insPrem:0,insExpiry:"",maintDue:"",maintNote:"",status:"Active",notes:"From statement"});
+    txn.ref="Linked: "+id+" (new asset)";created++;
+  }else if(act==="addfa"&&target){
+    const a=fassets.find(x=>x.id===target);
+    if(a){a.amount=r2((a.amount||0)+txn.amount);a.current=r2((a.current||0)+txn.amount);txn.ref="Linked: "+a.id+" (added value)";}
+  }else if(act==="fa"&&target){
+    const a=fassets.find(x=>x.id===target);
+    if(a)txn.ref="Service: "+a.id+" ("+a.name+")";   // maintenance expense, asset value unchanged
   }
   return created;
 }
@@ -3518,6 +3682,9 @@ function voucherEffect(t,sign){
           if(l.balance<=0.004&&sign>0){l.status="Closed";l.closedDate=t.date;}
         }
       }
+    }else if(ln.kind==="Fixed Asset"&&ln.sub.startsWith("fa:")){
+      const a=fassets.find(x=>x.id===ln.sub.slice(3));
+      if(a){a.amount=r2((a.amount||0)+amt);a.current=r2((a.current||0)+amt);}   // Dr adds value, Cr reduces
     }
   });
 }
@@ -3734,6 +3901,9 @@ document.addEventListener("click",e=>{
     case "editInv":{const r=invs[i];if(r)loadInvIntoForm(r);break;}
     case "editFA":{const a=fassets[i];if(a)loadFAIntoForm(a);break;}
     case "delFA":if(confirm(`Delete "${fassets[i].name}"?`)){if(editingFA===fassets[i].id)cancelEditFA();fassets.splice(i,1);done();}break;
+    case "editCM":{const c=commits[i];if(c)loadCMIntoForm(c);break;}
+    case "doneCM":{const c=commits[i];if(c)markCMDone(c.id);break;}
+    case "delCM":if(confirm(`Delete "${commits[i].name}"?`)){if(editingCM===commits[i].id)cancelEditCM();commits.splice(i,1);done();}break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;
     case "editLD":{const r=lends[i];if(r)loadLDIntoForm(r);break;}
@@ -3916,10 +4086,11 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   b.classList.add("active");
   const tab=b.dataset.tab;
   $$(".panel").forEach(p=>p.classList.remove("active"));
-  const map={home:"panel-home",add:"panel-add",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",fa:"panel-fa",imp:"panel-imp",coa:"panel-coa"};
+  const map={home:"panel-home",add:"panel-add",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",fa:"panel-fa",commit:"panel-commit",imp:"panel-imp",coa:"panel-coa"};
   const panel=$("#"+map[tab]);if(panel)panel.classList.add("active");
   if(tab==="bank"){renderBank();renderStatement();refreshSelects();if($("#recDate")&&!$("#recDate").value)$("#recDate").value=todayISO();}
   if(tab==="fa"){renderFA();refreshSelects();if($("#faDate")&&!$("#faDate").value)$("#faDate").value=todayISO();}
+  if(tab==="commit"){renderCM();if($("#cmNext")&&!$("#cmNext").value)$("#cmNext").value=todayISO();}
   if(tab==="imp")refreshSelects();
   if(tab==="home")renderDash();
   window.scrollTo(0,0);
@@ -4362,6 +4533,8 @@ const NATURES=[
   {v:"insurance",l:"Insurance payment",      dir:"dr", cat:"Insurance"},
   {v:"loangiven",l:"Loan given",             dir:"dr", target:"ldrecv_out"},
   {v:"emi",      l:"Loan repayment / EMI",   dir:"dr", target:"ldpay", req:1},
+  {v:"fabuy",    l:"Fixed asset purchase",   dir:"dr", target:"fa_new"},
+  {v:"famaint",  l:"Asset service / maintenance", dir:"dr", target:"fa", cat:"Maintenance"},
   {v:"transfer", l:"Own account transfer",   target:"bank", req:1},
   {v:"salary",   l:"Income \u00b7 salary",  dir:"cr", cat:"Salary"},
   {v:"inc",      l:"Income \u00b7 other",   dir:"cr"},
@@ -4386,6 +4559,8 @@ function natureTargetOptions(t){
     case "ldrecv_out":return o("newld:recv","\u2795 New \u00b7 person from description",t.tag)+recvs.map(l=>o("addld:"+l.id,"Lend more \u2014 "+esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
     case "ldrecv_in":return o("","\u2014 choose person \u2014",t.tag)+recvs.map(l=>o("payld:"+l.id,esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
     case "ldpay":return o("","\u2014 choose loan \u2014",t.tag)+pays.map(l=>o("payld:"+l.id,esc(l.person)+" \u00b7 "+fmt(l.balance)+" due",t.tag)).join("");
+    case "fa_new":return o("newfa","\u2795 New fixed asset (from description)",t.tag)+fassets.filter(a=>a.status!=="Disposed").map(a=>o("addfa:"+a.id,"Add to "+esc(a.name)+" \u00b7 "+esc(a.id),t.tag)).join("");
+    case "fa":return o("","\u2014 choose asset \u2014",t.tag)+fassets.filter(a=>a.status!=="Disposed").map(a=>o("fa:"+a.id,esc(a.name)+" \u00b7 "+esc(a.id),t.tag)).join("");
     case "ldpay_new":return o("newld:pay","\u2795 New \u00b7 lender from description",t.tag)+pays.map(l=>o("addld:"+l.id,"Borrowed more \u2014 "+esc(l.person),t.tag)).join("");
     case "invinc":return o("","General (no link)",t.tag)+openInvs.map(v=>o("divinv:"+v.id,"Dividend \u2014 "+esc(v.name),t.tag)).join("")+recvs.map(l=>o("intld:"+l.id,"Interest \u2014 "+esc(l.person),t.tag)).join("");
     case "bank":return o("","\u2014 choose other account \u2014",t.transferBank)+banks.filter(b=>b.name!==importBank).map(b=>o(b.name,esc(b.name),t.transferBank)).join("");
@@ -4401,6 +4576,8 @@ function applyNatureDefaults(t){
     case "insurance":t.type="Expense";t.cat="Insurance";t.tag="";break;
     case "loangiven":t.type="Expense";t.cat="Debt Given";t.tag=t.tag&&/^(newld:recv|addld)/.test(t.tag)?t.tag:"newld:recv";break;
     case "emi":t.type="Expense";t.cat="Loan Repayment";if(!/^payld/.test(t.tag))t.tag="";break;
+    case "fabuy":t.type="Expense";t.cat="Fixed Asset";t.tag=t.tag&&/^(newfa|addfa)/.test(t.tag)?t.tag:"newfa";break;
+    case "famaint":t.type="Expense";t.cat="Maintenance";if(!/^fa:/.test(t.tag))t.tag="";break;
     case "salary":t.type="Income";t.cat="Salary";t.tag="";break;
     case "invinc":t.type="Income";if(!/^(divinv|intld)/.test(t.tag))t.tag="";t.cat=/^intld/.test(t.tag)?"Interest":"Dividends / Profit";break;
     case "loanreturn":t.type="Income";t.cat="Debt Settlement";if(!/^payld/.test(t.tag))t.tag="";break;

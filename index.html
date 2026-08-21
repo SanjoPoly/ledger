@@ -3918,11 +3918,25 @@ function eventTotals(id){
   net=r2(net);
   return {net,spent:net,recv:0};
 }
-/* the expense type carried on a tagged transaction (from the line cat or the ref) */
-function eventTxnType(t){
-  if(t.cat&&!/^(Event|Commitment)/i.test(t.cat))return t.cat;
+/* the expense TAG carried on a tagged transaction. Priority:
+   1. the Event line's own cat (the tag chosen in the voucher grid)
+   2. the "Event type: X" reference
+   3. the txn cat ONLY if it matches one of the event's declared expense types
+   Anything else is "Untagged" — we never fall back to a COA category. */
+function eventTxnType(t,ev){
+  /* 1. an Event line-kind carries the chosen tag in its cat */
+  if(t.lines&&t.lines.length){
+    const evLine=t.lines.find(l=>l.kind==="Event"&&l.cat);
+    if(evLine&&evLine.cat)return evLine.cat;
+  }
+  /* 2. the reference stamp */
   const m=/Event type:\s*(.+)$/.exec(t.ref||"");
-  return m?m[1].trim():"(untagged)";
+  if(m&&m[1].trim())return m[1].trim();
+  /* 3. the txn cat, but only if it's a real declared expense type for this event */
+  ev=ev||events.find(x=>x.id===t.event);
+  const types=(ev&&ev.expTypes)||[];
+  if(t.cat&&types.some(x=>x.toLowerCase()===t.cat.toLowerCase()))return t.cat;
+  return "Untagged";
 }
 /* all transactions tagged to an event, newest first */
 function eventTxns(id){return txns.filter(t=>t.event===id).slice().sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:(a.id<b.id?1:-1)));}
@@ -3933,7 +3947,7 @@ function eventTypeBreakdown(id){
   eventTxns(id).forEach(t=>{
     const amt=eventTxnAmount(t,ev);
     if(amt===0)return;
-    const k=eventTxnType(t);
+    const k=eventTxnType(t,ev);
     map[k]=r2((map[k]||0)+amt);
   });
   return Object.entries(map).map(([type,amt])=>({type,amt})).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
@@ -4046,14 +4060,14 @@ function renderEventDetail(){
   $("#evTrend").innerHTML=evTrendSVG(trend);
   /* transaction rows */
   $("#evDetailList").innerHTML=list.length?list.map(tx=>{
-    const a=eventTxnAmount(tx,ev);const isCr=a<0;const typ=eventTxnType(tx);
-    return `<div class="ev-txn-row"><span class="d">${esc(tx.date)}</span><span class="desc">${esc(tx.desc||tx.cat||"\u2014")}${typ&&typ!=="(untagged)"?` <span class="tag2">${esc(typ)}</span>`:""} <span class="tag2" style="opacity:.7">${esc(tx.id)}</span></span><span class="amt" style="color:${isCr?"var(--mint)":"var(--coral)"}">${isCr?"\u2212":""}${fmt(Math.abs(a))}</span></div>`;
+    const a=eventTxnAmount(tx,ev);const isCr=a<0;const typ=eventTxnType(tx,ev);
+    return `<div class="ev-txn-row"><span class="d">${esc(tx.date)}</span><span class="desc">${esc(tx.desc||tx.cat||"\u2014")} <span class="tag2" style="${typ==="Untagged"?"opacity:.5":"background:rgba(139,124,246,.16);color:var(--violet)"}">${esc(typ)}</span> <span class="tag2" style="opacity:.7">${esc(tx.id)}</span></span><span class="amt" style="color:${isCr?"var(--mint)":"var(--coral)"}">${isCr?"\u2212":""}${fmt(Math.abs(a))}</span></div>`;
   }).join(""):'<div class="dues-empty">No matching transactions.</div>';
 }
 /* breakdown/trend variants honouring the debit/credit filter */
 function eventTypeBreakdownFor(id,filter){
   const ev=events.find(x=>x.id===id);const map={};
-  eventTxns(id).forEach(t=>{let a=eventTxnAmount(t,ev);if(filter==="debit"&&a<=0)return;if(filter==="credit"&&a>=0)return;const k=eventTxnType(t);map[k]=r2((map[k]||0)+Math.abs(a));});
+  eventTxns(id).forEach(t=>{let a=eventTxnAmount(t,ev);if(filter==="debit"&&a<=0)return;if(filter==="credit"&&a>=0)return;const k=eventTxnType(t,ev);map[k]=r2((map[k]||0)+Math.abs(a));});
   return Object.entries(map).map(([type,amt])=>({type,amt})).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
 }
 function eventPeriodTrendFor(id,filter){

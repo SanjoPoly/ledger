@@ -791,15 +791,6 @@
   <!-- ============ ADD / POST ============ -->
   <section class="panel" id="panel-add">
     <div class="section-head"><h2>Post a journal voucher</h2><span class="total" id="addHead"></span></div>
-    <div class="quickpay-bar" id="quickPayBar">
-      <div class="qp-title">Quick pay</div>
-      <div class="qp-controls">
-        <select id="qpKind"><option value="commit">Financial commitment</option><option value="event">Event expense</option></select>
-        <select id="qpTarget"></select>
-        <button type="button" class="btn-accent" id="btnQuickPay">Pay / post \u2192</button>
-      </div>
-      <div class="qp-hint" id="qpHint"></div>
-    </div>
     <form class="add-card" id="formTxn">
       <div class="vgrid-head">
         <div class="f"><label for="tDate">Date</label><input type="date" id="tDate" required></div>
@@ -821,6 +812,10 @@
           </div>
           <div class="emi-note" id="emiNote"></div>
         </div>
+      </div>
+      <div class="emi-panel" id="cmClosePanel" style="display:none">
+        <label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--text);cursor:pointer"><input type="checkbox" id="cmCloseMonth" style="width:17px;height:17px;accent-color:var(--mint)" checked> Mark this month paid &mdash; roll the commitment to its next due date</label>
+        <div class="emi-note" style="margin-top:.4rem">If unticked, the commitment stays in your upcoming/due list for this month (you're just recording a payment against it).</div>
       </div>
       <div class="f" style="grid-column:1/-1"><button type="submit" id="btnPostVoucher">Post voucher</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <input type="hidden" id="tLoan" value=""><input type="hidden" id="tBank"><input type="hidden" id="tBankTo">
@@ -2433,9 +2428,10 @@ function bankForCoa(num){return num?banks.find(b=>b.coa===num):null;}
 ============================================================ */
 let vLines=[];            // [{kind,type,cat,acct,sub,dr,cr}]
 let vLineSeq=0;
-function newVLine(over){return Object.assign({uid:++vLineSeq,kind:"Ledger",type:"Expense",cat:"",acct:"",sub:"",dr:"",cr:""},over||{});}
+function newVLine(over){return Object.assign({uid:++vLineSeq,kind:"Ledger",type:"Expense",cat:"",acct:"",sub:"",dr:"",cr:"",manualAmt:false},over||{});}
 function resetVoucher(){
   vLines=[newVLine({kind:"Ledger",type:"Expense"}),newVLine({kind:"Bank"})];
+  if($("#cmCloseMonth"))$("#cmCloseMonth").checked=true;
   renderVLines();
   refreshEventPicker();
   refreshQuickPay();
@@ -2642,6 +2638,9 @@ function renderVLines(){
       <div class="vline-name">${esc(vLineName(ln))}</div>
     </div>`;
   }).join("");
+  /* show the "mark month paid" toggle only when a Commitment line is in the voucher */
+  const hasCommit=vLines.some(l=>l.kind==="Commitment"&&/^cm:/.test(l.sub||""));
+  if($("#cmClosePanel"))$("#cmClosePanel").style.display=hasCommit?"":"none";
   renderVTotals();
 }
 function renderVTotals(){
@@ -2664,13 +2663,21 @@ function bindVoucherGrid(){
     if(f==="type"){ln.type=e.target.value;ln.cat="";ln.acct="";renderVLines();return;}
     if(f==="cat"){ln.cat=e.target.value;ln.acct="";renderVLines();return;}
     if(f==="acct"){ln.acct=e.target.value;$(".vline[data-i='"+i+"'] .vline-name",row).textContent=vLineName(ln);return;}
-    if(f==="sub"){ln.sub=e.target.value;renderVLines();return;}
+    if(f==="sub"){
+      ln.sub=e.target.value;
+      /* picking a Commitment auto-fills its amount into Debit (unless user set one) */
+      if(ln.kind==="Commitment"&&/^cm:/.test(ln.sub)){
+        const c=commits.find(x=>x.id===ln.sub.slice(3));
+        if(c&&c.amount>0&&!ln.manualAmt){ln.dr=r2(c.amount);ln.cr="";mirrorAmount(i,"dr");}
+      }
+      renderVLines();return;
+    }
   });
   box.addEventListener("input",e=>{
     const f=e.target.getAttribute("data-vf");if(!f)return;
     const row=e.target.closest(".vline");const i=+row.dataset.i;const ln=vLines[i];if(!ln)return;
-    if(f==="dr"){ln.dr=e.target.value;if(num(ln.dr)>0)ln.cr="";}
-    if(f==="cr"){ln.cr=e.target.value;if(num(ln.cr)>0)ln.dr="";}
+    if(f==="dr"){ln.dr=e.target.value;if(num(ln.dr)>0)ln.cr="";ln.manualAmt=true;mirrorAmount(i,"dr");}
+    if(f==="cr"){ln.cr=e.target.value;if(num(ln.cr)>0)ln.dr="";ln.manualAmt=true;mirrorAmount(i,"cr");}
     row.classList.toggle("dr-line",num(ln.dr)>0);row.classList.toggle("cr-line",num(ln.cr)>0);
     renderVTotals();
   });
@@ -2679,6 +2686,24 @@ function bindVoucherGrid(){
     const i=+e.target.closest(".vline").dataset.i;
     if(vLines.length>1){vLines.splice(i,1);renderVLines();}
   });
+}
+/* convenience: when a debit/credit is typed on one line, mirror it to the opposite
+   side of the *other* line so a simple 2-line voucher balances automatically.
+   Only fills a counterpart that the user hasn't manually edited, so their own
+   amounts are never overwritten. Re-renders the grid to show the copied value. */
+function mirrorAmount(i,side){
+  if(vLines.length!==2)return;                 // only for the simple two-line case
+  const src=vLines[i];const j=i===0?1:0;const other=vLines[j];
+  if(other.manualAmt)return;                   // respect a value the user set themselves
+  const amt=side==="dr"?src.dr:src.cr;
+  if(side==="dr"){other.cr=amt;other.dr="";}   // debit here -> credit there
+  else{other.dr=amt;other.cr="";}              // credit here -> debit there
+  /* re-render so the mirrored value shows, keeping focus on the field being typed */
+  const box=$("#vLines");
+  const active=document.activeElement;const af=active&&active.getAttribute&&active.getAttribute("data-vf");
+  const ai=active&&active.closest?(+active.closest(".vline").dataset.i):-1;
+  renderVLines();
+  if(af&&ai>=0){const sel=box.querySelector(`.vline[data-i='${ai}'] [data-vf='${af}']`);if(sel){sel.focus();const v=sel.value;sel.value="";sel.value=v;}}
 }
 function $q(sel,root){return (root||document).querySelector(sel);}
 /* what kind of register does this COA account map to? */
@@ -4457,8 +4482,13 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     cancelEditTxn();setDirty(true);renderAll();toast("Voucher updated");
   }else{
     const rec={id:nextTxnId(),date,desc,method,type:"Voucher",amount:tDr,lines,cat:lines[0]?vLineName2(lines[0]):"",coaAcct:"",offsetAcct:"",bank:"",toBank:"",ref:vRef,loanRef:"",bankRef:"",event:evId};
-    /* rolling a paid financial commitment forward to its next cycle */
-    if(cmLine){const c=commits.find(x=>x.id===cmLine.sub.slice(3));if(c){const due=cmNextDue(c);c.next=cmAdvance(due||todayISO(),c.freq);}}
+    /* a paid financial commitment: record last-paid, and (if the toggle is ticked)
+       roll it to its next due so it drops off the upcoming/due list for this month */
+    if(cmLine){const c=commits.find(x=>x.id===cmLine.sub.slice(3));if(c){
+      c.lastPaid=date;c.lastAmt=r2(num(cmLine.dr)||c.amount||0);
+      const closeMonth=!$("#cmCloseMonth")||$("#cmCloseMonth").checked;
+      if(closeMonth){const due=cmNextDue(c);c.next=cmAdvance(due||todayISO(),c.freq);}
+    }}
     applyVoucherEffects(rec);
     txns.push(rec);
     /* EMI purchase: create a linked loan record for the instalment plan */

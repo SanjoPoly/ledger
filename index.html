@@ -378,6 +378,18 @@
   .jrnl-preview-wrap{margin-top:.2rem}
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  /* fixed assets */
+  .fa-sub-head{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--line);padding-top:.7rem;margin-top:.2rem}
+  .fa-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.8rem;margin-bottom:1rem}
+  .fa-card{border:1px solid var(--line);border-radius:var(--r-md);padding:.9rem;background:var(--wash)}
+  .fa-card .fa-ic{font-size:1.3rem}
+  .fa-card .fa-nm{font-weight:600;font-size:.92rem;margin:.3rem 0 .1rem}
+  .fa-card .fa-val{font-family:var(--mono);font-weight:700;font-size:1.05rem}
+  .fa-card .fa-ty{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .fa-chip{display:inline-block;font-size:.62rem;font-weight:700;padding:.12rem .45rem;border-radius:999px;margin:.35rem .3rem 0 0}
+  .fa-chip.ok{background:rgba(61,220,163,.14);color:var(--mint)}
+  .fa-chip.warn{background:rgba(255,176,32,.16);color:var(--amber,#E0A21B)}
+  .fa-chip.bad{background:rgba(255,110,97,.16);color:var(--coral)}
   /* delete buttons hidden by default; a toggle in Settings reveals them */
   .icon-btn.danger{display:none}
   body.del-on .icon-btn.danger{display:inline-flex}
@@ -678,6 +690,7 @@
     <button class="pill" data-tab="bank"><span class="dot"></span>Banks</button>
     <button class="pill" data-tab="ld"><span class="dot"></span>Loans &amp; Debts</button>
     <button class="pill" data-tab="inv"><span class="dot"></span>Investments</button>
+    <button class="pill" data-tab="fa"><span class="dot"></span>Fixed Assets</button>
     <button class="pill" data-tab="imp"><span class="dot"></span>Statement Upload</button>
     <button class="pill" data-tab="coa"><span class="dot"></span>Chart of Accounts</button>
   </nav>
@@ -867,6 +880,38 @@
     <div class="table-card">
       <table id="tblInv"><thead><tr><th>Inv ID</th><th>Asset</th><th>Type</th><th>Bank</th><th style="text-align:right">Invested</th><th style="text-align:right">Current</th><th style="text-align:right">Gain / loss</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyInv" style="display:none">No investments yet.</div>
+    </div>
+  </section>
+
+  <!-- ============ FIXED ASSETS ============ -->
+  <section class="panel" id="panel-fa">
+    <div class="section-head"><h2>Fixed assets</h2><span class="total" id="faTotalHead"></span></div>
+    <form class="add-card" id="formFA" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="f"><label for="faName">Asset name</label><input type="text" id="faName" placeholder="e.g. Honda Activa, My House" required></div>
+      <div class="f"><label for="faType">Asset type</label><select id="faType"><option>House / Property</option><option>Car</option><option>Bike</option><option>Scooter</option><option>Land</option><option>Electronics</option><option>Furniture</option><option>Other</option></select></div>
+      <div class="f"><label for="faDate">Acquired date</label><input type="date" id="faDate"></div>
+      <div class="f"><label for="faAmt">Opening value <i>(cost)</i></label><input type="number" id="faAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="faCur">Current value <i>(optional)</i></label><input type="number" id="faCur" min="0" step="0.01" inputmode="decimal" placeholder="same as opening"></div>
+      <div class="f"><label for="faCoa">Main account <i>(COA · required)</i></label><select id="faCoa"></select></div>
+      <div class="f" style="grid-column:1/-1"><div class="fa-sub-head">Insurance <i>(optional)</i></div></div>
+      <div class="f"><label for="faInsurer">Insurer / policy</label><input type="text" id="faInsurer" placeholder="e.g. ICICI Lombard #POL123"></div>
+      <div class="f"><label for="faInsPrem">Premium</label><input type="number" id="faInsPrem" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="f"><label for="faInsExpiry">Insurance renewal date</label><input type="date" id="faInsExpiry"></div>
+      <div class="f" style="grid-column:1/-1"><div class="fa-sub-head">Maintenance / service <i>(optional)</i></div></div>
+      <div class="f"><label for="faMaintDue">Next service / maintenance due</label><input type="date" id="faMaintDue"></div>
+      <div class="f" style="grid-column:span 2"><label for="faMaintNote">Maintenance note</label><input type="text" id="faMaintNote" placeholder="e.g. 10,000 km service, PUC renewal"></div>
+      <div class="f" style="grid-column:1/-1"><label for="faNotes">Notes</label><input type="text" id="faNotes" placeholder="registration no., location, etc."></div>
+      <div class="f" style="grid-column:1/-1"><button type="submit" id="faSubmitBtn">+ Create fixed asset</button><button type="button" id="btnCancelFA" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+    </form>
+    <div class="toolbar">
+      <input type="search" id="searchFA" placeholder="Search asset…">
+      <select id="filterFAStatus"><option value="">All statuses</option><option value="Active">Active</option><option value="Disposed">Disposed</option></select>
+      <span class="sum" id="faFilteredSum"></span>
+    </div>
+    <div id="faCards" class="fa-cards"></div>
+    <div class="table-card">
+      <table id="tblFA"><thead><tr><th>ID</th><th>Asset</th><th>Type</th><th style="text-align:right">Value</th><th>Insurance</th><th>Maintenance</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="empty" id="emptyFA" style="display:none">No fixed assets yet. Add your house, vehicles, etc.</div>
     </div>
   </section>
 
@@ -1594,9 +1639,11 @@ let txns=[];      // {id,date,type,cat,desc,amount,bank,method,ref}
 let editingTxn=null;  // Txn ID currently being edited in the posting form
 let editingLD=null;   // Loan/debt Record ID currently being edited
 let editingInv=null;  // Investment ID currently being edited
+let editingFA=null;   // Fixed-asset ID currently being edited
 let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
+let fassets=[];   // {id,name,assetType,date,amount,current,coa,insurer,insPrem,insExpiry,maintDue,maintNote,status,notes}
 let coa=[];       // {number,name,type,category,sub,keywords} — Chart of Accounts
 
 /* ---------- id helpers ---------- */
@@ -1800,7 +1847,30 @@ function parseWorkbook(buf,name){
     });
   });
 
-  // Chart of Accounts (optional sheet — main accounts + statement-matching keywords)
+  // Fixed Assets
+  fassets.length=0;
+  sheetRows(wb,"Fixed Assets").forEach(r=>{
+    const nm=String(gv(r,"Asset Name","Name")||"").trim();
+    if(!nm&&!gv(r,"Asset ID"))return;
+    const amount=num(gv(r,"Opening Value","Value"));
+    const curRaw=gv(r,"Current Value");
+    fassets.push({
+      id:String(gv(r,"Asset ID","ID")||"").trim()||nextId(fassets,"FA",1),
+      name:nm,
+      assetType:String(gv(r,"Asset Type","Type")||"Other").trim()||"Other",
+      date:normDate(gv(r,"Acquired Date","Date"))||todayISO(),
+      amount,
+      current:curRaw===""?amount:num(curRaw),
+      coa:String(gv(r,"Main Account")||"").trim(),
+      insurer:String(gv(r,"Insurer","Insurance Provider","Policy")||"").trim(),
+      insPrem:num(gv(r,"Insurance Premium","Premium")),
+      insExpiry:normDate(gv(r,"Insurance Expiry","Insurance Renewal Date","Insurance Renewal")),
+      maintDue:normDate(gv(r,"Maintenance Due","Next Service","Service Due")),
+      maintNote:String(gv(r,"Maintenance Note","Service Note")||"").trim(),
+      status:String(gv(r,"Status")||"Active").trim()||"Active",
+      notes:String(gv(r,"Notes")||"").trim()
+    });
+  });
   coa=[];
   sheetRows(wb,"Chart of Accounts").forEach(r=>{
     const numv=String(gv(r,"Account Number")||"").trim();
@@ -1898,6 +1968,13 @@ function buildWorkbook(){
   wsI["!cols"]=[{wch:10},{wch:18},{wch:12},{wch:13},{wch:14},{wch:13},{wch:18},{wch:14},{wch:9},{wch:12},{wch:12},{wch:18},{wch:14},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsI,"Investments");
 
+  // Fixed Assets
+  const faHeaders=["Asset ID","Asset Name","Asset Type","Acquired Date","Opening Value","Current Value","Main Account","Insurer","Insurance Premium","Insurance Renewal Date","Maintenance Due","Maintenance Note","Status","Notes"];
+  const faData=fassets.map(a=>[a.id,a.name,a.assetType,a.date,a.amount,a.current,a.coa||"",a.insurer||"",a.insPrem||"",a.insExpiry||"",a.maintDue||"",a.maintNote||"",a.status,a.notes||""]);
+  const wsFA=bannerSheet("Fixed Assets Register","House, vehicles and other fixed assets with insurance renewal and maintenance reminders.",faHeaders,faData);
+  wsFA["!cols"]=[{wch:10},{wch:20},{wch:14},{wch:13},{wch:14},{wch:14},{wch:14},{wch:20},{wch:16},{wch:18},{wch:14},{wch:24},{wch:10},{wch:24}];
+  XLSX.utils.book_append_sheet(wb,wsFA,"Fixed Assets");
+
   // Chart of Accounts — preserved on every save so hand-added accounts survive
   const coaHeaders=["Account Number","Name","Account Type","Account Category","Account Sub Category","Key Words for Matching","Control Account"];
   const coaData=coa.slice().sort((a,b)=>String(a.number).localeCompare(String(b.number),undefined,{numeric:true})).map(a=>[a.number,a.name,a.type,a.category,a.sub,a.keywords,a.control?"Yes":""]);
@@ -1943,6 +2020,7 @@ function refreshSelects(){
   try{syncCoaCat();}catch(e){}
   const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value,{catMatch:/(cash|bank)/,taken:coaTakenBy("bank")});
   const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value,{catMatch:/invest/,taken:coaTakenBy("inv")});
+  const fac=$("#faCoa");if(fac)fac.innerHTML=coaAcctOptions("Asset",fac.value);
   const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value);}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
@@ -2281,6 +2359,15 @@ function renderDues(){
     duesData[cid]={kind:"pay",ref:"card",refId:b.name,amt:owed,who:b.name};
     payRows.push({dISO,html:row(cid,"pay",b.name,"card outstanding"+(dTxt?" \u00b7 due "+dTxt:""),owed,dueClass(dISO),'<span class="due-tag card">card</span>'+dueTag(dISO))});
   });
+  /* fixed-asset reminders: insurance renewals and services coming up (no settle button) */
+  fassets.filter(a=>a.status!=="Disposed").forEach(a=>{
+    [["Insurance renewal",a.insExpiry,a.insPrem,a.insurer],["Service / maintenance",a.maintDue,0,a.maintNote]].forEach(([label,d,amt,note])=>{
+      if(!d||!inPeriod(d,false))return;
+      const rowHtml=`<div class="due-row ${dueClass(d)}"><div><div class="due-who">${faIcon(a.assetType)} ${esc(a.name)} <span class="due-tag" style="background:var(--wash-strong);color:var(--muted)">${label}</span>${dueTag(d)}</div><div class="due-meta">${esc(note||label)} \u00b7 due ${esc(d)}</div></div><div class="due-right"><div class="due-amt">${amt>0?fmt(amt):"\u2014"}</div></div></div>`;
+      if(amt>0)payTotal+=amt;
+      payRows.push({dISO:d,html:rowHtml});
+    });
+  });
   payBox.innerHTML=payRows.length?payRows.sort((a,b)=>(a.dISO||"9999").localeCompare(b.dISO||"9999")).map(r=>r.html).join("")
     :'<div class="dues-empty">Nothing to pay here.</div>';
   if($("#duePaySum"))$("#duePaySum").textContent=payRows.length?fmt(payTotal)+(showAll?" balance":" due"):"";
@@ -2361,7 +2448,7 @@ function dueDateISO(day){
 }
 function renderAll(){
   try{refreshSelects();}catch(e){console.error("selects",e);}
-  [renderDash,renderDues,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderCoa,renderStatement].forEach(fn=>{
+  [renderDash,renderDues,renderTxn,renderAddRecent,renderBank,renderLD,renderInv,renderFA,renderCoa,renderStatement].forEach(fn=>{
     try{fn();}catch(e){console.error(fn.name+" failed:",e);}
   });
 }
@@ -2434,9 +2521,10 @@ function renderStatements(){
   const bankRows=banks.filter(b=>b.kind!=="card").map(b=>({name:b.name,amt:bankBalance(b.name,asOf)}));
   const cardRows=banks.filter(b=>b.kind==="card").map(b=>({name:b.name+" (card)",amt:bankBalance(b.name,asOf)})).filter(x=>x.amt>0.005);
   const invRows=invs.filter(v=>v.status!=="Closed"&&beforeAsOf(v.date)).map(v=>({name:v.name+" \u00b7 "+v.id,amt:v.current}));
+  const faRows=fassets.filter(a=>a.status!=="Disposed"&&beforeAsOf(a.date)).map(a=>({name:a.name+" \u00b7 "+a.id,amt:a.current||a.amount||0}));
   const recvRows=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance}));
   const payRows=lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&beforeAsOf(l.issue)).map(l=>({name:l.person+" \u00b7 "+l.id,amt:l.balance})).concat(cardRows);
-  const aT=r2([...bankRows,...invRows,...recvRows].reduce((sm,x)=>sm+x.amt,0));
+  const aT=r2([...bankRows,...invRows,...faRows,...recvRows].reduce((sm,x)=>sm+x.amt,0));
   const lT=r2(payRows.reduce((sm,x)=>sm+x.amt,0));
   const stBalScope=$("#stBalScope");
   if(stBalScope)stBalScope.textContent=asOf?("as of "+new Date(dashPeriodKey()+"-01").toLocaleString(undefined,{month:"short",year:"numeric"})+" end"):"as of today";
@@ -2445,7 +2533,7 @@ function renderStatements(){
       +rows.map(x=>`<div class="fin-row fin-sub"><span>${esc(x.name)}</span><span class="${cls||""}">${fmt(x.amt)}</span></div>`).join("")
     :"";
   bs.innerHTML=
-    sec("Cash & bank",bankRows)+sec("Investments",invRows)+sec("Money owed to you",recvRows)
+    sec("Cash & bank",bankRows)+sec("Investments",invRows)+sec("Fixed assets",faRows)+sec("Money owed to you",recvRows)
     +`<div class="fin-row fin-total"><span>Total assets</span><span class="pos">${fmt(aT)}</span></div>`
     +sec("Loans & borrowings",payRows,"neg")
     +`<div class="fin-row fin-total"><span>Total liabilities</span><span class="neg">${fmt(lT)}</span></div>`
@@ -3034,6 +3122,95 @@ function renderInv(){
   $("#tblInv").style.display=invs.length?"":"none";
 }
 
+/* ---------- fixed assets ---------- */
+function faIcon(t){t=(t||"").toLowerCase();return /house|property|land/.test(t)?"\ud83c\udfe0":/car/.test(t)?"\ud83d\ude97":/bike|motor/.test(t)?"\ud83c\udfcd\ufe0f":/scooter/.test(t)?"\ud83d\udef5":/electron/.test(t)?"\ud83d\udcbb":/furnitur/.test(t)?"\ud83d\udECB\ufe0f":"\ud83d\udCE6";}
+/* days until a date (negative = past) */
+function daysUntil(d){if(!d)return null;const t=new Date(todayISO()),x=new Date(d);return Math.round((x-t)/86400000);}
+function faDueChip(label,d){
+  if(!d)return "";
+  const n=daysUntil(d);
+  if(n<0)return `<span class="fa-chip bad">${label} overdue \u00b7 ${esc(d)}</span>`;
+  if(n<=30)return `<span class="fa-chip warn">${label} in ${n}d \u00b7 ${esc(d)}</span>`;
+  return `<span class="fa-chip ok">${label} ${esc(d)}</span>`;
+}
+function renderFA(){
+  const cardBox=$("#faCards"),tblBody=document.querySelector("#tblFA tbody");
+  const active=fassets.filter(a=>a.status!=="Disposed");
+  const totalVal=active.reduce((s,a)=>s+(a.current||a.amount||0),0);
+  if($("#faTotalHead"))$("#faTotalHead").textContent=fassets.length?`${fmt(totalVal)} value \u00b7 ${active.length} asset${active.length===1?"":"s"}`:"";
+  const q=($("#searchFA")?$("#searchFA").value:"").trim().toLowerCase();
+  const fst=$("#filterFAStatus")?$("#filterFAStatus").value:"";
+  const rows=fassets.map((a,i)=>({a,i})).filter(({a})=>(!q||(a.name+" "+a.assetType).toLowerCase().includes(q))&&(!fst||a.status===fst));
+  if($("#faFilteredSum"))$("#faFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
+  if(cardBox){
+    cardBox.innerHTML=active.map(a=>{
+      const val=a.current||a.amount||0;
+      return `<div class="fa-card"><div class="fa-ic">${faIcon(a.assetType)}</div><div class="fa-ty">${esc(a.assetType)}</div><div class="fa-nm">${esc(a.name)}</div><div class="fa-val">${fmt(val)}</div>${a.insExpiry?faDueChip("Insurance",a.insExpiry):""}${a.maintDue?faDueChip("Service",a.maintDue):""}</div>`;
+    }).join("");
+  }
+  if(tblBody){
+    tblBody.innerHTML=rows.map(({a,i})=>{
+      const val=a.current||a.amount||0;const disposed=a.status==="Disposed";
+      return `<tr data-i="${i}"${disposed?' style="opacity:.6"':''}>
+        <td data-l="ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(a.id)}</td>
+        <td data-l="Asset"><strong>${faIcon(a.assetType)} ${esc(a.name)}</strong>${a.notes?`<div style="font-size:.7rem;color:var(--muted)">${esc(a.notes)}</div>`:""}</td>
+        <td data-l="Type">${esc(a.assetType)}</td>
+        <td data-l="Value" class="num">${fmt(val)}</td>
+        <td data-l="Insurance">${a.insExpiry?faDueChip("",a.insExpiry).replace('">  \u00b7',' ">'):'<span style="color:var(--muted);font-size:.75rem">\u2014</span>'}${a.insurer?`<div style="font-size:.68rem;color:var(--muted)">${esc(a.insurer)}</div>`:""}</td>
+        <td data-l="Maintenance">${a.maintDue?faDueChip("",a.maintDue):'<span style="color:var(--muted);font-size:.75rem">\u2014</span>'}${a.maintNote?`<div style="font-size:.68rem;color:var(--muted)">${esc(a.maintNote)}</div>`:""}</td>
+        <td data-l="Status">${disposed?`<span style="font-size:.72rem;color:var(--muted)">Disposed</span>`:'<span class="tag in">Active</span>'}</td>
+        <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="editFA">Edit</button><button type="button" class="icon-btn danger" data-act="delFA">Del</button></div></td></tr>`;
+    }).join("");
+  }
+  if($("#emptyFA"))$("#emptyFA").style.display=fassets.length?"none":"block";
+  if($("#tblFA"))$("#tblFA").style.display=fassets.length?"":"none";
+}
+$("#formFA")&&$("#formFA").addEventListener("submit",e=>{
+  e.preventDefault();
+  const name=$("#faName").value.trim();
+  const coaVal=$("#faCoa")?$("#faCoa").value:"";
+  if(!name){toast("Enter the asset name");return;}
+  if(!coaVal){toast("Choose a main account \u2014 it's required so the asset hits the right ledger");return;}
+  const amount=num($("#faAmt").value);
+  const rec={
+    name,assetType:$("#faType").value,date:$("#faDate").value||todayISO(),
+    amount,current:$("#faCur").value===""?amount:num($("#faCur").value),coa:coaVal,
+    insurer:$("#faInsurer").value.trim(),insPrem:num($("#faInsPrem").value),insExpiry:$("#faInsExpiry").value||"",
+    maintDue:$("#faMaintDue").value||"",maintNote:$("#faMaintNote").value.trim(),
+    status:"Active",notes:$("#faNotes").value.trim()
+  };
+  if(editingFA){
+    const a=fassets.find(x=>x.id===editingFA);if(a)Object.assign(a,rec);
+    cancelEditFA();setDirty(true);renderAll();toast("Fixed asset updated");return;
+  }
+  rec.id=nextId(fassets,"FA",1);
+  fassets.push(rec);
+  e.target.reset();$("#faDate").value=todayISO();
+  setDirty(true);renderAll();toast("Fixed asset created \u00b7 "+rec.id);
+});
+function loadFAIntoForm(a){
+  editingFA=a.id;
+  $("#faName").value=a.name;$("#faType").value=a.assetType;$("#faDate").value=a.date||todayISO();
+  $("#faAmt").value=a.amount||"";$("#faCur").value=a.current||"";
+  if($("#faCoa"))$("#faCoa").innerHTML=coaAcctOptions("Asset",a.coa||"");
+  $("#faInsurer").value=a.insurer||"";$("#faInsPrem").value=a.insPrem||"";$("#faInsExpiry").value=a.insExpiry||"";
+  $("#faMaintDue").value=a.maintDue||"";$("#faMaintNote").value=a.maintNote||"";$("#faNotes").value=a.notes||"";
+  if($("#faSubmitBtn"))$("#faSubmitBtn").textContent="\u2713 Update fixed asset";
+  if($("#btnCancelFA"))$("#btnCancelFA").style.display="";
+  window.scrollTo(0,0);
+  toast("Editing "+a.id+" \u2014 change fields and press Update");
+}
+function cancelEditFA(){
+  editingFA=null;
+  const f=$("#formFA");if(f)f.reset();
+  $("#faDate").value=todayISO();
+  if($("#faSubmitBtn"))$("#faSubmitBtn").textContent="+ Create fixed asset";
+  if($("#btnCancelFA"))$("#btnCancelFA").style.display="none";
+}
+$("#btnCancelFA")&&$("#btnCancelFA").addEventListener("click",cancelEditFA);
+$("#searchFA")&&$("#searchFA").addEventListener("input",renderFA);
+$("#filterFAStatus")&&$("#filterFAStatus").addEventListener("change",renderFA);
+
 /* ---------- applying payments against a loan / debt ----------
    A payment lowers Balance Due. When the balance reaches zero the record
    closes itself. Reversing (edit or delete) puts the money back and
@@ -3555,6 +3732,8 @@ document.addEventListener("click",e=>{
     case "delTxn":if(confirm("Delete this transaction?")){if(editingTxn===txns[i].id)cancelEditTxn();const tt=txns[i];if(tt.type==="Voucher")reverseVoucherEffects(tt);else{reverseLoanPayment(tt);reverseInvTopup(tt);reverseLoanTopup(tt);}txns.splice(i,1);done();}break;
     case "closeInv":openCloseModal("inv",i);break;
     case "editInv":{const r=invs[i];if(r)loadInvIntoForm(r);break;}
+    case "editFA":{const a=fassets[i];if(a)loadFAIntoForm(a);break;}
+    case "delFA":if(confirm(`Delete "${fassets[i].name}"?`)){if(editingFA===fassets[i].id)cancelEditFA();fassets.splice(i,1);done();}break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}
     case "closeLD":openCloseModal("ld",i);break;
     case "editLD":{const r=lends[i];if(r)loadLDIntoForm(r);break;}
@@ -3737,9 +3916,10 @@ $$(".pill").forEach(b=>b.addEventListener("click",()=>{
   b.classList.add("active");
   const tab=b.dataset.tab;
   $$(".panel").forEach(p=>p.classList.remove("active"));
-  const map={home:"panel-home",add:"panel-add",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",imp:"panel-imp",coa:"panel-coa"};
+  const map={home:"panel-home",add:"panel-add",txn:"panel-txn",bank:"panel-bank",ld:"panel-ld",inv:"panel-inv",fa:"panel-fa",imp:"panel-imp",coa:"panel-coa"};
   const panel=$("#"+map[tab]);if(panel)panel.classList.add("active");
   if(tab==="bank"){renderBank();renderStatement();refreshSelects();if($("#recDate")&&!$("#recDate").value)$("#recDate").value=todayISO();}
+  if(tab==="fa"){renderFA();refreshSelects();if($("#faDate")&&!$("#faDate").value)$("#faDate").value=todayISO();}
   if(tab==="imp")refreshSelects();
   if(tab==="home")renderDash();
   window.scrollTo(0,0);

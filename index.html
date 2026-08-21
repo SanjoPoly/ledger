@@ -378,6 +378,9 @@
   .jrnl-preview-wrap{margin-top:.2rem}
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  /* delete buttons hidden by default; a toggle in Settings reveals them */
+  .icon-btn.danger{display:none}
+  body.del-on .icon-btn.danger{display:inline-flex}
   .emi-panel{border:1px solid var(--line);border-radius:var(--r-md);padding:.8rem 1rem;background:var(--wash);margin:.3rem 0 1rem}
   .emi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem}
   .emi-grid .f{margin:0}
@@ -815,7 +818,9 @@
       <div class="f"><label for="ldRate">Interest rate <i>(% per year, optional)</i></label><input type="number" id="ldRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
       <div class="f"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
-      <div class="f"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
+      <div class="f" id="ldDueWrap"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
+      <div class="f" id="ldDueDayWrap" style="display:none"><label for="ldDueDay">Due day of month <i>(1–31)</i></label><input type="number" id="ldDueDay" min="1" max="31" step="1" inputmode="numeric" placeholder="e.g. 5"></div>
+      <div class="f" style="grid-column:1/-1;justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer"><input type="checkbox" id="ldMonthly" style="width:17px;height:17px;accent-color:var(--mint)"> Monthly commitment — recurs on a day each month (EMI, rent, subscription)</label></div>
       <div class="f"><label for="ldCoa">Main account <i>(COA · required)</i></label><select id="ldCoa"></select></div>
       <input type="hidden" id="ldFundBank" value="">
       <div class="f"><button type="submit">+ Create record master</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
@@ -956,6 +961,9 @@
         <select id="stCurrency"><option>SAR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>INR</option><option>PKR</option><option>EGP</option></select>
         <div class="hint">Applies across the whole app and is stored in your ledger.</div>
       </div>
+      <div class="f"><label class="chk-line" style="display:flex;align-items:center;gap:.6rem;font-size:.9rem;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer"><input type="checkbox" id="stAllowDelete" style="width:18px;height:18px;accent-color:var(--coral)"> Show delete buttons</label>
+        <div class="hint">Off by default to prevent accidental deletions. Turn on to reveal the Del buttons on transactions, banks, loans and investments.</div>
+      </div>
     </div>
 
     <!-- ===== Lists ===== -->
@@ -1070,6 +1078,8 @@ const LIST_HEADERS={incomeCats:"Income Categories",expenseCats:"Expense Categori
 let lists=JSON.parse(JSON.stringify(DEFAULT_LISTS));
 let theme=(function(){try{return localStorage.getItem("ledgr.theme")==="light"?"light":"dark";}catch(_){return "dark";}})();
 let currency="SAR", owner="", username="", passHash="";
+let allowDelete=false;
+function applyAllowDelete(){document.body.classList.toggle("del-on",!!allowDelete);}
 let storageMode="local";            // "local" | "github"
 let fileHandle=null, fileName="", dirty=false;
 const gh={token:"",repo:"",path:"",branch:"main",sha:null};
@@ -1474,6 +1484,7 @@ $("#btnSettings").addEventListener("click",()=>{
   $("#stListValues").value=lists[$("#stListPick").value].join("\n");
   $("#stCurrency").value=currency;
   if(![...$("#stCurrency").options].some(o=>o.value===currency)){const o=document.createElement("option");o.textContent=currency;$("#stCurrency").appendChild(o);$("#stCurrency").value=currency;}
+  if($("#stAllowDelete"))$("#stAllowDelete").checked=!!allowDelete;
   renderBank();
   setSettingsTab("secBanks");
   $("#settingsOverlay").style.display="flex";
@@ -1515,6 +1526,8 @@ $("#btnSettingsSave").addEventListener("click",async()=>{
   }
   owner=name;username=user;
   if($("#stCurrency").value)currency=$("#stCurrency").value;
+  if($("#stAllowDelete"))allowDelete=$("#stAllowDelete").checked;
+  applyAllowDelete();
   $("#ownerLabel").textContent=owner?owner+"’s ledger":"Personal finance";
   if(storageMode==="github"&&gh.token&&sessionPass)await saveProfile(sessionPass);
   setDirty(true);
@@ -1737,6 +1750,8 @@ function parseWorkbook(buf,name){
       status:String(gv(r,"Status")||"Open").trim()||"Open",
       coa:String(gv(r,"Main Account")||"").trim(),
       creditLimit:num(gv(r,"Credit Limit","Limit")),
+      dueDay:Math.round(num(gv(r,"Due Day","Monthly Due Day")))||0,
+      monthly:/^(1|y|yes|true)/i.test(String(gv(r,"Monthly")||""))||Math.round(num(gv(r,"Due Day","Monthly Due Day")))>0?1:0,
       closedDate:normDate(gv(r,"Closed Date")),
       closeBank:String(gv(r,"Close Bank Account","Close Bank")||"").trim(),
       txnRef:String(gv(r,"Auto-Posted Txn Ref","Txn Ref")||"").trim()
@@ -1792,6 +1807,7 @@ function parseWorkbook(buf,name){
       if(k==="username")username=String(v||"");
       if(k==="passwordhash")passHash=String(v||"");
       if(k==="theme"&&v)theme=String(v)==="light"?"light":"dark";
+      if(k==="allowdelete"||k==="show delete"||k==="showdelete")allowDelete=/^(1|y|yes|true|on)/i.test(String(v).trim());
     });
   }
   const listWs=wb.Sheets["Lists"];
@@ -1805,6 +1821,7 @@ function parseWorkbook(buf,name){
     }
   }
   applyTheme(theme,false);
+  applyAllowDelete();
 }
 
 function loadWorkbook(buf,name){
@@ -1849,10 +1866,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
-  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref","Main Account","Credit Limit"];
-  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||"",r.coa||"",r.creditLimit||""]);
-  const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due. Credit cards track available = limit − balance.",ldHeaders,ldData);
-  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18},{wch:18},{wch:14}];
+  const ldHeaders=["Record ID","Type","Person / Lender","Category / Purpose","Principal / Original","Interest Rate (%)","Term (Months)","EMI","Net Payable","Total Paid","Balance Due","Issue Date","Due Date","Status","Closed Date","Close Bank Account","Auto-Posted Txn Ref","Main Account","Credit Limit","Monthly","Due Day"];
+  const ldData=lends.map(r=>[r.id,r.type,r.person,r.purpose,r.principal,r.rate||0,r.term||0,ldEmi(r),ldNetPayable(r),r2(ldNetPayable(r)-r.balance),r.balance,r.issue||"",r.due||"",r.status,r.closedDate||"",r.closeBank||"",r.txnRef||"",r.coa||"",r.creditLimit||"",r.monthly?"Yes":"",r.dueDay||""]);
+  const wsL=bannerSheet("Loans & Debts Management","Interest-aware tracking. Net Payable = EMI x Term. Payments reduce Balance Due. Monthly commitments recur on a Due Day.",ldHeaders,ldData);
+  wsL["!cols"]=[{wch:10},{wch:18},{wch:16},{wch:16},{wch:16},{wch:14},{wch:12},{wch:12},{wch:14},{wch:12},{wch:13},{wch:12},{wch:12},{wch:9},{wch:12},{wch:16},{wch:18},{wch:18},{wch:14},{wch:9},{wch:9}];
   XLSX.utils.book_append_sheet(wb,wsL,"Loans & Debts");
 
   // Investments
@@ -1879,7 +1896,7 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsList,"Lists");
 
   // Settings
-  const settings=[["Key","Value"],["Currency",currency],["Owner",owner],["Username",username],["PasswordHash",passHash],["Theme",theme]];
+  const settings=[["Key","Value"],["Currency",currency],["Owner",owner],["Username",username],["PasswordHash",passHash],["Theme",theme],["AllowDelete",allowDelete?"Yes":"No"]];
   const wsS=XLSX.utils.aoa_to_sheet(settings);
   XLSX.utils.book_append_sheet(wb,wsS,"Settings");
 
@@ -1907,7 +1924,7 @@ function refreshSelects(){
   try{syncCoaCat();}catch(e){}
   const bc=$("#bCoa");if(bc)bc.innerHTML=coaAcctOptions("Asset",bc.value,{catMatch:/(cash|bank)/,taken:coaTakenBy("bank")});
   const ic=$("#ivCoa");if(ic)ic.innerHTML=coaAcctOptions("Asset",ic.value,{catMatch:/invest/,taken:coaTakenBy("inv")});
-  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value,{catMatch:t==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});}
+  const lc=$("#ldCoa");if(lc){const t=$("#ldType")?$("#ldType").value:"Debt Receivable";lc.innerHTML=coaAcctOptions(t==="Debt Receivable"?"Asset":"Liability",lc.value);}
   const opts=arr=>arr.map(v=>`<option>${esc(v)}</option>`).join("");
   const bankOpts=(sel)=>banks.length?banks.map(b=>`<option${b.name===sel?" selected":""}>${esc(b.name)}</option>`).join(""):'<option value="">— add a bank —</option>';
   // voucher grid: bind once, seed with two lines if empty
@@ -2186,19 +2203,21 @@ function renderDues(){
   const recvs=lends.filter(l=>l.status!=="Closed"&&l.type==="Debt Receivable"&&l.balance>0.5);
   let recvTotal=0;
   recvBox.innerHTML=recvs.length?recvs
-    .sort((a,b)=>(a.due||"9999").localeCompare(b.due||"9999"))
-    .map(l=>{recvTotal+=l.balance;return row(l.person,(l.purpose||"")+(l.due?" \u00b7 due "+l.due:""),l.balance,dueClass(l.due),dueTag(l.due));}).join("")
+    .sort((a,b)=>((a.monthly&&a.dueDay?dueDateISO(a.dueDay):a.due)||"9999").localeCompare((b.monthly&&b.dueDay?dueDateISO(b.dueDay):b.due)||"9999"))
+    .map(l=>{recvTotal+=l.balance;const dISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):l.due;const dTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):l.due;return row(l.person,(l.purpose||"")+(dTxt?" \u00b7 due "+dTxt:""),l.balance,dueClass(dISO),dueTag(dISO));}).join("")
     :'<div class="dues-empty">Nothing to receive \u2014 all settled.</div>';
   if($("#dueRecvSum"))$("#dueRecvSum").textContent=recvs.length?fmt(recvTotal)+" outstanding":"";
 
   /* ---- TO PAY: loan EMIs, personal debts, and credit cards ---- */
   const payItems=[];
   lends.filter(l=>l.status!=="Closed"&&l.type!=="Debt Receivable"&&l.balance>0.5).forEach(l=>{
+    const dueISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):(l.due||"");
+    const dueTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):(l.due||"");
     if(l.term>0){
       const emi=Math.min(ldEmi(l),l.balance);   // this month's instalment (capped at balance)
-      payItems.push({who:l.person,meta:(l.purpose||"loan")+" \u00b7 balance "+fmt(l.balance),amt:emi,due:l.due,tag:'<span class="due-tag emi">EMI</span>'});
+      payItems.push({who:l.person,meta:(l.purpose||"loan")+" \u00b7 balance "+fmt(l.balance)+(dueTxt?" \u00b7 due "+dueTxt:""),amt:emi,due:dueISO,tag:'<span class="due-tag emi">EMI</span>'});
     }else{
-      payItems.push({who:l.person,meta:(l.purpose||"debt")+(l.due?" \u00b7 due "+l.due:""),amt:l.balance,due:l.due,tag:""});
+      payItems.push({who:l.person,meta:(l.purpose||"debt")+(dueTxt?" \u00b7 due "+dueTxt:""),amt:l.balance,due:dueISO,tag:l.monthly?'<span class="due-tag emi">monthly</span>':""});
     }
   });
   /* credit cards: outstanding to pay, with the card's due date */
@@ -3267,7 +3286,10 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
       const oldNet=ldNetPayable(r);
       r.type=type;r.person=$("#ldPerson").value.trim();r.purpose=$("#ldPurpose").value.trim();
       r.principal=principal;r.rate=rate;r.term=term;
-      r.issue=$("#ldIssue").value||r.issue;r.due=$("#ldDue").value||"";
+      r.issue=$("#ldIssue").value||r.issue;
+      r.monthly=$("#ldMonthly")&&$("#ldMonthly").checked?1:0;
+      r.dueDay=r.monthly?Math.round(num($("#ldDueDay").value))||0:0;
+      r.due=r.monthly?"":($("#ldDue").value||"");
       r.coa=coaVal;
       r.creditLimit=num($("#ldLimit").value);
       // shift the outstanding balance by however much the net payable moved
@@ -3279,7 +3301,9 @@ $("#formLD")&&$("#formLD").addEventListener("submit",e=>{
   }
   const prefix=type==="Bank Loan Payable"?"LOAN":type==="Credit Card"?"CARD":"DEBT";
   const id=nextId(lends,prefix,1);
-  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,creditLimit:num($("#ldLimit").value),balance:0,issue:$("#ldIssue").value||todayISO(),due:$("#ldDue").value||"",status:"Open",coa:coaVal,closedDate:"",closeBank:"",txnRef:""};
+  const monthly=$("#ldMonthly")&&$("#ldMonthly").checked?1:0;
+  const dueDay=monthly?Math.round(num($("#ldDueDay").value))||0:0;
+  const rec={id,type,person:$("#ldPerson").value.trim(),purpose:$("#ldPurpose").value.trim(),principal,rate,term,creditLimit:num($("#ldLimit").value),balance:0,issue:$("#ldIssue").value||todayISO(),due:monthly?"":($("#ldDue").value||""),monthly,dueDay,status:"Open",coa:coaVal,closedDate:"",closeBank:"",txnRef:""};
   rec.balance=ldNetPayable(rec);   // liability starts at principal + interest (0 if no principal yet)
   lends.push(rec);
   /* master only \u2014 no bank cash posting. build the balance by posting vouchers to this record. */
@@ -3309,9 +3333,13 @@ function updateLdPreview(){
 function loadLDIntoForm(r){
   editingLD=r.id;
   $("#ldType").value=r.type;$("#ldPerson").value=r.person;$("#ldPurpose").value=r.purpose||"";
-  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"",{catMatch:r.type==="Debt Receivable"?/receivable/:/(loan|debt|borrow|payable|credit)/,taken:coaTakenBy("loan")});
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(r.type==="Debt Receivable"?"Asset":"Liability",r.coa||"");
   $("#ldPrincipal").value=r.principal;$("#ldRate").value=r.rate||"";$("#ldTerm").value=r.term||"";
   $("#ldIssue").value=r.issue||todayISO();$("#ldDue").value=r.due||"";
+  if($("#ldMonthly")){$("#ldMonthly").checked=!!r.monthly;}
+  if($("#ldDueDay"))$("#ldDueDay").value=r.dueDay||"";
+  if($("#ldDueWrap"))$("#ldDueWrap").style.display=r.monthly?"none":"";
+  if($("#ldDueDayWrap"))$("#ldDueDayWrap").style.display=r.monthly?"":"none";
   if($("#ldLimit"))$("#ldLimit").value=r.creditLimit||"";
   if($("#ldLimitWrap"))$("#ldLimitWrap").style.display=r.type==="Credit Card"?"":"none";
   const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="✓ Update record";
@@ -3324,7 +3352,9 @@ function cancelEditLD(){
   editingLD=null;
   const f=$("#formLD");if(f){f.reset();f.classList.remove("editing");}
   $("#ldIssue").value=todayISO();
-
+  if($("#ldDueWrap"))$("#ldDueWrap").style.display="";
+  if($("#ldDueDayWrap"))$("#ldDueDayWrap").style.display="none";
+  if($("#ldLimitWrap"))$("#ldLimitWrap").style.display="none";
   const btn=$("#formLD button[type=submit]");if(btn)btn.textContent="+ Add record";
   if($("#btnCancelLD"))$("#btnCancelLD").style.display="none";
   updateLdPreview();
@@ -3573,6 +3603,11 @@ document.addEventListener("click",e=>{
 $("#searchBank")&&$("#searchBank").addEventListener("input",renderBank);
 $("#stmtBank")&&$("#stmtBank").addEventListener("change",renderStatement);
 $("#stmtMonth")&&$("#stmtMonth").addEventListener("change",renderStatement);
+$("#ldMonthly")&&$("#ldMonthly").addEventListener("change",()=>{
+  const on=$("#ldMonthly").checked;
+  if($("#ldDueWrap"))$("#ldDueWrap").style.display=on?"none":"";
+  if($("#ldDueDayWrap"))$("#ldDueDayWrap").style.display=on?"":"none";
+});
 $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   const t=$("#ldType").value;
   const card=t==="Credit Card";
@@ -3581,7 +3616,7 @@ $("#ldType")&&$("#ldType").addEventListener("change",()=>{
   if($("#ldPrincipalLabel"))$("#ldPrincipalLabel").innerHTML=card?'Opening outstanding <i>(optional)</i>':'Opening principal <i>(optional — post entries later)</i>';
   /* credit cards are a payable liability, same COA family as loans owed */
   const payable=t==="Debt Receivable"?false:true;
-  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(payable?"Liability":"Asset",$("#ldCoa").value,{catMatch:payable?/(loan|debt|borrow|payable|credit)/:/receivable/,taken:coaTakenBy("loan")});
+  if($("#ldCoa"))$("#ldCoa").innerHTML=coaAcctOptions(payable?"Liability":"Asset",$("#ldCoa").value);
 });
 
 /* ---------- tab nav ---------- */

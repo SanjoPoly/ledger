@@ -2243,10 +2243,14 @@ function renderDues(){
     const dISO=l.monthly&&l.dueDay?dueDateISO(l.dueDay):l.due;
     if(!inPeriod(dISO,l.monthly))return;
     const dTxt=l.monthly&&l.dueDay?nextDueDateText(l.dueDay):l.due;
-    const amt=l.balance;   // receivables settle the full outstanding
+    /* per-month view shows the EMI instalment (if the record has a term); "All" shows the full outstanding */
+    const emi=l.term>0?Math.min(ldEmi(l),l.balance):l.balance;
+    const amt=showAll?l.balance:emi;
     recvTotal+=amt;
     duesData[l.id]={kind:"recv",ref:"loan",refId:l.id,amt,who:l.person};
-    recvRows.push({dISO,html:row(l.id,"recv",l.person,(l.purpose||"")+(dTxt?" \u00b7 due "+dTxt:""),amt,dueClass(dISO),dueTag(dISO))});
+    const tag=l.term>0?'<span class="due-tag emi">EMI</span>':(l.monthly?'<span class="due-tag emi">monthly</span>':"");
+    const meta=(l.purpose||"")+(l.term>0&&!showAll?" \u00b7 balance "+fmt(l.balance):"")+(dTxt?" \u00b7 due "+dTxt:"");
+    recvRows.push({dISO,html:row(l.id,"recv",l.person,meta,amt,dueClass(dISO),tag+dueTag(dISO))});
   });
   recvBox.innerHTML=recvRows.length?recvRows.sort((a,b)=>(a.dISO||"9999").localeCompare(b.dISO||"9999")).map(r=>r.html).join("")
     :'<div class="dues-empty">Nothing to receive here.</div>';

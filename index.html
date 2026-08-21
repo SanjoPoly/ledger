@@ -384,6 +384,22 @@
   .quickpay-bar .qp-controls{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
   .quickpay-bar select{min-height:40px;flex:1;min-width:160px}
   .quickpay-bar .qp-hint{font-size:.76rem;color:var(--muted);margin-top:.5rem}
+  /* event expense-type analysis */
+  .ev-analysis{margin-bottom:1.2rem}
+  .ev-an-card{border:1px solid var(--line);border-radius:var(--r-md);padding:1rem 1.1rem;background:var(--card)}
+  .ev-an-card h3{font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 0 .8rem}
+  .ev-bar-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.55rem;font-size:.83rem}
+  .ev-bar-row .lbl{min-width:110px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev-bar-track{flex:1;height:9px;border-radius:6px;background:var(--wash-strong);overflow:hidden}
+  .ev-bar-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--violet),var(--blue))}
+  .ev-bar-row .amt{min-width:92px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+  .ev-bar-row .pct{min-width:42px;text-align:right;font-size:.72rem;color:var(--muted)}
+  .ev-txn-row{display:flex;align-items:center;gap:.6rem;padding:.55rem 0;border-bottom:1px solid var(--line);font-size:.85rem}
+  .ev-txn-row:last-child{border-bottom:none}
+  .ev-txn-row .d{color:var(--muted);font-size:.76rem;min-width:74px}
+  .ev-txn-row .desc{flex:1;overflow:hidden;text-overflow:ellipsis}
+  .ev-txn-row .tag2{font-size:.66rem;background:var(--wash-strong);color:var(--muted);padding:.1rem .45rem;border-radius:20px}
+  .ev-txn-row .amt{font-variant-numeric:tabular-nums;font-weight:600;min-width:96px;text-align:right}
   /* collapsible master-creation forms */
   form.add-card.collapsed{display:none!important}
   .add-toggle{border:1px solid var(--line-strong);background:var(--card);color:var(--text);border-radius:10px;padding:.45rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;min-height:38px}
@@ -955,12 +971,14 @@
       <div class="f" style="grid-column:1/-1"><label for="cmNote">Note</label><input type="text" id="cmNote" placeholder="e.g. Jio number 98xxx, cleaner Ramesh 90xxx"></div>
       <div class="f" style="grid-column:1/-1"><button type="submit" id="cmSubmitBtn">+ Add commitment</button><button type="button" id="btnCancelCM" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
     </form>
+    <h3 style="font-size:.95rem;margin:.4rem 0 .7rem;color:var(--text)">Due this month <small style="color:var(--muted);font-weight:400">\u00b7 paid &amp; closed drop off automatically</small></h3>
+    <div id="cmCards" class="fa-cards"></div>
+    <h3 style="font-size:.95rem;margin:1.4rem 0 .5rem;color:var(--text)">All commitments</h3>
     <div class="toolbar">
       <input type="search" id="searchCM" placeholder="Search…">
       <select id="filterCMFreq"><option value="">All frequencies</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="halfyearly">Half-yearly</option><option value="yearly">Yearly</option></select>
       <span class="sum" id="cmFilteredSum"></span>
     </div>
-    <div id="cmCards" class="fa-cards"></div>
     <div class="table-card">
       <table id="tblCM"><thead><tr><th>Commitment</th><th>Category</th><th>Frequency</th><th>Next due</th><th style="text-align:right">Amount</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyCM" style="display:none">No commitments yet. Add recurring tasks like recharges, cleaning, or whitewash.</div>
@@ -971,6 +989,7 @@
   <section class="panel" id="panel-event">
     <div class="section-head"><h2>Events / projects</h2><span class="total" id="evTotalHead"></span><span style="margin-left:auto"></span><button type="button" class="add-toggle" data-formtoggle="formEV">+ Add event</button></div>
     <p class="sub" style="margin:-.3rem 0 1rem;color:var(--muted);font-size:.85rem">Track a project (e.g. building a house, a wedding, a car purchase). Tag expenses &amp; income to it — they accumulate here. When complete, the total capitalises into the event's main account with one settlement voucher.</p>
+    <div id="evAnalysis" class="ev-analysis"></div>
     <form class="add-card collapsed" id="formEV" style="grid-template-columns:1fr 1fr 1fr">
       <div class="f"><label for="evName">Event name</label><input type="text" id="evName" placeholder="e.g. My Home, Wedding, New Car" required></div>
       <div class="f"><label for="evType">Event type</label><select id="evType"><option value="fa">Fixed Asset (capitalise)</option><option value="exp">Expense (P&amp;L)</option><option value="inv">Investment</option></select></div>
@@ -1168,6 +1187,15 @@
   </div>
 </div>
 
+<div id="evTxnOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
+  <div class="auth-card" style="max-width:640px;max-height:90vh;overflow:auto">
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem"><h2 style="font-size:1.25rem;margin:0" id="evTxnTitle">Event transactions</h2><button class="btn ghost" id="btnEvTxnClose" style="margin-left:auto;width:auto;padding:.3rem .8rem">Close</button></div>
+    <p class="sub" id="evTxnSub" style="margin-bottom:.8rem"></p>
+    <div id="evTxnBreakdown"></div>
+    <div id="evTxnList"></div>
+  </div>
+</div>
+
 <div id="settleOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
   <div class="auth-card" style="max-width:440px;max-height:90vh;overflow:auto">
     <h2 style="font-size:1.25rem;margin-bottom:.5rem" id="settleTitle">Record payment</h2>
@@ -1176,6 +1204,7 @@
     <div class="f"><label for="settleAmt">Amount</label><input type="number" step="0.01" id="settleAmt" placeholder="0.00"></div>
     <div class="f"><label for="settleDate">Date</label><input type="date" id="settleDate"></div>
     <div class="f"><label for="settleAcct" id="settleAcctLabel">From / to account</label><select id="settleAcct" class="bank-select" style="width:100%"></select></div>
+    <label id="settleCloseWrap" style="display:none;align-items:center;gap:.5rem;margin:.2rem 0 .6rem;font-size:.85rem;cursor:pointer"><input type="checkbox" id="settleClose" style="width:auto"> Close this commitment after paying <i style="color:var(--muted)">(one-off — won't recur)</i></label>
     <div class="rec-hint" id="settleHint" style="margin-bottom:1rem"></div>
     <div class="stack">
       <button class="btn primary" id="btnSettleConfirm">Confirm &amp; post</button>
@@ -1793,7 +1822,7 @@ let banks=[];     // {id,name,acct,type,opening,recDate,statement,notes}
 let lends=[];     // {id,type,person,purpose,principal,balance,issue,due,status,closedDate,closeBank,txnRef}
 let invs=[];      // {id,name,assetType,date,amount,current,bank,status,closedDate,closedValue,txnRef}
 let fassets=[];   // {id,name,assetType,date,amount,current,coa,insurer,insPrem,insExpiry,maintDue,maintNote,status,notes}
-let commits=[];   // {id,name,cat,freq,next,amount,active,note,kind,coa}
+let commits=[];   // {id,name,cat,freq,next,amount,active,note,kind,coa,lastPaid,lastAmt,status}
 let events=[];    // {id,name,type,coa,start,budget,expTypes[],note,status,completedDate,settleRef}
 let coa=[];       // {number,name,type,category,sub,keywords} — Chart of Accounts
 
@@ -2040,6 +2069,9 @@ function parseWorkbook(buf,name){
       active:/^(0|n|no|false|paused)/i.test(String(gv(r,"Status","Active")||"Active").trim())?0:1,
       kind:/non/i.test(String(gv(r,"Kind","Type")||""))?"nonfin":"fin",
       coa:String(gv(r,"Main Account","Expense Account")||"").trim(),
+      lastPaid:normDate(gv(r,"Last Paid","Last Paid Date")),
+      lastAmt:num(gv(r,"Last Amount","Last Paid Amount")),
+      status:/closed/i.test(String(gv(r,"Record Status","Commitment Status")||""))?"Closed":"",
       note:String(gv(r,"Note","Notes")||"").trim()
     });
   });
@@ -2278,10 +2310,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsFA,"Fixed Assets");
 
   // Commitments
-  const cmHeaders=["ID","Commitment","Category","Frequency","Next Due","Amount","Status","Kind","Main Account","Note"];
-  const cmData=commits.map(c=>[c.id,c.name,c.cat,FREQ_LABEL[c.freq]||c.freq,c.next||"",c.amount||"",c.active?"Active":"Paused",c.kind==="nonfin"?"Non-financial":"Financial",c.coa||"",c.note||""]);
-  const wsCM=bannerSheet("Recurring Commitments","Recurring financial tasks and reminders \u2014 recharges, cleaning, maintenance, subscriptions \u2014 with next-due tracking. Financial ones post a voucher on pay.",cmHeaders,cmData);
-  wsCM["!cols"]=[{wch:10},{wch:24},{wch:16},{wch:13},{wch:13},{wch:12},{wch:9},{wch:14},{wch:16},{wch:24}];
+  const cmHeaders=["ID","Commitment","Category","Frequency","Next Due","Amount","Status","Kind","Main Account","Last Paid","Last Amount","Record Status","Note"];
+  const cmData=commits.map(c=>[c.id,c.name,c.cat,FREQ_LABEL[c.freq]||c.freq,c.status==="Closed"?"":(c.next||""),c.amount||"",c.active?"Active":"Paused",c.kind==="nonfin"?"Non-financial":"Financial",c.coa||"",c.lastPaid||"",c.lastAmt||"",c.status==="Closed"?"Closed":"Open",c.note||""]);
+  const wsCM=bannerSheet("Recurring Commitments","Recurring financial tasks and reminders \u2014 recharges, cleaning, maintenance, subscriptions \u2014 with next-due tracking. Financial ones post a voucher on pay. Records last paid date & amount; can be closed as one-off.",cmHeaders,cmData);
+  wsCM["!cols"]=[{wch:10},{wch:24},{wch:16},{wch:13},{wch:13},{wch:12},{wch:9},{wch:14},{wch:16},{wch:12},{wch:12},{wch:13},{wch:24}];
   XLSX.utils.book_append_sheet(wb,wsCM,"Commitments");
 
   // Events
@@ -2443,6 +2475,7 @@ function openEventPay(id){
   /* expense-type picker (event's free-text types), injected into the hint row */
   const types=ev.expTypes||[];
   $("#settleHint").innerHTML=types.length?`Expense type: <select id="evPayType" style="min-height:34px;margin-top:.3rem">${types.map(t=>`<option>${esc(t)}</option>`).join("")}<option value="">(general)</option></select>`:"Books the expense against "+esc((coaByNumber(ev.coa)||{}).name||"the event account")+".";
+  if($("#settleCloseWrap"))$("#settleCloseWrap").style.display="none";
   $("#settleOverlay").style.display="flex";
 }
 function postEventPay(ev,amt,acct,date,expType){
@@ -2804,7 +2837,7 @@ let duesData={};
 function renderCommitDash(){
   const box=$("#commitDash");if(!box)return;
   const showAll=duesPeriodKey==="all";
-  const items=commits.filter(c=>c.active).map(c=>({c,due:cmNextDue(c)})).filter(x=>x.due&&(showAll||monthKeyOf(x.due)<=duesPeriodKey))
+  const items=commits.filter(c=>c.active&&c.status!=="Closed").map(c=>({c,due:cmNextDue(c)})).filter(x=>x.due&&(showAll||monthKeyOf(x.due)<=duesPeriodKey))
     .sort((a,b)=>a.due.localeCompare(b.due));
   let total=0;
   box.innerHTML=items.length?items.map(({c,due})=>{
@@ -2834,6 +2867,7 @@ function openSettle(id){
     .map(b=>`<option value="${esc(b.name)}">${esc(b.name)}${b.kind==="card"?" (card)":""} \u2014 ${fmt(bankBalance(b.name))}</option>`).join("");
   $("#settleAcct").innerHTML=opts||'<option value="">\u2014 add a bank first \u2014</option>';
   $("#settleHint").textContent=d.ref==="card"?"Posts Dr card / Cr the chosen account, reducing the card outstanding.":isRecv?"Posts Dr account / Cr the receivable, clearing part or all of it.":"Posts Dr the debt / Cr account, reducing what you owe.";
+  if($("#settleCloseWrap"))$("#settleCloseWrap").style.display="none";
   $("#settleOverlay").style.display="flex";
 }
 $("#btnSettleCancel")&&$("#btnSettleCancel").addEventListener("click",()=>{$("#settleOverlay").style.display="none";settleCtx=null;});
@@ -2851,7 +2885,7 @@ $("#btnSettleConfirm")&&$("#btnSettleConfirm").addEventListener("click",()=>{
   if(d.ref==="commit"){
     const c=commits.find(x=>x.id===d.refId);
     $("#settleOverlay").style.display="none";settleCtx=null;
-    if(c)postCommitmentPayment(c,amt,acct,date);
+    if(c)postCommitmentPayment(c,amt,acct,date,$("#settleClose")&&$("#settleClose").checked);
     return;
   }
   if(d.ref==="event"){
@@ -3702,33 +3736,43 @@ function cmNextDue(c){
 function cmIcon(cat){cat=(cat||"").toLowerCase();return /recharge|bill/.test(cat)?"\ud83d\udcf1":/clean/.test(cat)?"\ud83e\uddf9":/mainten/.test(cat)?"\ud83d\udd27":/subscrip/.test(cat)?"\ud83d\udcfa":/insur/.test(cat)?"\ud83d\udee1\ufe0f":/rent|lease/.test(cat)?"\ud83c\udfe1":/health/.test(cat)?"\ud83d\udc8a":"\ud83d\udd01";}
 function renderCM(){
   const cardBox=$("#cmCards"),tblBody=document.querySelector("#tblCM tbody");
-  const active=commits.filter(c=>c.active);
+  const active=commits.filter(c=>c.active&&c.status!=="Closed");
   if($("#cmTotalHead"))$("#cmTotalHead").textContent=commits.length?`${active.length} active \u00b7 ${fmt(active.reduce((s,c)=>s+(c.amount||0),0))}/cycle`:"";
   const q=($("#searchCM")?$("#searchCM").value:"").trim().toLowerCase();
   const ff=$("#filterCMFreq")?$("#filterCMFreq").value:"";
   const rows=commits.map((c,i)=>({c,i})).filter(({c})=>(!q||(c.name+" "+c.cat+" "+(c.note||"")).toLowerCase().includes(q))&&(!ff||c.freq===ff));
   if($("#cmFilteredSum"))$("#cmFilteredSum").textContent=rows.length?`${rows.length} shown`:"";
-  /* cards show the soonest-due active commitments with a countdown chip */
+  /* TOP CARDS: this month's dues only — active, not closed, due on/before this month,
+     and not already settled this month. Paid/closed ones drop off automatically. */
+  const thisMk=thisMonthKey();
   if(cardBox){
-    const upcoming=active.map(c=>({c,due:cmNextDue(c)})).filter(x=>x.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,8);
-    cardBox.innerHTML=upcoming.map(({c,due})=>{
+    const dueThisMonth=active.map(c=>({c,due:cmNextDue(c)}))
+      .filter(x=>x.due&&monthKeyOf(x.due)<=thisMk)          // due this month or overdue
+      .sort((a,b)=>a.due.localeCompare(b.due));
+    let total=0;
+    cardBox.innerHTML=dueThisMonth.map(({c,due})=>{
       const n=daysUntil(due);
       const chip=n<0?`<span class="fa-chip bad">overdue \u00b7 ${esc(due)}</span>`:n<=7?`<span class="fa-chip warn">in ${n}d \u00b7 ${esc(due)}</span>`:`<span class="fa-chip ok">${esc(due)}</span>`;
-      return `<div class="fa-card"><div class="fa-ic">${cmIcon(c.cat)}</div><div class="fa-ty">${esc(FREQ_LABEL[c.freq]||c.freq)}</div><div class="fa-nm">${esc(c.name)}</div>${c.amount>0?`<div class="fa-val">${fmt(c.amount)}</div>`:""}${chip}<div style="margin-top:.5rem"><button type="button" class="due-btn" data-cmdone="${esc(c.id)}">Mark done</button></div></div>`;
-    }).join("")||'<div class="dues-empty" style="grid-column:1/-1">No active commitments — add one below.</div>';
+      if(c.amount>0)total+=c.amount;
+      return `<div class="fa-card"><div class="fa-ic">${cmIcon(c.cat)}</div><div class="fa-ty">${esc(FREQ_LABEL[c.freq]||c.freq)} \u00b7 ${c.kind==="fin"?"financial":"reminder"}</div><div class="fa-nm">${esc(c.name)}</div>${c.amount>0?`<div class="fa-val">${fmt(c.amount)}</div>`:""}${chip}<div style="margin-top:.5rem"><button type="button" class="due-btn" data-cmdone="${esc(c.id)}">${c.kind==="fin"?"Pay":"Mark done"}</button></div></div>`;
+    }).join("")||'<div class="dues-empty" style="grid-column:1/-1">Nothing due this month \u2014 all settled. \ud83c\udf89</div>';
   }
+  /* BOTTOM LIST: every commitment record ever created, with last-paid detail. */
   if(tblBody){
     tblBody.innerHTML=rows.map(({c,i})=>{
-      const due=cmNextDue(c);const n=due?daysUntil(due):null;
+      const closed=c.status==="Closed";
+      const due=closed?null:cmNextDue(c);const n=due?daysUntil(due):null;
       const dueCls=n==null?"":n<0?"bad":n<=7?"warn":"ok";
-      return `<tr data-i="${i}"${!c.active?' style="opacity:.55"':''}>
-        <td data-l="Commitment"><strong>${cmIcon(c.cat)} ${esc(c.name)}</strong>${c.note?`<div style="font-size:.7rem;color:var(--muted)">${esc(c.note)}</div>`:""}</td>
-        <td data-l="Category">${esc(c.cat)}</td>
+      const paidDetail=c.lastPaid?`<div style="font-size:.68rem;color:var(--muted)">last paid ${esc(c.lastPaid)}${c.lastAmt>0?" \u00b7 "+fmt(c.lastAmt):""}</div>`:"";
+      const statusCell=closed?'<span class="tag" style="background:var(--wash-strong);color:var(--muted)">Closed</span>':c.active?'<span class="tag in">Active</span>':'<span style="font-size:.72rem;color:var(--muted)">Paused</span>';
+      return `<tr data-i="${i}"${(!c.active||closed)?' style="opacity:.6"':''}>
+        <td data-l="Commitment"><strong>${cmIcon(c.cat)} ${esc(c.name)}</strong>${c.note?`<div style="font-size:.7rem;color:var(--muted)">${esc(c.note)}</div>`:""}${paidDetail}</td>
+        <td data-l="Category">${esc(c.cat)}${c.kind==="fin"?'':' <span style="font-size:.62rem;color:var(--muted)">(reminder)</span>'}</td>
         <td data-l="Frequency">${esc(FREQ_LABEL[c.freq]||c.freq)}</td>
-        <td data-l="Next due">${due?`<span class="fa-chip ${dueCls}">${esc(due)}</span>`:"\u2014"}</td>
+        <td data-l="Next due">${closed?'<span style="color:var(--muted)">\u2014</span>':(due?`<span class="fa-chip ${dueCls}">${esc(due)}</span>`:"\u2014")}</td>
         <td data-l="Amount" class="num">${c.amount>0?fmt(c.amount):"\u2014"}</td>
-        <td data-l="Status">${c.active?'<span class="tag in">Active</span>':'<span style="font-size:.72rem;color:var(--muted)">Paused</span>'}</td>
-        <td data-l=""><div class="row-actions">${c.active?`<button type="button" class="icon-btn" data-act="doneCM" title="Mark done \u2014 roll to next cycle">Done</button>`:""}<button type="button" class="icon-btn" data-act="editCM">Edit</button><button type="button" class="icon-btn danger" data-act="delCM">Del</button></div></td></tr>`;
+        <td data-l="Status">${statusCell}</td>
+        <td data-l=""><div class="row-actions">${(c.active&&!closed)?`<button type="button" class="icon-btn" data-act="doneCM" title="${c.kind==="fin"?"Pay this cycle":"Mark done"}">${c.kind==="fin"?"Pay":"Done"}</button>`:""}${closed?`<button type="button" class="icon-btn" data-act="reopenCM" title="Reopen">Reopen</button>`:""}<button type="button" class="icon-btn" data-act="editCM">Edit</button><button type="button" class="icon-btn danger" data-act="delCM">Del</button></div></td></tr>`;
     }).join("");
   }
   if($("#emptyCM"))$("#emptyCM").style.display=commits.length?"none":"block";
@@ -3783,25 +3827,36 @@ function markCMDone(id){
     $("#settleError").textContent="";
     $("#settleAcct").innerHTML=banks.map(b=>`<option value="${esc(b.name)}">${esc(b.name)}${b.kind==="card"?" (card)":""} \u2014 ${fmt(bankBalance(b.name))}</option>`).join("")||'<option value="">\u2014 add a bank first \u2014</option>';
     $("#settleHint").textContent="Dr "+(coaByNumber(c.coa)?coaByNumber(c.coa).name:"expense")+" / Cr the account. The commitment then rolls to its next date.";
+    if($("#settleCloseWrap")){$("#settleCloseWrap").style.display="flex";$("#settleClose").checked=false;}
     $("#settleOverlay").style.display="flex";
     return;
   }
   const due=cmNextDue(c);
+  c.lastPaid=todayISO();
   c.next=cmAdvance(due||todayISO(),c.freq);
   setDirty(true);renderAll();
   toast(`${c.name} done \u00b7 next ${c.next}`);
 }
-/* called by the settle-confirm handler once a financial commitment payment is entered */
-function postCommitmentPayment(c,amt,acct,date){
+/* called by the settle-confirm handler once a financial commitment payment is entered.
+   records last paid date + amount, then either closes the commitment (one-off) or
+   rolls its next-due forward one cycle. */
+function postCommitmentPayment(c,amt,acct,date,closeIt){
   const bank=banks.find(b=>b.name===acct);const acctCoa=bank?bank.coa:"";
   txns.push({id:nextTxnId(),date,type:"Voucher",desc:c.name+" (commitment)",amount:amt,cat:c.cat||"Commitment",lines:[
     {kind:"Ledger",acct:c.coa,sub:"",dr:amt,cr:0},                  // expense account debited
     {kind:"Bank",acct:acctCoa,sub:"bank:"+acct,dr:0,cr:amt}         // paid from account credited
   ],coaAcct:"",offsetAcct:"",bank:"",toBank:"",method:"",ref:"Commitment: "+c.id,loanRef:"",bankRef:""});
-  const due=cmNextDue(c);
-  c.next=cmAdvance(due||todayISO(),c.freq);
-  setDirty(true);renderAll();
-  toast(`${c.name} paid ${fmt(amt)} \u00b7 next ${c.next}`);
+  c.lastPaid=date;c.lastAmt=r2(amt);
+  if(closeIt){
+    c.status="Closed";c.active=0;
+    setDirty(true);renderAll();
+    toast(`${c.name} paid ${fmt(amt)} \u00b7 closed`);
+  }else{
+    const due=cmNextDue(c);
+    c.next=cmAdvance(due||todayISO(),c.freq);
+    setDirty(true);renderAll();
+    toast(`${c.name} paid ${fmt(amt)} \u00b7 next ${c.next}`);
+  }
 }
 $("#btnCancelCM")&&$("#btnCancelCM").addEventListener("click",cancelEditCM);
 /* pre-fill a commitment from a fixed asset (e.g. its periodic service / insurance) */
@@ -3838,11 +3893,54 @@ function eventTotals(id){
   });
   return {spent:r2(spent),recv:r2(recv),net:r2(spent-recv)};
 }
+/* the expense type carried on a tagged transaction (from the line cat or the ref) */
+function eventTxnType(t){
+  if(t.cat&&!/^(Event|Commitment)/i.test(t.cat))return t.cat;
+  const m=/Event type:\s*(.+)$/.exec(t.ref||"");
+  return m?m[1].trim():"(untagged)";
+}
+/* all transactions tagged to an event, newest first */
+function eventTxns(id){return txns.filter(t=>t.event===id).slice().sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:(a.id<b.id?1:-1)));}
+/* spend broken down by expense type for one event */
+function eventTypeBreakdown(id){
+  const map={};
+  eventTxns(id).forEach(t=>{
+    const amt=t.type==="Voucher"&&t.lines?t.lines.reduce((s,l)=>s+num(l.dr),0):(t.type==="Expense"?t.amount:0);
+    if(amt<=0)return;
+    const k=eventTxnType(t);
+    map[k]=r2((map[k]||0)+amt);
+  });
+  return Object.entries(map).map(([type,amt])=>({type,amt})).sort((a,b)=>b.amt-a.amt);
+}
+/* aggregate spend by expense type across ALL open events (for the top analysis) */
+function allEventsTypeBreakdown(){
+  const map={};
+  events.filter(e=>e.status!=="Completed").forEach(e=>{
+    eventTypeBreakdown(e.id).forEach(({type,amt})=>{map[type]=r2((map[type]||0)+amt);});
+  });
+  return Object.entries(map).map(([type,amt])=>({type,amt})).sort((a,b)=>b.amt-a.amt);
+}
 function evTypeOpts(sel){return events.filter(e=>e.status!=="Completed").map(e=>`<option value="${esc(e.id)}"${e.id===sel?" selected":""}>${esc(e.name)}</option>`).join("");}
 function renderEV(){
   const cardBox=$("#evCards"),tblBody=document.querySelector("#tblEV tbody");
   const open=events.filter(e=>e.status!=="Completed");
   if($("#evTotalHead"))$("#evTotalHead").textContent=events.length?`${open.length} open \u00b7 ${fmt(open.reduce((s,e)=>s+eventTotals(e.id).net,0))} accrued`:"";
+  /* TOP ANALYSIS: spend by expense type across all open events */
+  const anBox=$("#evAnalysis");
+  if(anBox){
+    const bd=allEventsTypeBreakdown();
+    const grand=bd.reduce((s,x)=>s+x.amt,0);
+    if(!bd.length){
+      anBox.innerHTML=events.length?'<div class="ev-an-card"><h3>Expense-type analysis</h3><div class="dues-empty">No tagged spending yet \u2014 book expenses to an event to see the breakdown.</div></div>':"";
+    }else{
+      const max=Math.max(...bd.map(x=>x.amt));
+      const bars=bd.slice(0,8).map(x=>{
+        const pct=grand>0?Math.round(x.amt/grand*100):0;
+        return `<div class="ev-bar-row"><span class="lbl" title="${esc(x.type)}">${esc(x.type)}</span><span class="ev-bar-track"><span class="ev-bar-fill" style="width:${Math.max(3,Math.round(x.amt/max*100))}%"></span></span><span class="amt">${fmt(x.amt)}</span><span class="pct">${pct}%</span></div>`;
+      }).join("");
+      anBox.innerHTML=`<div class="ev-an-card"><h3>Expense-type analysis \u00b7 open events \u00b7 ${fmt(grand)} total</h3>${bars}</div>`;
+    }
+  }
   const q=($("#searchEV")?$("#searchEV").value:"").trim().toLowerCase();
   const fs=$("#filterEVStatus")?$("#filterEVStatus").value:"";
   const rows=events.map((e,i)=>({e,i})).filter(({e})=>(!q||(e.name+" "+(e.note||"")).toLowerCase().includes(q))&&(!fs||e.status===fs));
@@ -3851,12 +3949,13 @@ function renderEV(){
     cardBox.innerHTML=open.map(e=>{
       const t=eventTotals(e.id);
       const pct=e.budget>0?Math.min(100,Math.round(t.net/e.budget*100)):null;
-      return `<div class="fa-card"><div class="fa-ic">\ud83d\udcc1</div><div class="fa-ty">${esc(EV_TYPE_LABEL[e.type]||e.type)}</div><div class="fa-nm">${esc(e.name)}</div><div class="fa-val">${fmt(t.net)}</div>${e.budget>0?`<div class="fa-chip ${pct>=100?"bad":pct>=80?"warn":"ok"}">${pct}% of ${fmt(e.budget)}</div>`:""}<div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap"><button type="button" class="due-btn" data-evcomplete="${esc(e.id)}">Complete</button></div></div>`;
+      const nTx=eventTxns(e.id).length;
+      return `<div class="fa-card"><div class="fa-ic">\ud83d\udcc1</div><div class="fa-ty">${esc(EV_TYPE_LABEL[e.type]||e.type)}</div><div class="fa-nm">${esc(e.name)}</div><div class="fa-val">${fmt(t.net)}</div>${e.budget>0?`<div class="fa-chip ${pct>=100?"bad":pct>=80?"warn":"ok"}">${pct}% of ${fmt(e.budget)}</div>`:""}<div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap"><button type="button" class="due-btn" data-evtxn="${esc(e.id)}">${nTx} txn${nTx===1?"":"s"}</button><button type="button" class="due-btn" data-evcomplete="${esc(e.id)}">Complete</button></div></div>`;
     }).join("")||'<div class="dues-empty" style="grid-column:1/-1">No open events.</div>';
   }
   if(tblBody){
     tblBody.innerHTML=rows.map(({e,i})=>{
-      const t=eventTotals(e.id);const done=e.status==="Completed";
+      const t=eventTotals(e.id);const done=e.status==="Completed";const nTx=eventTxns(e.id).length;
       return `<tr data-i="${i}"${done?' style="opacity:.6"':''}>
         <td data-l="ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(e.id)}</td>
         <td data-l="Event"><strong>\ud83d\udcc1 ${esc(e.name)}</strong>${e.expTypes&&e.expTypes.length?`<div style="font-size:.68rem;color:var(--muted)">types: ${esc(e.expTypes.join(", "))}</div>`:""}${e.note?`<div style="font-size:.68rem;color:var(--muted)">${esc(e.note)}</div>`:""}</td>
@@ -3865,12 +3964,35 @@ function renderEV(){
         <td data-l="Received" class="num">${t.recv>0?fmt(t.recv):"\u2014"}</td>
         <td data-l="Net accrued" class="num"><strong>${fmt(t.net)}</strong></td>
         <td data-l="Status">${done?`<span style="font-size:.72rem;color:var(--muted)">Completed ${esc(e.completedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-        <td data-l=""><div class="row-actions">${done?"":`<button type="button" class="icon-btn" data-act="completeEV" title="Capitalise total to main account">Complete</button>`}<button type="button" class="icon-btn" data-act="editEV">Edit</button><button type="button" class="icon-btn danger" data-act="delEV">Del</button></div></td></tr>`;
+        <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="viewEV" title="See tagged transactions">${nTx} txn${nTx===1?"":"s"}</button>${done?"":`<button type="button" class="icon-btn" data-act="completeEV" title="Capitalise total to main account">Complete</button>`}<button type="button" class="icon-btn" data-act="editEV">Edit</button><button type="button" class="icon-btn danger" data-act="delEV">Del</button></div></td></tr>`;
     }).join("");
   }
   if($("#emptyEV"))$("#emptyEV").style.display=events.length?"none":"block";
   if($("#tblEV"))$("#tblEV").style.display=events.length?"":"none";
 }
+/* open a modal listing all transactions tagged to an event, with its type breakdown */
+function openEventTxns(id){
+  const ev=events.find(x=>x.id===id);if(!ev)return;
+  const t=eventTotals(id);const list=eventTxns(id);const bd=eventTypeBreakdown(id);
+  $("#evTxnTitle").textContent=ev.name;
+  $("#evTxnSub").textContent=`${EV_TYPE_LABEL[ev.type]||ev.type} \u00b7 ${list.length} transaction${list.length===1?"":"s"} \u00b7 spent ${fmt(t.spent)}${t.recv>0?" \u00b7 received "+fmt(t.recv):""} \u00b7 net ${fmt(t.net)}`;
+  /* per-type breakdown bars */
+  if(bd.length){
+    const max=Math.max(...bd.map(x=>x.amt));
+    $("#evTxnBreakdown").innerHTML=`<div class="ev-an-card" style="margin-bottom:1rem"><h3>By expense type</h3>${bd.map(x=>`<div class="ev-bar-row"><span class="lbl" title="${esc(x.type)}">${esc(x.type)}</span><span class="ev-bar-track"><span class="ev-bar-fill" style="width:${Math.max(3,Math.round(x.amt/max*100))}%"></span></span><span class="amt">${fmt(x.amt)}</span></div>`).join("")}</div>`;
+  }else $("#evTxnBreakdown").innerHTML="";
+  /* transaction list */
+  $("#evTxnList").innerHTML=list.length?list.map(tx=>{
+    const isRecv=tx.type==="Income";
+    const amt=tx.type==="Voucher"&&tx.lines?tx.lines.reduce((s,l)=>s+num(l.dr),0):tx.amount;
+    const typ=eventTxnType(tx);
+    return `<div class="ev-txn-row"><span class="d">${esc(tx.date)}</span><span class="desc">${esc(tx.desc||tx.cat||"\u2014")}${typ&&typ!=="(untagged)"?` <span class="tag2">${esc(typ)}</span>`:""}</span><span class="amt" style="color:${isRecv?"var(--mint)":"var(--coral)"}">${isRecv?"+":"\u2212"}${fmt(Math.abs(amt))}</span></div>`;
+  }).join(""):'<div class="dues-empty">No transactions tagged to this event yet.</div>';
+  $("#evTxnOverlay").style.display="flex";
+}
+$("#btnEvTxnClose")&&$("#btnEvTxnClose").addEventListener("click",()=>{$("#evTxnOverlay").style.display="none";});
+$("#evTxnOverlay")&&$("#evTxnOverlay").addEventListener("click",e=>{if(e.target.id==="evTxnOverlay")$("#evTxnOverlay").style.display="none";});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-evtxn]");if(b)openEventTxns(b.getAttribute("data-evtxn"));});
 $("#formEV")&&$("#formEV").addEventListener("submit",e=>{
   e.preventDefault();
   const name=$("#evName").value.trim();if(!name){toast("Enter the event name");return;}
@@ -4502,8 +4624,10 @@ document.addEventListener("click",e=>{
     case "delFA":if(confirm(`Delete "${fassets[i].name}"?`)){if(editingFA===fassets[i].id)cancelEditFA();fassets.splice(i,1);done();}break;
     case "editCM":{const c=commits[i];if(c)loadCMIntoForm(c);break;}
     case "doneCM":{const c=commits[i];if(c)markCMDone(c.id);break;}
+    case "reopenCM":{const c=commits[i];if(c){c.status="";c.active=1;const due=cmNextDue(c);c.next=due;done();}break;}
     case "delCM":if(confirm(`Delete "${commits[i].name}"?`)){if(editingCM===commits[i].id)cancelEditCM();commits.splice(i,1);done();}break;
     case "editEV":{const ev=events[i];if(ev)loadEVIntoForm(ev);break;}
+    case "viewEV":{const ev=events[i];if(ev)openEventTxns(ev.id);break;}
     case "completeEV":{const ev=events[i];if(ev)completeEvent(ev.id);break;}
     case "delEV":if(confirm(`Delete "${events[i].name}"? Tagged transactions stay but lose the link.`)){if(editingEV===events[i].id)cancelEditEV();events.splice(i,1);done();}break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}

@@ -400,6 +400,23 @@
   .ev-txn-row .desc{flex:1;overflow:hidden;text-overflow:ellipsis}
   .ev-txn-row .tag2{font-size:.66rem;background:var(--wash-strong);color:var(--muted);padding:.1rem .45rem;border-radius:20px}
   .ev-txn-row .amt{font-variant-numeric:tabular-nums;font-weight:600;min-width:96px;text-align:right}
+  /* inline event detail section */
+  .ev-detail{border:1px solid var(--line);border-radius:var(--r-md);padding:1.1rem;background:var(--card);margin-top:1rem}
+  .ev-detail-head{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.9rem}
+  .ev-detail-head h3{font-size:1.05rem}
+  .ev-filter-tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+  .ev-ftab{border:1px solid var(--line-strong);background:var(--card);color:var(--muted);border-radius:20px;padding:.35rem .9rem;font-size:.8rem;font-weight:600;cursor:pointer}
+  .ev-ftab.on{background:var(--violet);color:#fff;border-color:var(--violet)}
+  .ev-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:720px){.ev-detail-grid{grid-template-columns:1fr}}
+  .ev-pie-wrap{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+  .ev-legend{flex:1;min-width:150px;display:flex;flex-direction:column;gap:.35rem}
+  .ev-leg{display:flex;align-items:center;gap:.5rem;font-size:.78rem}
+  .ev-leg .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .ev-leg .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev-leg .vl{color:var(--muted);font-variant-numeric:tabular-nums}
+  .fa-card.ev-sel{outline:2px solid var(--violet);outline-offset:1px}
+  tr.ev-row-sel{background:var(--wash-strong)}
   /* collapsible master-creation forms */
   form.add-card.collapsed{display:none!important}
   .add-toggle{border:1px solid var(--line-strong);background:var(--card);color:var(--text);border-radius:10px;padding:.45rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem;min-height:38px}
@@ -1007,9 +1024,10 @@
     </div>
     <div id="evCards" class="fa-cards"></div>
     <div class="table-card">
-      <table id="tblEV"><thead><tr><th>ID</th><th>Event</th><th>Type</th><th style="text-align:right">Spent</th><th style="text-align:right">Received</th><th style="text-align:right">Net accrued</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="tblEV"><thead><tr><th>ID</th><th>Event</th><th>Type</th><th style="text-align:right">Accrued (net debit)</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="empty" id="emptyEV" style="display:none">No events yet. Create a project to start accumulating costs against it.</div>
     </div>
+    <div id="evDetail" class="ev-detail" style="display:none"></div>
   </section>
 
   <!-- ============ STATEMENT UPLOAD ============ -->
@@ -1184,15 +1202,6 @@
       <button class="btn primary" id="btnCloseConfirm">Confirm &amp; close</button>
       <button class="btn ghost" id="btnCloseCancel">Cancel</button>
     </div>
-  </div>
-</div>
-
-<div id="evTxnOverlay" style="display:none;position:fixed;inset:0;background:rgba(5,9,18,.72);z-index:60;align-items:center;justify-content:center;padding:1.2rem;backdrop-filter:blur(4px)">
-  <div class="auth-card" style="max-width:640px;max-height:90vh;overflow:auto">
-    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem"><h2 style="font-size:1.25rem;margin:0" id="evTxnTitle">Event transactions</h2><button class="btn ghost" id="btnEvTxnClose" style="margin-left:auto;width:auto;padding:.3rem .8rem">Close</button></div>
-    <p class="sub" id="evTxnSub" style="margin-bottom:.8rem"></p>
-    <div id="evTxnBreakdown"></div>
-    <div id="evTxnList"></div>
   </div>
 </div>
 
@@ -2317,10 +2326,10 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsCM,"Commitments");
 
   // Events
-  const evHeaders=["Event ID","Event Name","Type","Main Account","Start Date","Budget","Expense Types","Note","Status","Completed Date","Settlement Ref","Spent","Received","Net Accrued"];
-  const evData=events.map(e=>{const t=eventTotals(e.id);return [e.id,e.name,EV_TYPE_LABEL[e.type]||e.type,e.coa||"",e.start||"",e.budget||"",(e.expTypes||[]).join(", "),e.note||"",e.status,e.completedDate||"",e.settleRef||"",t.spent,t.recv,t.net];});
-  const wsEV=bannerSheet("Events / Projects","Accumulate costs & income against a project. On completion the net total capitalises into the main account.",evHeaders,evData);
-  wsEV["!cols"]=[{wch:10},{wch:22},{wch:14},{wch:14},{wch:12},{wch:12},{wch:28},{wch:20},{wch:11},{wch:14},{wch:18},{wch:13},{wch:13},{wch:13}];
+  const evHeaders=["Event ID","Event Name","Type","Main Account","Start Date","Budget","Expense Types","Note","Status","Completed Date","Settlement Ref","Net Accrued (debit-credit)","Txn Count"];
+  const evData=events.map(e=>{const t=eventTotals(e.id);return [e.id,e.name,EV_TYPE_LABEL[e.type]||e.type,e.coa||"",e.start||"",e.budget||"",(e.expTypes||[]).join(", "),e.note||"",e.status,e.completedDate||"",e.settleRef||"",t.net,eventTxns(e.id).length];});
+  const wsEV=bannerSheet("Events / Projects","Accumulate costs against a project. Net accrued = debits minus credits on the event account. On completion the net total capitalises into the main account.",evHeaders,evData);
+  wsEV["!cols"]=[{wch:10},{wch:22},{wch:14},{wch:14},{wch:12},{wch:12},{wch:28},{wch:20},{wch:11},{wch:14},{wch:18},{wch:20},{wch:10}];
   XLSX.utils.book_append_sheet(wb,wsEV,"Events");
 
   // Chart of Accounts — preserved on every save so hand-added accounts survive
@@ -3882,16 +3891,32 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-cmdone]");
 
 /* ---------- events / projects ---------- */
 const EV_TYPE_LABEL={fa:"Fixed Asset",exp:"Expense",inv:"Investment"};
-/* accrued totals for an event, summed from every transaction tagged to it */
+/* the amount a transaction contributes to an event = net DEBIT to the event's own
+   account. A debit adds to the accrued cost; a credit reduces it. Bank / paying-side
+   lines are ignored, so only the project cost accumulates. */
+function eventTxnAmount(t,ev){
+  if(t.type==="Voucher"&&t.lines){
+    /* sum the lines that hit the event account (or an Event line-kind), Dr - Cr */
+    let net=0,any=false;
+    t.lines.forEach(l=>{
+      const hitsEvent=l.kind==="Event"||(ev&&l.acct===ev.coa);
+      if(hitsEvent){net+=num(l.dr)-num(l.cr);any=true;}
+    });
+    if(any)return r2(net);
+    /* fallback (older data w/o an event-account line): Dr side only */
+    return r2(t.lines.reduce((s,l)=>s+num(l.dr),0));
+  }
+  /* plain rows: expense = debit (adds), income = credit (reduces) */
+  if(t.type==="Income")return -r2(t.amount);
+  return r2(t.amount);
+}
+/* net accrued for an event (sum of net debits from every tagged transaction) */
 function eventTotals(id){
-  let spent=0,recv=0;
-  txns.forEach(t=>{
-    if(t.event!==id)return;
-    if(t.type==="Income")recv+=t.amount;
-    else if(t.type==="Expense")spent+=t.amount;
-    else if(t.type==="Voucher"&&t.lines){t.lines.forEach(l=>{spent+=num(l.dr);recv+=num(l.cr);});}
-  });
-  return {spent:r2(spent),recv:r2(recv),net:r2(spent-recv)};
+  const ev=events.find(x=>x.id===id);
+  let net=0;
+  txns.forEach(t=>{if(t.event===id)net+=eventTxnAmount(t,ev);});
+  net=r2(net);
+  return {net,spent:net,recv:0};
 }
 /* the expense type carried on a tagged transaction (from the line cat or the ref) */
 function eventTxnType(t){
@@ -3901,16 +3926,28 @@ function eventTxnType(t){
 }
 /* all transactions tagged to an event, newest first */
 function eventTxns(id){return txns.filter(t=>t.event===id).slice().sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:(a.id<b.id?1:-1)));}
-/* spend broken down by expense type for one event */
+/* spend broken down by expense type for one event (net debit per type) */
 function eventTypeBreakdown(id){
+  const ev=events.find(x=>x.id===id);
   const map={};
   eventTxns(id).forEach(t=>{
-    const amt=t.type==="Voucher"&&t.lines?t.lines.reduce((s,l)=>s+num(l.dr),0):(t.type==="Expense"?t.amount:0);
-    if(amt<=0)return;
+    const amt=eventTxnAmount(t,ev);
+    if(amt===0)return;
     const k=eventTxnType(t);
     map[k]=r2((map[k]||0)+amt);
   });
-  return Object.entries(map).map(([type,amt])=>({type,amt})).sort((a,b)=>b.amt-a.amt);
+  return Object.entries(map).map(([type,amt])=>({type,amt})).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+}
+/* spend by month for one event (net debit per month) — for the trend chart */
+function eventPeriodTrend(id){
+  const ev=events.find(x=>x.id===id);
+  const map={};
+  eventTxns(id).forEach(t=>{
+    const amt=eventTxnAmount(t,ev);
+    const mk=monthKeyOf(t.date)||"?";
+    map[mk]=r2((map[mk]||0)+amt);
+  });
+  return Object.entries(map).map(([mk,amt])=>({mk,amt})).sort((a,b)=>a.mk.localeCompare(b.mk));
 }
 /* aggregate spend by expense type across ALL open events (for the top analysis) */
 function allEventsTypeBreakdown(){
@@ -3950,49 +3987,116 @@ function renderEV(){
       const t=eventTotals(e.id);
       const pct=e.budget>0?Math.min(100,Math.round(t.net/e.budget*100)):null;
       const nTx=eventTxns(e.id).length;
-      return `<div class="fa-card"><div class="fa-ic">\ud83d\udcc1</div><div class="fa-ty">${esc(EV_TYPE_LABEL[e.type]||e.type)}</div><div class="fa-nm">${esc(e.name)}</div><div class="fa-val">${fmt(t.net)}</div>${e.budget>0?`<div class="fa-chip ${pct>=100?"bad":pct>=80?"warn":"ok"}">${pct}% of ${fmt(e.budget)}</div>`:""}<div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap"><button type="button" class="due-btn" data-evtxn="${esc(e.id)}">${nTx} txn${nTx===1?"":"s"}</button><button type="button" class="due-btn" data-evcomplete="${esc(e.id)}">Complete</button></div></div>`;
+      return `<div class="fa-card${selectedEV===e.id?" ev-sel":""}"><div class="fa-ic">\ud83d\udcc1</div><div class="fa-ty">${esc(EV_TYPE_LABEL[e.type]||e.type)}</div><div class="fa-nm">${esc(e.name)}</div><div class="fa-val">${fmt(t.net)}</div>${e.budget>0?`<div class="fa-chip ${pct>=100?"bad":pct>=80?"warn":"ok"}">${pct}% of ${fmt(e.budget)}</div>`:""}<div style="margin-top:.5rem;display:flex;gap:.4rem;flex-wrap:wrap"><button type="button" class="due-btn" data-evtxn="${esc(e.id)}">${nTx} txn${nTx===1?"":"s"}</button><button type="button" class="due-btn" data-evcomplete="${esc(e.id)}">Complete</button></div></div>`;
     }).join("")||'<div class="dues-empty" style="grid-column:1/-1">No open events.</div>';
   }
   if(tblBody){
     tblBody.innerHTML=rows.map(({e,i})=>{
       const t=eventTotals(e.id);const done=e.status==="Completed";const nTx=eventTxns(e.id).length;
-      return `<tr data-i="${i}"${done?' style="opacity:.6"':''}>
+      return `<tr data-i="${i}"${done?' style="opacity:.6"':''}${selectedEV===e.id?' class="ev-row-sel"':''}>
         <td data-l="ID" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)">${esc(e.id)}</td>
         <td data-l="Event"><strong>\ud83d\udcc1 ${esc(e.name)}</strong>${e.expTypes&&e.expTypes.length?`<div style="font-size:.68rem;color:var(--muted)">types: ${esc(e.expTypes.join(", "))}</div>`:""}${e.note?`<div style="font-size:.68rem;color:var(--muted)">${esc(e.note)}</div>`:""}</td>
         <td data-l="Type">${esc(EV_TYPE_LABEL[e.type]||e.type)}<div style="font-size:.66rem;color:var(--muted)">${esc((coaByNumber(e.coa)||{}).name||"")}</div></td>
-        <td data-l="Spent" class="num">${fmt(t.spent)}</td>
-        <td data-l="Received" class="num">${t.recv>0?fmt(t.recv):"\u2014"}</td>
-        <td data-l="Net accrued" class="num"><strong>${fmt(t.net)}</strong></td>
+        <td data-l="Accrued" class="num"><strong>${fmt(t.net)}</strong></td>
         <td data-l="Status">${done?`<span style="font-size:.72rem;color:var(--muted)">Completed ${esc(e.completedDate||"")}</span>`:'<span class="tag in">Open</span>'}</td>
-        <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="viewEV" title="See tagged transactions">${nTx} txn${nTx===1?"":"s"}</button>${done?"":`<button type="button" class="icon-btn" data-act="completeEV" title="Capitalise total to main account">Complete</button>`}<button type="button" class="icon-btn" data-act="editEV">Edit</button><button type="button" class="icon-btn danger" data-act="delEV">Del</button></div></td></tr>`;
+        <td data-l=""><div class="row-actions"><button type="button" class="icon-btn" data-act="viewEV" title="See tagged transactions">${selectedEV===e.id?"Hide":nTx+" txn"+(nTx===1?"":"s")}</button>${done?"":`<button type="button" class="icon-btn" data-act="completeEV" title="Capitalise total to main account">Complete</button>`}<button type="button" class="icon-btn" data-act="editEV">Edit</button><button type="button" class="icon-btn danger" data-act="delEV">Del</button></div></td></tr>`;
     }).join("");
   }
   if($("#emptyEV"))$("#emptyEV").style.display=events.length?"none":"block";
   if($("#tblEV"))$("#tblEV").style.display=events.length?"":"none";
+  if(selectedEV&&events.some(e=>e.id===selectedEV))renderEventDetail();else if($("#evDetail"))$("#evDetail").style.display="none";
 }
-/* open a modal listing all transactions tagged to an event, with its type breakdown */
-function openEventTxns(id){
-  const ev=events.find(x=>x.id===id);if(!ev)return;
-  const t=eventTotals(id);const list=eventTxns(id);const bd=eventTypeBreakdown(id);
-  $("#evTxnTitle").textContent=ev.name;
-  $("#evTxnSub").textContent=`${EV_TYPE_LABEL[ev.type]||ev.type} \u00b7 ${list.length} transaction${list.length===1?"":"s"} \u00b7 spent ${fmt(t.spent)}${t.recv>0?" \u00b7 received "+fmt(t.recv):""} \u00b7 net ${fmt(t.net)}`;
-  /* per-type breakdown bars */
-  if(bd.length){
-    const max=Math.max(...bd.map(x=>x.amt));
-    $("#evTxnBreakdown").innerHTML=`<div class="ev-an-card" style="margin-bottom:1rem"><h3>By expense type</h3>${bd.map(x=>`<div class="ev-bar-row"><span class="lbl" title="${esc(x.type)}">${esc(x.type)}</span><span class="ev-bar-track"><span class="ev-bar-fill" style="width:${Math.max(3,Math.round(x.amt/max*100))}%"></span></span><span class="amt">${fmt(x.amt)}</span></div>`).join("")}</div>`;
-  }else $("#evTxnBreakdown").innerHTML="";
-  /* transaction list */
-  $("#evTxnList").innerHTML=list.length?list.map(tx=>{
-    const isRecv=tx.type==="Income";
-    const amt=tx.type==="Voucher"&&tx.lines?tx.lines.reduce((s,l)=>s+num(l.dr),0):tx.amount;
-    const typ=eventTxnType(tx);
-    return `<div class="ev-txn-row"><span class="d">${esc(tx.date)}</span><span class="desc">${esc(tx.desc||tx.cat||"\u2014")}${typ&&typ!=="(untagged)"?` <span class="tag2">${esc(typ)}</span>`:""}</span><span class="amt" style="color:${isRecv?"var(--mint)":"var(--coral)"}">${isRecv?"+":"\u2212"}${fmt(Math.abs(amt))}</span></div>`;
-  }).join(""):'<div class="dues-empty">No transactions tagged to this event yet.</div>';
-  $("#evTxnOverlay").style.display="flex";
+let selectedEV=null;
+let evTxnFilter="all";   // all | debit | credit
+/* toggle the inline detail section for an event */
+function showEventDetail(id){
+  selectedEV=(selectedEV===id)?null:id;
+  if(!selectedEV){$("#evDetail").style.display="none";renderEV();return;}
+  evTxnFilter="all";
+  renderEV();
+  const d=$("#evDetail");if(d)d.scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-$("#btnEvTxnClose")&&$("#btnEvTxnClose").addEventListener("click",()=>{$("#evTxnOverlay").style.display="none";});
-$("#evTxnOverlay")&&$("#evTxnOverlay").addEventListener("click",e=>{if(e.target.id==="evTxnOverlay")$("#evTxnOverlay").style.display="none";});
-document.addEventListener("click",e=>{const b=e.target.closest("[data-evtxn]");if(b)openEventTxns(b.getAttribute("data-evtxn"));});
+/* render the inline detail: filter tabs, txn list, pie chart, period trend */
+function renderEventDetail(){
+  const box=$("#evDetail");if(!box)return;
+  const ev=events.find(x=>x.id===selectedEV);if(!ev){box.style.display="none";return;}
+  box.style.display="block";
+  const t=eventTotals(ev.id);
+  let list=eventTxns(ev.id);
+  /* filter by debit / credit selection */
+  if(evTxnFilter!=="all")list=list.filter(tx=>{const a=eventTxnAmount(tx,ev);return evTxnFilter==="debit"?a>0:a<0;});
+  const bd=eventTypeBreakdownFor(ev.id,evTxnFilter);
+  const trend=eventPeriodTrendFor(ev.id,evTxnFilter);
+  box.innerHTML=`
+    <div class="ev-detail-head">
+      <div><h3 style="margin:0">\ud83d\udcc1 ${esc(ev.name)} \u2014 transactions</h3><div style="font-size:.8rem;color:var(--muted)">${esc(EV_TYPE_LABEL[ev.type]||ev.type)} \u00b7 ${esc((coaByNumber(ev.coa)||{}).name||"")} \u00b7 net accrued <strong style="color:var(--text)">${fmt(t.net)}</strong></div></div>
+      <button type="button" class="btn ghost" id="btnEvDetailClose" style="width:auto;padding:.35rem .9rem">Close</button>
+    </div>
+    <div class="ev-filter-tabs">
+      ${["all","debit","credit"].map(f=>`<button type="button" class="ev-ftab${evTxnFilter===f?" on":""}" data-evfilter="${f}">${f==="all"?"All":f==="debit"?"Debits (expense)":"Credits (reduce)"}</button>`).join("")}
+    </div>
+    <div class="ev-detail-grid">
+      <div class="ev-an-card"><h3>Expense type \u2014 share</h3><div id="evPie"></div></div>
+      <div class="ev-an-card"><h3>Spend trend \u2014 by month</h3><div id="evTrend"></div></div>
+    </div>
+    <div class="ev-an-card" style="margin-top:1rem"><h3>Transactions \u00b7 ${list.length}</h3><div id="evDetailList"></div></div>`;
+  /* pie chart (SVG) */
+  $("#evPie").innerHTML=evPieSVG(bd);
+  /* trend chart (SVG bars) */
+  $("#evTrend").innerHTML=evTrendSVG(trend);
+  /* transaction rows */
+  $("#evDetailList").innerHTML=list.length?list.map(tx=>{
+    const a=eventTxnAmount(tx,ev);const isCr=a<0;const typ=eventTxnType(tx);
+    return `<div class="ev-txn-row"><span class="d">${esc(tx.date)}</span><span class="desc">${esc(tx.desc||tx.cat||"\u2014")}${typ&&typ!=="(untagged)"?` <span class="tag2">${esc(typ)}</span>`:""} <span class="tag2" style="opacity:.7">${esc(tx.id)}</span></span><span class="amt" style="color:${isCr?"var(--mint)":"var(--coral)"}">${isCr?"\u2212":""}${fmt(Math.abs(a))}</span></div>`;
+  }).join(""):'<div class="dues-empty">No matching transactions.</div>';
+}
+/* breakdown/trend variants honouring the debit/credit filter */
+function eventTypeBreakdownFor(id,filter){
+  const ev=events.find(x=>x.id===id);const map={};
+  eventTxns(id).forEach(t=>{let a=eventTxnAmount(t,ev);if(filter==="debit"&&a<=0)return;if(filter==="credit"&&a>=0)return;const k=eventTxnType(t);map[k]=r2((map[k]||0)+Math.abs(a));});
+  return Object.entries(map).map(([type,amt])=>({type,amt})).filter(x=>x.amt>0).sort((a,b)=>b.amt-a.amt);
+}
+function eventPeriodTrendFor(id,filter){
+  const ev=events.find(x=>x.id===id);const map={};
+  eventTxns(id).forEach(t=>{let a=eventTxnAmount(t,ev);if(filter==="debit"&&a<=0)return;if(filter==="credit"&&a>=0)return;const mk=monthKeyOf(t.date)||"?";map[mk]=r2((map[mk]||0)+Math.abs(a));});
+  return Object.entries(map).map(([mk,amt])=>({mk,amt})).sort((a,b)=>a.mk.localeCompare(b.mk));
+}
+/* SVG pie chart of expense-type share */
+const EV_PIE_COLORS=["#8b7cf6","#4d9fff","#33d6a6","#ffb454","#ff6b6b","#22c1c3","#c77dff","#f78fb3","#95d5b2","#ffd166"];
+function evPieSVG(bd){
+  const total=bd.reduce((s,x)=>s+x.amt,0);
+  if(total<=0)return '<div class="dues-empty">No data.</div>';
+  const cx=70,cy=70,r=60;let a0=-Math.PI/2;
+  const arcs=bd.map((x,i)=>{
+    const frac=x.amt/total,a1=a0+frac*2*Math.PI;
+    const big=frac>0.5?1:0;
+    const x1=cx+r*Math.cos(a0),y1=cy+r*Math.sin(a0),x2=cx+r*Math.cos(a1),y2=cy+r*Math.sin(a1);
+    const d=frac>=0.9999?`M ${cx-r} ${cy} a ${r} ${r} 0 1 1 ${2*r} 0 a ${r} ${r} 0 1 1 ${-2*r} 0`:`M ${cx} ${cy} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${big} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+    a0=a1;return `<path d="${d}" fill="${EV_PIE_COLORS[i%EV_PIE_COLORS.length]}" stroke="var(--card)" stroke-width="1.5"></path>`;
+  }).join("");
+  const legend=bd.map((x,i)=>`<div class="ev-leg"><span class="sw" style="background:${EV_PIE_COLORS[i%EV_PIE_COLORS.length]}"></span><span class="nm" title="${esc(x.type)}">${esc(x.type)}</span><span class="vl">${fmt(x.amt)} \u00b7 ${Math.round(x.amt/total*100)}%</span></div>`).join("");
+  return `<div class="ev-pie-wrap"><svg viewBox="0 0 140 140" width="140" height="140">${arcs}</svg><div class="ev-legend">${legend}</div></div>`;
+}
+/* SVG bar chart of spend by month */
+function evTrendSVG(trend){
+  if(!trend.length)return '<div class="dues-empty">No data.</div>';
+  const max=Math.max(...trend.map(x=>x.amt))||1;
+  const W=Math.max(220,trend.length*54),H=150,pad=26,bw=Math.min(40,(W-pad)/trend.length-10);
+  const bars=trend.map((x,i)=>{
+    const h=Math.max(2,Math.round((x.amt/max)*(H-pad-18)));
+    const bx=pad+i*((W-pad)/trend.length),by=H-pad-h;
+    const lbl=x.mk==="?"?"?":new Date(x.mk+"-01").toLocaleString(undefined,{month:"short",year:"2-digit"});
+    return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${h}" rx="3" fill="var(--violet)"></rect>
+      <text x="${(bx+bw/2).toFixed(1)}" y="${(by-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--muted)">${fmtShort(x.amt)}</text>
+      <text x="${(bx+bw/2).toFixed(1)}" y="${H-pad+12}" text-anchor="middle" font-size="8" fill="var(--muted)">${esc(lbl)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMidYMid meet"><line x1="${pad}" y1="${H-pad}" x2="${W}" y2="${H-pad}" stroke="var(--line)" stroke-width="1"></line>${bars}</svg>`;
+}
+document.addEventListener("click",e=>{
+  const f=e.target.closest("[data-evfilter]");if(f){evTxnFilter=f.getAttribute("data-evfilter");renderEventDetail();return;}
+  if(e.target.id==="btnEvDetailClose"){selectedEV=null;$("#evDetail").style.display="none";renderEV();return;}
+});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-evtxn]");if(b)showEventDetail(b.getAttribute("data-evtxn"));});
 $("#formEV")&&$("#formEV").addEventListener("submit",e=>{
   e.preventDefault();
   const name=$("#evName").value.trim();if(!name){toast("Enter the event name");return;}
@@ -4627,7 +4731,7 @@ document.addEventListener("click",e=>{
     case "reopenCM":{const c=commits[i];if(c){c.status="";c.active=1;const due=cmNextDue(c);c.next=due;done();}break;}
     case "delCM":if(confirm(`Delete "${commits[i].name}"?`)){if(editingCM===commits[i].id)cancelEditCM();commits.splice(i,1);done();}break;
     case "editEV":{const ev=events[i];if(ev)loadEVIntoForm(ev);break;}
-    case "viewEV":{const ev=events[i];if(ev)openEventTxns(ev.id);break;}
+    case "viewEV":{const ev=events[i];if(ev)showEventDetail(ev.id);break;}
     case "completeEV":{const ev=events[i];if(ev)completeEvent(ev.id);break;}
     case "delEV":if(confirm(`Delete "${events[i].name}"? Tagged transactions stay but lose the link.`)){if(editingEV===events[i].id)cancelEditEV();events.splice(i,1);done();}break;
     case "reopenInv":{const r=invs[i];if(confirm(`Reopen "${r.name}"? The redemption transaction will be removed.`)){txns=txns.filter(t=>t.id!==r.txnRef);r.status="Open";r.closedDate="";r.closedValue=0;r.txnRef="";done();}break;}

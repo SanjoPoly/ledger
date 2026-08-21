@@ -378,6 +378,12 @@
   .jrnl-preview-wrap{margin-top:.2rem}
   .jrnl-preview{font-size:.8rem;color:var(--text);background:var(--wash);border:1px dashed var(--line-strong);border-radius:var(--r-md);padding:.6rem .8rem;display:block;line-height:1.5}
   .jrnl-preview .pos{color:var(--mint)} .jrnl-preview .neg{color:var(--coral)}
+  .emi-panel{border:1px solid var(--line);border-radius:var(--r-md);padding:.8rem 1rem;background:var(--wash);margin:.3rem 0 1rem}
+  .emi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem}
+  .emi-grid .f{margin:0}
+  .emi-note{margin-top:.6rem;font-size:.8rem;color:var(--muted)}
+  .emi-note b{color:var(--text);font-family:var(--mono)}
+  @media(max-width:560px){.emi-grid{grid-template-columns:1fr 1fr}}
   /* multi-line voucher grid */
   #formTxn{display:block!important}   /* the voucher form is block flow, not the add-card grid */
   #formTxn>.f{max-width:340px}
@@ -708,6 +714,17 @@
         <button type="button" class="btn-add-line" id="btnAddLine">+ Add line</button>
         <div class="vtotals" id="vTotals"></div>
       </div>
+      <div class="emi-panel" id="emiPanel">
+        <label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--text);cursor:pointer"><input type="checkbox" id="emiOn" style="width:17px;height:17px;accent-color:var(--mint)"> This is an EMI purchase — split it into monthly instalments</label>
+        <div id="emiFields" style="display:none;margin-top:.7rem">
+          <div class="emi-grid">
+            <div class="f"><label for="emiTenure">Tenure (months)</label><input type="number" id="emiTenure" min="1" step="1" inputmode="numeric" placeholder="e.g. 12"></div>
+            <div class="f"><label for="emiRate">Interest rate (% p.a.)</label><input type="number" id="emiRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 14"></div>
+            <div class="f"><label for="emiStart">EMI start date</label><input type="date" id="emiStart"></div>
+          </div>
+          <div class="emi-note" id="emiNote"></div>
+        </div>
+      </div>
       <div class="f" style="grid-column:1/-1"><button type="submit" id="btnPostVoucher">Post voucher</button><button type="button" id="btnCancelTxn" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
       <input type="hidden" id="tLoan" value=""><input type="hidden" id="tBank"><input type="hidden" id="tBankTo">
     </form>
@@ -735,6 +752,8 @@
   <section class="panel" id="panel-bank">
     <div class="section-head"><h2>Your banks</h2><span class="total" id="bankTotalHead"></span><span style="margin-left:auto"></span><button class="top-btn" id="btnAddBankJump" type="button" style="min-height:38px">+ Add bank (in Setups)</button></div>
     <div class="bank-cards" id="bankCards"></div>
+    <div class="section-head" id="cardsHead" style="margin-top:1.2rem;display:none"><h2>Credit cards</h2><span class="total" id="cardsTotalHead"></span></div>
+    <div class="bank-cards" id="creditCards"></div>
 
     <div class="section-head"><h2>Verify a bank balance</h2></div>
     <div class="add-card" id="verifyCard">
@@ -896,6 +915,7 @@
         <div class="f"><label for="bType">Account type</label><select id="bType"><option>Savings</option><option>Current</option><option>Cash</option><option>Other</option></select></div>
         <div class="f"><label for="bOpen" id="bOpenLabel">Opening balance</label><input type="number" step="0.01" id="bOpen" value="0"></div>
         <div class="f" id="bLimitWrap" style="display:none"><label for="bLimit">Credit limit</label><input type="number" step="0.01" id="bLimit" value="0" placeholder="e.g. 100000"></div>
+        <div class="f" id="bDueWrap" style="display:none"><label for="bDueDay">Payment due day <i>(of month)</i></label><input type="number" id="bDueDay" min="1" max="31" step="1" placeholder="e.g. 7"></div>
         <div class="f"><label for="bCoa" id="bCoaLabel">Main account <i>(COA · required)</i></label><select id="bCoa"></select></div>
         <div class="f wide" style="grid-column:1/-1"><label for="bNotes">Notes</label><input type="text" id="bNotes"></div>
         <button type="submit" class="btn primary" style="grid-column:1/-1">+ Add account</button>
@@ -1575,6 +1595,17 @@ function bankBalance(name,asOf){
   return r2(opening+bankCredits(name,asOf)-bankDebits(name,asOf));
 }
 function isCardAcct(name){const b=banks.find(x=>x.name===name);return !!(b&&b.kind==="card");}
+/* next payment due date given a day-of-month, as a short label */
+function nextDueDateText(day){
+  if(!day)return "";
+  const now=new Date();
+  let y=now.getFullYear(),m=now.getMonth();
+  const dim=n=>new Date(y,m+1,0).getDate();
+  let d=Math.min(day,dim());
+  if(new Date(y,m,d)<new Date(y,now.getMonth(),now.getDate())){m++;if(m>11){m=0;y++;}d=Math.min(day,new Date(y,m+1,0).getDate());}
+  const mon=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m];
+  return `${d} ${mon}`;
+}
 function cardAvailable(name){const b=banks.find(x=>x.name===name);if(!b||b.kind!=="card")return null;return r2((b.creditLimit||0)-bankBalance(name));}
 
 /* ---------- parse the 4-sheet workbook (headers on row 3) ---------- */
@@ -1658,6 +1689,7 @@ function parseWorkbook(buf,name){
       coa:String(gv(r,"Main Account")||"").trim(),
       kind:/card/i.test(String(gv(r,"Account Kind","Kind")||""))?"card":"bank",
       creditLimit:num(gv(r,"Credit Limit","Limit")),
+      dueDay:Math.round(num(gv(r,"Payment Due Day","Due Day")))||0,
       recDate:normDate(gv(r,"Reconciled Date")),
       statement:gv(r,"Statement Balance")===""?null:num(gv(r,"Statement Balance")),
       notes:String(gv(r,"Notes")||"").trim()
@@ -1782,17 +1814,17 @@ function buildWorkbook(){
   XLSX.utils.book_append_sheet(wb,wsT,"Transactions");
 
   // Banks & Reconciliation (write computed values; keep formulas-as-values for portability)
-  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status","Main Account","Account Kind","Credit Limit"];
+  const bkHeaders=["Account ID","Bank Name","Account Number","Account Type","Opening Balance","Total Credits","Total Debits","Calculated Book Balance","Reconciled Date","Statement Balance","Discrepancy","Reconciliation Status","Main Account","Account Kind","Credit Limit","Payment Due Day"];
   const bkData=banks.map(b=>{
     const cr=bankCredits(b.name),db=bankDebits(b.name);
     const book=b.kind==="card"?r2(b.opening+db-cr):r2(b.opening+cr-db);   // card = outstanding owed
     const stmt=b.statement;
     const disc=stmt==null?"":r2(book-stmt);
     const status=stmt==null?"Pending":(Math.abs(book-stmt)<0.01?"Reconciled":"Discrepancy");
-    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status,b.coa||"",b.kind==="card"?"Credit Card":"Bank",b.creditLimit||""];
+    return [b.id,b.name,b.acct,b.type,b.opening,cr,db,book,b.recDate||"",stmt==null?"":stmt,disc,status,b.coa||"",b.kind==="card"?"Credit Card":"Bank",b.creditLimit||"",b.dueDay||""];
   });
   const wsB=bannerSheet("Bank Accounts & Reconciliation","Automated balance tracking with reconciliation. Credit-card accounts track outstanding = opening + spends − payments.",bkHeaders,bkData);
-  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18},{wch:12},{wch:13},{wch:13}];
+  wsB["!cols"]=[{wch:10},{wch:16},{wch:18},{wch:12},{wch:14},{wch:13},{wch:13},{wch:18},{wch:14},{wch:16},{wch:12},{wch:18},{wch:12},{wch:13},{wch:13},{wch:14}];
   XLSX.utils.book_append_sheet(wb,wsB,"Banks & Reconciliation");
 
   // Loans & Debts
@@ -2487,26 +2519,40 @@ function renderTxn(){
 
 /* ---------- banks ---------- */
 function renderBank(){
-  const cardBox=$("#bankCards"),tblBody=document.querySelector("#tblBank tbody");
+  const cardBox=$("#bankCards"),creditBox=$("#creditCards"),tblBody=document.querySelector("#tblBank tbody");
   const head=$("#bankTotalHead");
+  const assetBanks=banks.map((b,i)=>({b,i})).filter(x=>x.b.kind!=="card");
+  const creditCardsList=banks.map((b,i)=>({b,i})).filter(x=>x.b.kind==="card");
   if(head){
-    const assets=banks.filter(b=>b.kind!=="card").reduce((s,b)=>s+bankBalance(b.name),0);
-    const cardDebt=banks.filter(b=>b.kind==="card").reduce((s,b)=>s+bankBalance(b.name),0);
-    head.textContent=banks.length?(fmt(assets)+" in banks"+(cardDebt>0?" \u00b7 "+fmt(cardDebt)+" on cards":"")):"";
+    const assets=assetBanks.reduce((s,x)=>s+bankBalance(x.b.name),0);
+    head.textContent=banks.length?(fmt(assets)+" in banks"):"";
   }
   if(cardBox){
-    cardBox.innerHTML=banks.map((b,i)=>{
-      const isCard=b.kind==="card";
+    cardBox.innerHTML=assetBanks.map(({b,i})=>{
       const bal=bankBalance(b.name);
       const last=(b.acct||"").toString().slice(-4);
-      const book=isCard?r2(b.opening+bankDebits(b.name)-bankCredits(b.name)):r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
+      const book=r2(b.opening+bankCredits(b.name)-bankDebits(b.name));
       const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
       const recTag=reconciled?`<div class="rec-chip">\u2713 Reconciled ${esc(b.recDate||"")}</div>`:"";
-      if(isCard){
-        const avail=cardAvailable(b.name);
-        return `<div class="bank-card card-acct" data-i="${i}"><div class="label">\ud83d\udcb3 Credit card${last?" \u00b7 ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance neg">${fmt(bal)} <span style="font-size:.7rem;color:var(--muted)">owed</span></div>${b.creditLimit>0?`<div class="rec-chip" style="background:rgba(61,220,163,.12);color:var(--mint)">${fmt(avail)} of ${fmt(b.creditLimit)} available</div>`:""}${recTag}</div>`;
-      }
       return `<div class="bank-card${bal<0?" neg":""}" data-i="${i}"><div class="label">${esc(b.type||"")}${last?" \u00b7 ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance">${fmt(bal)}</div>${recTag}</div>`;
+    }).join("");
+  }
+  /* separate Credit cards section */
+  if($("#cardsHead"))$("#cardsHead").style.display=creditCardsList.length?"flex":"none";
+  if($("#cardsTotalHead")){
+    const owed=creditCardsList.reduce((s,x)=>s+bankBalance(x.b.name),0);
+    $("#cardsTotalHead").textContent=creditCardsList.length?fmt(owed)+" owed on cards":"";
+  }
+  if(creditBox){
+    creditBox.innerHTML=creditCardsList.map(({b,i})=>{
+      const bal=bankBalance(b.name);
+      const last=(b.acct||"").toString().slice(-4);
+      const avail=cardAvailable(b.name);
+      const due=b.dueDay?nextDueDateText(b.dueDay):"";
+      const book=r2(b.opening+bankDebits(b.name)-bankCredits(b.name));
+      const reconciled=b.statement!=null&&Math.abs(book-b.statement)<0.01;
+      const recTag=reconciled?`<div class="rec-chip">\u2713 Reconciled ${esc(b.recDate||"")}</div>`:"";
+      return `<div class="bank-card card-acct" data-i="${i}"><div class="label">\ud83d\udcb3 Credit card${last?" \u00b7 ····"+esc(last):""}</div><div class="bname">${esc(b.name)}</div><div class="balance neg">${fmt(bal)} <span style="font-size:.7rem;color:var(--muted)">owed</span></div>${b.creditLimit>0?`<div class="rec-chip" style="background:rgba(61,220,163,.12);color:var(--mint)">${fmt(avail)} of ${fmt(b.creditLimit)} available</div>`:""}${due?`<div class="rec-chip" style="background:rgba(255,176,32,.14);color:var(--amber,#E0A21B)">Due ${esc(due)}</div>`:""}${recTag}</div>`;
     }).join("");
   }
   if(tblBody){
@@ -2980,6 +3026,29 @@ function reverseInvTopup(t){
 
 /* ---------- voucher grid form ---------- */
 $("#btnAddLine")&&$("#btnAddLine").addEventListener("click",()=>{vLines.push(newVLine());renderVLines();});
+/* EMI purchase panel */
+function emiVoucherAmount(){return r2(vLines.reduce((s,l)=>s+num(l.dr),0));}
+function flatEmi(principal,ratePa,months){
+  if(!months)return 0;
+  const r=(ratePa||0)/100/12;
+  if(r<=0)return r2(principal/months);
+  return r2(principal*r*Math.pow(1+r,months)/(Math.pow(1+r,months)-1));   // reducing-balance EMI
+}
+function updateEmiNote(){
+  const note=$("#emiNote");if(!note)return;
+  const p=emiVoucherAmount(),m=Math.round(num($("#emiTenure").value)),rate=num($("#emiRate").value);
+  if(!p||!m){note.innerHTML="Enter the purchase amount (debit lines), tenure and rate to see the EMI.";return;}
+  const emi=flatEmi(p,rate,m),total=r2(emi*m),interest=r2(total-p);
+  note.innerHTML=`Monthly EMI <b>${fmt(emi)}</b> \u00d7 ${m} months = <b>${fmt(total)}</b> total (interest <b>${fmt(interest)}</b>). A loan record will be created and linked to this purchase.`;
+}
+$("#emiOn")&&$("#emiOn").addEventListener("change",()=>{
+  const on=$("#emiOn").checked;
+  if($("#emiFields"))$("#emiFields").style.display=on?"":"none";
+  if(on&&$("#emiStart")&&!$("#emiStart").value)$("#emiStart").value=$("#tDate").value||todayISO();
+  updateEmiNote();
+});
+["emiTenure","emiRate"].forEach(id=>{const el=$("#"+id);if(el)el.addEventListener("input",updateEmiNote);});
+function resetEmiPanel(){if($("#emiOn"))$("#emiOn").checked=false;if($("#emiFields"))$("#emiFields").style.display="none";["emiTenure","emiRate","emiStart"].forEach(id=>{if($("#"+id))$("#"+id).value="";});}
 $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
   e.preventDefault();
   const date=$("#tDate").value||todayISO(),desc=$("#tDesc").value.trim(),method=$("#tPay").value;
@@ -3008,9 +3077,23 @@ $("#formTxn")&&$("#formTxn").addEventListener("submit",e=>{
     const rec={id:nextTxnId(),date,desc,method,type:"Voucher",amount:tDr,lines,cat:lines[0]?vLineName2(lines[0]):"",coaAcct:"",offsetAcct:"",bank:"",toBank:"",ref:"",loanRef:"",bankRef:""};
     applyVoucherEffects(rec);
     txns.push(rec);
-    resetVoucher();$("#tDate").value=todayISO();$("#tDesc").value="";
+    /* EMI purchase: create a linked loan record for the instalment plan */
+    let emiMsg="";
+    if($("#emiOn")&&$("#emiOn").checked){
+      const m=Math.round(num($("#emiTenure").value)),rate=num($("#emiRate").value);
+      if(m>0){
+        const coaPay=(coa.find(a=>a.type==="Liability"&&/(loan|debt|credit|payable)/i.test(a.category||""))||{}).number||"";
+        const id=nextId(lends,"EMI",1);
+        const ldRec={id,type:"Bank Loan Payable",person:(desc||"EMI purchase").slice(0,30),purpose:"EMI \u00b7 voucher "+rec.id,principal:tDr,rate,term:m,creditLimit:0,balance:0,issue:$("#emiStart").value||date,due:"",status:"Open",coa:coaPay,closedDate:"",closeBank:"",txnRef:rec.id};
+        ldRec.balance=ldNetPayable(ldRec);
+        lends.push(ldRec);
+        rec.loanRef=id;rec.ref="EMI plan: "+id;
+        emiMsg=` \u00b7 EMI ${fmt(ldEmi(ldRec))}\u00d7${m}`;
+      }
+    }
+    resetVoucher();resetEmiPanel();$("#tDate").value=todayISO();$("#tDesc").value="";
     setDirty(true);renderAll();
-    toast(`Voucher posted \u00b7 ${lines.length} lines \u00b7 ${fmt(tDr)}`);
+    toast(`Voucher posted \u00b7 ${lines.length} lines \u00b7 ${fmt(tDr)}${emiMsg}`);
   }
 });
 function vLineName2(l){const a=coaByNumber(l.acct);return a?a.name:(l.acct||"Account");}
@@ -3085,7 +3168,7 @@ function cancelEditTxn(){
   editingTxn=null;
   const form=$("#formTxn");if(form)form.classList.remove("editing");
   $("#tDate").value=todayISO();$("#tDesc").value="";
-  resetVoucher();
+  resetVoucher();if(typeof resetEmiPanel==="function")resetEmiPanel();
   const submitBtn=$("#btnPostVoucher");if(submitBtn)submitBtn.textContent="Post voucher";
   if($("#btnCancelTxn"))$("#btnCancelTxn").style.display="none";
 }
@@ -3365,15 +3448,16 @@ $("#formBank")&&$("#formBank").addEventListener("submit",e=>{
   const kind=$("#bKind")?$("#bKind").value:"bank";
   const coaVal=$("#bCoa")?$("#bCoa").value:"";
   if(!coaVal){toast("Choose a main account \u2014 it's required so entries post to the right ledger");return;}
-  const nb={id:nextId(banks,kind==="card"?"CARD":"ACC",1),name,acct:$("#bAcct").value.trim(),type:kind==="card"?"Credit Card":$("#bType").value,opening:num($("#bOpen").value),coa:coaVal,kind,creditLimit:kind==="card"?num($("#bLimit").value):0,recDate:null,statement:null,notes:$("#bNotes").value.trim()};
+  const nb={id:nextId(banks,kind==="card"?"CARD":"ACC",1),name,acct:$("#bAcct").value.trim(),type:kind==="card"?"Credit Card":$("#bType").value,opening:num($("#bOpen").value),coa:coaVal,kind,creditLimit:kind==="card"?num($("#bLimit").value):0,dueDay:kind==="card"?Math.round(num($("#bDueDay").value))||0:0,recDate:null,statement:null,notes:$("#bNotes").value.trim()};
   if(bankEditState){nb.id=bankEditState.id;if(bankEditState.opening===nb.opening){nb.statement=bankEditState.statement;nb.recDate=bankEditState.recDate;}bankEditState=null;}
   banks.push(nb);
-  e.target.reset();$("#bOpen").value="0";if($("#bLimit"))$("#bLimit").value="0";if($("#bLimitWrap"))$("#bLimitWrap").style.display="none";
+  e.target.reset();$("#bOpen").value="0";if($("#bLimit"))$("#bLimit").value="0";if($("#bLimitWrap"))$("#bLimitWrap").style.display="none";if($("#bDueWrap"))$("#bDueWrap").style.display="none";
   setDirty(true);renderAll();toast(kind==="card"?"Credit card saved":"Bank saved");
 });
 $("#bKind")&&$("#bKind").addEventListener("change",()=>{
   const card=$("#bKind").value==="card";
   if($("#bLimitWrap"))$("#bLimitWrap").style.display=card?"":"none";
+  if($("#bDueWrap"))$("#bDueWrap").style.display=card?"":"none";
   if($("#bOpenLabel"))$("#bOpenLabel").textContent=card?"Opening outstanding":"Opening balance";
   /* a card's main account is a liability (Credit Card Payable); a bank's is an asset */
   if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions(card?"Liability":"Asset",$("#bCoa").value,{catMatch:card?/(credit|card|payable)/:/(cash|bank)/,taken:coaTakenBy("bank")});
@@ -3387,7 +3471,9 @@ document.addEventListener("click",e=>{
     const card=(b.kind==="card");
     $("#bName").value=b.name;$("#bAcct").value=b.acct;$("#bType").value=b.type;$("#bOpen").value=b.opening;$("#bNotes").value=b.notes;
     if($("#bLimit"))$("#bLimit").value=b.creditLimit||0;
+    if($("#bDueDay"))$("#bDueDay").value=b.dueDay||"";
     if($("#bLimitWrap"))$("#bLimitWrap").style.display=card?"":"none";
+    if($("#bDueWrap"))$("#bDueWrap").style.display=card?"":"none";
     if($("#bOpenLabel"))$("#bOpenLabel").textContent=card?"Opening outstanding":"Opening balance";
     if($("#bCoa"))$("#bCoa").innerHTML=coaAcctOptions(card?"Liability":"Asset",b.coa||"",{catMatch:card?/(credit|card|payable)/:/(cash|bank)/,taken:coaTakenBy("bank")});
     bankEditState={id:b.id,statement:b.statement,recDate:b.recDate,opening:b.opening};

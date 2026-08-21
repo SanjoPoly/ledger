@@ -2631,7 +2631,10 @@ function dashAsOf(){
 function populateDashPeriod(){
   const sel=$("#dashPeriod");if(!sel)return;
   const months=[...new Set(txns.map(t=>monthKeyOf(t.date)))].filter(Boolean).sort().reverse();
-  const cur=sel.dataset.init?sel.value:"";     // default: All time
+  /* default to the current month on first load (fall back to the latest month with data) */
+  let cur;
+  if(sel.dataset.init){cur=sel.value;}
+  else{const tm=thisMonthKey();cur=months.includes(tm)?tm:(months[0]||"");}
   sel.dataset.init=1;
   sel.innerHTML='<option value=""'+(cur===""?" selected":"")+'>All time</option>'
     +months.map(m=>{const l=new Date(m+"-01").toLocaleString(undefined,{month:"short",year:"numeric"});return `<option value="${m}"${m===cur?" selected":""}>${esc(l)}</option>`;}).join("");

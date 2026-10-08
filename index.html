@@ -441,8 +441,17 @@
   body.simple-mode .advanced-only{display:none!important}
   body:not(.simple-mode) .simple-only{display:none!important}
   body.simple-mode .acct-only{display:none!important}
-  #formSimple{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem 1rem}
-  @media(max-width:680px){#formSimple{grid-template-columns:1fr 1fr}}
+  /* simple Add form: segmented type buttons + friendly field grid */
+  .stype-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.1rem}
+  .stype-btn{flex:1;min-width:140px;border:1.5px solid var(--line-strong);background:var(--card);color:var(--muted);border-radius:12px;padding:.8rem .6rem;font-size:.92rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;transition:border-color .12s,background .12s,color .12s}
+  .stype-btn .ic{font-size:1.15rem}
+  .stype-btn:hover{border-color:var(--mint)}
+  .stype-btn.is-on{border-color:var(--mint);background:var(--mint);color:#052b22}
+  .simple-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+  @media(max-width:680px){.simple-fields{grid-template-columns:1fr 1fr}}
+  .simple-fields .amt-field input{font-size:1.35rem;font-weight:700;letter-spacing:.01em}
+  .simple-actions{margin-top:1.2rem;display:flex;gap:.6rem}
+  .simple-actions #btnPostSimple{font-size:.98rem;padding:.72rem 1.8rem}
   /* friendly intro banner shown at the top of simplified screens */
   .layman-tip{display:none;border:1px solid var(--line);border-left:3px solid var(--mint);border-radius:var(--r-md);padding:.7rem .9rem;background:var(--wash);font-size:.83rem;color:var(--muted);margin-bottom:1rem}
   body.simple-mode .layman-tip{display:block}
@@ -800,16 +809,26 @@
   <!-- ============ ADD / POST ============ -->
   <section class="panel" id="panel-add">
     <div class="section-head"><h2 id="addTitle">Post a journal voucher</h2><span class="total" id="addHead"></span></div>
-    <form class="add-card simple-only" id="formSimple" style="display:none">
-      <div class="f"><label for="sType">Type</label><select id="sType"><option value="Expense">Expense (money out)</option><option value="Income">Income (money in)</option><option value="Transfer">Transfer between my accounts</option></select></div>
-      <div class="f"><label for="sDate">Date</label><input type="date" id="sDate" required></div>
-      <div class="f" id="sCatWrap"><label for="sCat">Category</label><select id="sCat"></select></div>
-      <div class="f" id="sAcctWrap"><label for="sAcct" id="sAcctLabel">Paid from / into (cash · bank · card)</label><select id="sAcct"></select></div>
-      <div class="f" id="sToAcctWrap" style="display:none"><label for="sToAcct">To account</label><select id="sToAcct"></select></div>
-      <div class="f"><label for="sAmt">Amount</label><input type="number" id="sAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
-      <div class="f" style="flex:2"><label for="sDesc">Description <i>(optional)</i></label><input type="text" id="sDesc" placeholder="e.g. Groceries at DMart"></div>
-      <div class="f"><label for="sPay">Method</label><select id="sPay"></select></div>
-      <div class="f" style="grid-column:1/-1"><button type="submit" id="btnPostSimple">Add entry</button><button type="button" id="btnCancelSimple" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
+    <form class="add-card simple-only" id="formSimple">
+      <div class="stype-row" id="sTypeRow">
+        <button type="button" class="stype-btn is-on" data-stype="Expense"><span class="ic">💸</span>Money out</button>
+        <button type="button" class="stype-btn" data-stype="Income"><span class="ic">💰</span>Money in</button>
+        <button type="button" class="stype-btn" data-stype="Transfer"><span class="ic">🔁</span>Between my accounts</button>
+      </div>
+      <input type="hidden" id="sType" value="Expense">
+      <div class="simple-fields">
+        <div class="f amt-field"><label for="sAmt">Amount</label><input type="number" id="sAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00" required></div>
+        <div class="f" id="sCatWrap"><label for="sCat" id="sCatLabel">What for?</label><select id="sCat"></select></div>
+        <div class="f" id="sAcctWrap"><label for="sAcct" id="sAcctLabel">Paid from</label><select id="sAcct"></select></div>
+        <div class="f" id="sToAcctWrap" style="display:none"><label for="sToAcct">To account</label><select id="sToAcct"></select></div>
+        <div class="f"><label for="sDate">Date</label><input type="date" id="sDate" required></div>
+        <div class="f"><label for="sDesc">Note <i>(optional)</i></label><input type="text" id="sDesc" placeholder="e.g. DMart groceries"></div>
+        <div class="f" id="sPayWrap"><label for="sPay">Paid by <i>(optional)</i></label><select id="sPay"></select></div>
+      </div>
+      <div class="simple-actions">
+        <button type="submit" id="btnPostSimple">Add</button>
+        <button type="button" id="btnCancelSimple" class="btn-cancel-edit" style="display:none">Cancel</button>
+      </div>
     </form>
     <form class="add-card advanced-only" id="formTxn">
       <div class="vgrid-head">
@@ -2532,21 +2551,30 @@ function bankAcctOptions(sel){
 function renderSimpleAdd(){
   const f=$("#formSimple");if(!f)return;
   const type=$("#sType")?$("#sType").value:"Expense";
+  /* keep the segmented buttons in sync with the current type */
+  document.querySelectorAll('#sTypeRow .stype-btn').forEach(b=>b.classList.toggle('is-on',b.dataset.stype===type));
   if($("#addTitle"))$("#addTitle").textContent=advanced?"Post a journal voucher":"Add a transaction";
   if($("#sDate")&&!$("#sDate").value)$("#sDate").value=todayISO();
   /* categories from the simple lists */
   const cats=type==="Income"?lists.incomeCats:type==="Expense"?lists.expenseCats:[];
   if($("#sCatWrap"))$("#sCatWrap").style.display=type==="Transfer"?"none":"";
+  if($("#sCatLabel"))$("#sCatLabel").textContent=type==="Income"?"Source":"What for?";
   if($("#sCat")){const cur=$("#sCat").value;$("#sCat").innerHTML=cats.map(c=>`<option${c===cur?" selected":""}>${esc(c)}</option>`).join("")||'<option value="">— none —</option>';}
   /* offset account(s) */
   if($("#sAcct"))$("#sAcct").innerHTML=bankAcctOptions($("#sAcct").value);
-  if($("#sAcctLabel"))$("#sAcctLabel").textContent=type==="Income"?"Received into (cash · bank · card)":type==="Transfer"?"From account":"Paid from (cash · bank · card)";
+  if($("#sAcctLabel"))$("#sAcctLabel").textContent=type==="Income"?"Received into":type==="Transfer"?"From account":"Paid from";
   if($("#sToAcctWrap"))$("#sToAcctWrap").style.display=type==="Transfer"?"":"none";
   if($("#sToAcct"))$("#sToAcct").innerHTML=bankAcctOptions($("#sToAcct").value);
-  /* payment methods */
-  if($("#sPay")){const cur=$("#sPay").value;$("#sPay").innerHTML=(lists.payMethods||[]).map(m=>`<option${m===cur?" selected":""}>${esc(m)}</option>`).join("");}
+  /* payment method is optional in simple mode; hidden for transfers */
+  if($("#sPayWrap"))$("#sPayWrap").style.display=type==="Transfer"?"none":"";
+  if($("#sPay")){const cur=$("#sPay").value;$("#sPay").innerHTML='<option value="">— any —</option>'+(lists.payMethods||[]).map(m=>`<option${m===cur?" selected":""}>${esc(m)}</option>`).join("");}
 }
 $("#sType")&&$("#sType").addEventListener("change",renderSimpleAdd);
+/* segmented Money-out / Money-in / Transfer buttons drive the hidden #sType */
+document.querySelectorAll('#sTypeRow .stype-btn').forEach(b=>b.addEventListener('click',()=>{
+  if($("#sType"))$("#sType").value=b.dataset.stype;
+  renderSimpleAdd();
+}));
 $("#formSimple")&&$("#formSimple").addEventListener("submit",e=>{
   e.preventDefault();
   const type=$("#sType").value;

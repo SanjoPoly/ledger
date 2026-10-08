@@ -450,6 +450,20 @@
   .simple-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
   @media(max-width:680px){.simple-fields{grid-template-columns:1fr 1fr}}
   .simple-fields .amt-field input{font-size:1.35rem;font-weight:700;letter-spacing:.01em}
+  /* ---- radical simple-mode trims: hide advanced blocks, fields and columns ---- */
+  body.simple-mode .adv-block{display:none!important}
+  body.simple-mode .adv-field{display:none!important}
+  /* History table: hide Txn ID (1), Acct type (8), Method (9) + the journal voucher button */
+  body.simple-mode #tblTxn th:nth-child(1),body.simple-mode #tblTxn td:nth-child(1),
+  body.simple-mode #tblTxn th:nth-child(8),body.simple-mode #tblTxn td:nth-child(8),
+  body.simple-mode #tblTxn th:nth-child(9),body.simple-mode #tblTxn td:nth-child(9){display:none}
+  body.simple-mode [data-act="voucher"]{display:none!important}
+  /* Loan tables: hide Record (1), EMI/rate (4), Net payable (5) */
+  body.simple-mode .tbl-ld th:nth-child(1),body.simple-mode .tbl-ld td:nth-child(1),
+  body.simple-mode .tbl-ld th:nth-child(4),body.simple-mode .tbl-ld td:nth-child(4),
+  body.simple-mode .tbl-ld th:nth-child(5),body.simple-mode .tbl-ld td:nth-child(5){display:none}
+  /* Investments table: hide Inv ID (1) */
+  body.simple-mode #tblInv th:nth-child(1),body.simple-mode #tblInv td:nth-child(1){display:none}
   .simple-actions{margin-top:1.2rem;display:flex;gap:.6rem}
   .simple-actions #btnPostSimple{font-size:.98rem;padding:.72rem 1.8rem}
   /* friendly intro banner shown at the top of simplified screens */
@@ -798,8 +812,8 @@
       <div class="chart-card"><h3 style="color:var(--mint)">To receive <small id="dueRecvSum"></small></h3><div id="dueRecv" class="dues-list"></div></div>
       <div class="chart-card"><h3 style="color:var(--coral)">To pay <small id="duePaySum"></small></h3><div id="duePay" class="dues-list"></div></div>
     </div>
-    <div class="section-head" style="margin-top:1.6rem"><h2 style="font-size:1.05rem">Upcoming commitments</h2><span class="total" id="commitDashHead" style="margin-left:auto"></span></div>
-    <div class="chart-card"><div id="commitDash" class="dues-list"></div></div>
+    <div class="section-head adv-block" style="margin-top:1.6rem"><h2 style="font-size:1.05rem">Upcoming commitments</h2><span class="total" id="commitDashHead" style="margin-left:auto"></span></div>
+    <div class="chart-card adv-block"><div id="commitDash" class="dues-list"></div></div>
     <div class="charts">
       <div class="chart-card"><h3>Assets &amp; liabilities <small>statement · <span id="stBalScope">as of today</span></small></h3><div id="stBalance" class="fin-st"></div></div>
       <div class="chart-card"><h3>Income &amp; expense <small>statement · <span id="stPeriodLabel">all time</span></small></h3><div id="stPL" class="fin-st"></div></div>
@@ -823,7 +837,7 @@
         <div class="f" id="sToAcctWrap" style="display:none"><label for="sToAcct">To account</label><select id="sToAcct"></select></div>
         <div class="f"><label for="sDate">Date</label><input type="date" id="sDate" required></div>
         <div class="f"><label for="sDesc">Note <i>(optional)</i></label><input type="text" id="sDesc" placeholder="e.g. DMart groceries"></div>
-        <div class="f" id="sPayWrap"><label for="sPay">Paid by <i>(optional)</i></label><select id="sPay"></select></div>
+        <div class="f acct-only" id="sPayWrap"><label for="sPay">Paid by <i>(optional)</i></label><select id="sPay"></select></div>
       </div>
       <div class="simple-actions">
         <button type="submit" id="btnPostSimple">Add</button>
@@ -886,14 +900,14 @@
     <div class="section-head" id="cardsHead" style="margin-top:1.2rem;display:none"><h2>Credit cards</h2><span class="total" id="cardsTotalHead"></span></div>
     <div class="bank-cards" id="creditCards"></div>
 
-    <div class="section-head"><h2>Verify a bank balance</h2></div>
-    <div class="add-card" id="verifyCard">
+    <div class="section-head adv-block"><h2>Verify a bank balance</h2></div>
+    <div class="add-card adv-block" id="verifyCard">
       <div class="f"><label for="recBank">Bank account</label><select id="recBank" class="bank-select"></select></div>
       <div class="f"><label for="recDate">Statement date <i>(balance as of)</i></label><input type="date" id="recDate"></div>
       <div class="f"><label for="recBal">Statement closing balance</label><input type="number" step="0.01" id="recBal" placeholder="0.00"></div>
       <button class="btn-accent" id="btnReconcile" type="button" style="grid-column:1/-1">Verify balance</button>
     </div>
-    <div id="recOutput"></div>
+    <div id="recOutput" class="adv-block"></div>
 
     <div class="section-head" style="margin-top:1.5rem"><h2>Bank statement</h2><span class="total" id="stmtHead"></span></div>
     <div class="toolbar">
@@ -922,12 +936,12 @@
       <div class="f"><label for="ldPurpose">Category / Purpose</label><input type="text" id="ldPurpose" placeholder="e.g. Money given, Housing loan"></div>
       <div class="f" id="ldLimitWrap" style="display:none"><label for="ldLimit">Credit limit <i>(optional)</i></label><input type="number" id="ldLimit" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 100000"></div>
       <div class="f"><label for="ldPrincipal" id="ldPrincipalLabel">Opening principal <i>(optional — post entries later)</i></label><input type="number" id="ldPrincipal" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-      <div class="f"><label for="ldRate">Interest rate <i>(% per year, optional)</i></label><input type="number" id="ldRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
-      <div class="f"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
+      <div class="f adv-field"><label for="ldRate">Interest rate <i>(% per year, optional)</i></label><input type="number" id="ldRate" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 8.5"></div>
+      <div class="f adv-field"><label for="ldTerm">Term <i>(months, optional)</i></label><input type="number" id="ldTerm" min="0" step="1" inputmode="numeric" placeholder="e.g. 240"></div>
       <div class="f"><label for="ldIssue">Issue date</label><input type="date" id="ldIssue"></div>
       <div class="f" id="ldDueWrap"><label for="ldDue">Due date <i>(optional)</i></label><input type="date" id="ldDue"></div>
-      <div class="f" id="ldDueDayWrap" style="display:none"><label for="ldDueDay">Due day of month <i>(1–31)</i></label><input type="number" id="ldDueDay" min="1" max="31" step="1" inputmode="numeric" placeholder="e.g. 5"></div>
-      <div class="f" style="grid-column:1/-1;justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer"><input type="checkbox" id="ldMonthly" style="width:17px;height:17px;accent-color:var(--mint)"> Monthly commitment — recurs on a day each month (EMI, rent, subscription)</label></div>
+      <div class="f adv-field" id="ldDueDayWrap" style="display:none"><label for="ldDueDay">Due day of month <i>(1–31)</i></label><input type="number" id="ldDueDay" min="1" max="31" step="1" inputmode="numeric" placeholder="e.g. 5"></div>
+      <div class="f adv-field" style="grid-column:1/-1;justify-content:end"><label class="chk-line" style="display:flex;align-items:center;gap:.5rem;font-size:.83rem;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer"><input type="checkbox" id="ldMonthly" style="width:17px;height:17px;accent-color:var(--mint)"> Monthly commitment — recurs on a day each month (EMI, rent, subscription)</label></div>
       <div class="f acct-only"><label for="ldCoa">Main account <i>(COA · required)</i></label><select id="ldCoa"></select></div>
       <input type="hidden" id="ldFundBank" value="">
       <div class="f"><button type="submit">+ Create record master</button><button type="button" id="btnCancelLD" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
@@ -958,7 +972,7 @@
       <div class="f"><label for="ivType">Asset type</label><select id="ivType"></select></div>
       <div class="f"><label for="ivDate" id="ivDateLabel">As-of date</label><input type="date" id="ivDate"></div>
       <div class="f"><label for="ivAmt" id="ivAmtLabel">Opening cost <i>(optional — post entries later)</i></label><input type="number" id="ivAmt" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></div>
-      <div class="f"><label for="ivCur">Current value <i>(optional)</i></label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as opening"></div>
+      <div class="f adv-field"><label for="ivCur">Current value <i>(optional)</i></label><input type="number" id="ivCur" min="0" step="0.01" inputmode="decimal" placeholder="same as opening"></div>
       <div class="f acct-only"><label for="ivCoa">Main account <i>(COA · required)</i></label><select id="ivCoa"></select></div>
       <input type="hidden" id="ivBank" value=""><input type="checkbox" id="ivExisting" style="display:none">
       <div class="f"><button type="submit" id="ivSubmitBtn">+ Create investment master</button><button type="button" id="btnCancelInv" class="btn-cancel-edit" style="display:none">Cancel edit</button></div>
@@ -1302,10 +1316,20 @@ let allowDelete=false;
 function applyAllowDelete(){document.body.classList.toggle("del-on",!!allowDelete);}
 let advanced=true;   // advanced accounting (double-entry + COA) on by default
 /* toggle simple vs advanced accounting mode across the app */
+/* tabs hidden in simple mode — only the everyday ones remain:
+   Dashboard · Add · History · Accounts · Money lent & owed · Savings */
+const SIMPLE_HIDDEN_TABS=["fa","commit","event","imp","coa"];
 function applyAdvanced(){
   document.body.classList.toggle("simple-mode",!advanced);
-  /* hide the Chart of Accounts nav pill in simple mode */
-  const coaPill=document.querySelector('.pill[data-tab="coa"]');if(coaPill)coaPill.style.display=advanced?"":"none";
+  /* show/hide the advanced nav pills */
+  SIMPLE_HIDDEN_TABS.forEach(t=>{const p=document.querySelector('.pill[data-tab="'+t+'"]');if(p)p.style.display=advanced?"":"none";});
+  /* if we're sitting on a now-hidden tab, bounce back to the dashboard */
+  if(!advanced){
+    const act=document.querySelector(".pill.active");
+    if(act&&SIMPLE_HIDDEN_TABS.includes(act.getAttribute("data-tab"))){
+      const home=document.querySelector('.pill[data-tab="home"]');if(home)home.click();
+    }
+  }
   applyLaymanLabels();
   /* rebuild the Add screen for the current mode */
   if(typeof renderSimpleAdd==="function")renderSimpleAdd();
@@ -1367,6 +1391,13 @@ function applyLaymanLabels(){
     evType.options[1].textContent=simple?"A one-time event (wedding, trip…)":"Expense (P&L)";
     evType.options[2].textContent=simple?"An investment":"Investment";
   }
+  /* plain-word labels & button text for the loan and investment forms */
+  const setTxt=(sel,simpleTxt,advTxt)=>{const el=document.querySelector(sel);if(el)el.textContent=simple?simpleTxt:advTxt;};
+  setTxt('label[for="ldPrincipal"]',"Amount","Opening principal (optional — post entries later)");
+  setTxt('#formLD button[type="submit"]',"+ Add","+ Create record master");
+  setTxt('#ivSubmitBtn',"+ Add","+ Create investment master");
+  setTxt('label[for="ivAmt"]',"Amount","Opening cost (optional — post entries later)");
+  setTxt('label[for="ldPurpose"]',"Note (optional)","Category / Purpose");
 }
 let storageMode="local";            // "local" | "github"
 let fileHandle=null, fileName="", dirty=false;
